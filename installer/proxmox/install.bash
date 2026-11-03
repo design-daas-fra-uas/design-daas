@@ -13,12 +13,14 @@ DOCKER_DATA_ROOT="/home/daas-docker"
 
 usage() {
     cat <<EOF >&2
-Usage: $0 -i <ip-address> -h <hostname> -d <domain>
+Usage: $0 -i <ip-address> -h <hostname> -d <domain> [-n <ip-part>]
 
 Options:
     -i    IP address of this host
     -h    Host name (e.g. pve1)
     -d    Domain (e.g. daas-design.de)
+    -n    Last octet of this host on the DaaS networks (default: 1); the
+          instances on vmbr1 use 192.168.223.<ip-part> as their gateway
 EOF
     exit 1
 }
@@ -26,11 +28,13 @@ EOF
 PROXMOX_IP=""
 PROXMOX_HOST=""
 PROXMOX_DOMAIN=""
-while getopts ":i:h:d:" o; do
+IP_PART=1
+while getopts ":i:h:d:n:" o; do
     case "$o" in
         i) PROXMOX_IP="$OPTARG" ;;
         h) PROXMOX_HOST="$OPTARG" ;;
         d) PROXMOX_DOMAIN="$OPTARG" ;;
+        n) IP_PART="$OPTARG" ;;
         :) die "Option -$OPTARG requires an argument." ;;
         *) usage ;;
     esac
@@ -38,7 +42,14 @@ done
 shift $((OPTIND - 1))
 
 [[ -n "$PROXMOX_IP" && -n "$PROXMOX_HOST" && -n "$PROXMOX_DOMAIN" ]] || usage
+[[ "$IP_PART" =~ ^[0-9]+$ ]] && (( IP_PART >= 1 && IP_PART <= 254 )) \
+    || die "Invalid IP part '$IP_PART' (expected 1-254)"
 require_root
+
+# vmbr1 address of this host (same value daas/configure.bash writes to
+# bridge_cidr_inst). The backend masquerades instance traffic, so this is
+# the instances' default gateway.
+INST_GATEWAY="192.168.223.$IP_PART"
 
 install_kernel() {
     step "Proxmox repository + PVE kernel"
@@ -79,9 +90,12 @@ EOF
 install_pve() {
     step "Proxmox VE + docker + build tools"
     apt_install proxmox-ve open-iscsi
-    run apt-get remove -y linux-image-amd64 'linux-image-6.1*' os-prober \
-        || warn "Debian kernel / os-prober already removed"
-    apt_install pip docker.io nginx build-essential python3.11-dev
+    # Removed one by one: apt aborts the whole call if one name is unknown
+    local pkg
+    for pkg in linux-image-amd64 'linux-image-6.1*' os-prober; do
+        run apt-get remove -y "$pkg" || info "Not installed: $pkg"
+    done
+    apt_install python3-pip docker.io nginx build-essential python3.11-dev
     run pip install docker --break-system-packages
     run update-grub
 
@@ -98,13 +112,12 @@ EOF
 install_dnsmasq() {
     step "dnsmasq (DHCP for instances on vmbr1)"
     apt_install python3-click dnsmasq
-    # TODO: the router option points at the host's main IP, not at the vmbr1
-    # bridge address (192.168.223.x). Check this is intended.
+    info "Instance gateway (vmbr1): $INST_GATEWAY"
     write_file /etc/dnsmasq.conf <<EOF
 server=8.8.8.8
 interface=vmbr1
 dhcp-range=192.168.223.50,192.168.223.75,1m
-dhcp-option=vmbr1,3,$PROXMOX_IP
+dhcp-option=vmbr1,3,$INST_GATEWAY
 dhcp-option=vmbr1,6,8.8.8.8
 dhcp-leasefile=/var/lib/misc/dnsmasq.leases
 conf-dir=/etc/dnsmasq.d,.bak

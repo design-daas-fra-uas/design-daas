@@ -48,6 +48,9 @@ shift $((OPTIND - 1))
 [[ -n "$REPO_FOLDER" && -n "$HOST_NAME" && -n "$DOMAIN_NAME" ]] || usage
 [[ "$IP_PART" =~ ^[0-9]+$ ]] && (( IP_PART >= 1 && IP_PART <= 254 )) \
     || die "Invalid IP part '$IP_PART' (expected 1-254)"
+if (( (IP_PART >= 50 && IP_PART <= 75) || (IP_PART >= 100 && IP_PART <= 104) )); then
+    die "IP part $IP_PART collides with the dnsmasq DHCP addresses (.50-.75, .100-.104) on vmbr1"
+fi
 
 require_root
 require_cmds sed grep openssl nginx systemctl
@@ -78,6 +81,23 @@ set_toml_value "$CFG_FOLDER/vm.toml"        bridge_cidr_ceph    "192.168.100.$IP
 set_toml_value "$CFG_FOLDER/vm.toml"        bridge_cidr_cluster "192.168.200.$IP_PART/24"
 set_toml_value "$CFG_FOLDER/container.toml" host                "192.168.123.$IP_PART"
 
+# The backend only creates bridges that are missing, so an existing bridge
+# with another address keeps it and no longer matches the config.
+check_bridge() {
+    local bridge="$1" wanted="$2" current
+    current="$(ip -4 -o addr show dev "$bridge" 2>/dev/null | awk '{print $4; exit}' || true)"
+    if [[ -z "$current" ]]; then
+        info "$bridge does not exist yet (the backend creates it as $wanted)"
+    elif [[ "$current" == "$wanted" ]]; then
+        info "$bridge already has $wanted"
+    else
+        warn "$bridge has $current, but the config now says $wanted."
+        warn "Use the matching HOST_NUMBER (-i) or change $bridge in /etc/network/interfaces."
+    fi
+}
+check_bridge vmbr0 "192.168.123.$IP_PART/24"
+check_bridge vmbr1 "192.168.223.$IP_PART/24"
+
 if [[ -z "$STANDALONE" ]]; then
     info "Clustered host: bridging $DEVICE_NAME into vmbr0"
     set_toml_value "$CFG_FOLDER/vm.toml" bridge_gw_daas      "192.168.123.1"
@@ -97,7 +117,7 @@ fi
 step "nginx"
 # ============================================================
 
-run "$DAAS_INSTALLER_DIR/daas/mkcert.bash" -o "$HOST_NAME" -c "$FQDN"
+"$DAAS_INSTALLER_DIR/daas/mkcert.bash" -o "$HOST_NAME" -c "$FQDN"
 
 run cp "$DAAS_INSTALLER_DIR/daas/nginx.conf" /etc/nginx/nginx.conf
 sed -e "s#pve1.cluster.local#$FQDN#g" "$DAAS_INSTALLER_DIR/daas/daas.conf" \

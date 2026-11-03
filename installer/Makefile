@@ -16,6 +16,7 @@ HOST_IP ?= 10.0.2.15
 HOST_NAME ?= pve1
 HOST_DOMAIN ?= daas-design.de
 NET_DEVICE ?= enp0s4
+ISO_USER ?= root
 
 CEPH_DISK ?= /dev/vdb
 CEPH_NETWORK ?= 192.168.100.0/24
@@ -47,7 +48,7 @@ SERVICES := frontend.service daas.service \
         proxmox-install-ceph proxmox-install-ceph-osd \
         proxmox-install-ceph-cephfs proxmox-install-ceph-pool \
         proxmox-cluster-create proxmox-cluster-join \
-        proxmox-isogen proxmox-isoupload \
+        proxmox-isogen proxmox-isoupload require-pve \
         daas-all daas-install daas-configure daas-services daas-containers \
         daas-start daas-stop \
         frontend-all frontend-install frontend-configure
@@ -70,7 +71,7 @@ usage:
 	@echo "  make frontend-all         # frontend (needs $(FRONTEND_FOLDER))"
 	@echo ""
 	@echo "COMMON"
-	@echo "  all                       proxmox-default + daas-all"
+	@echo "  all                       proxmox-install/configure + daas-all + other"
 	@echo "  install                   proxmox-install + daas-install"
 	@echo "  configure                 proxmox-configure + daas-configure"
 	@echo "  other                     Generate and upload ISOs"
@@ -112,6 +113,7 @@ usage:
 	@echo "  HOST_NAME=$(HOST_NAME)"
 	@echo "  HOST_DOMAIN=$(HOST_DOMAIN)"
 	@echo "  NET_DEVICE=$(NET_DEVICE)"
+	@echo "  ISO_USER=$(ISO_USER)"
 	@echo "  STANDALONE=$(STANDALONE)"
 	@echo "  CEPH_DISK=$(CEPH_DISK)"
 	@echo "  CEPH_NETWORK=$(CEPH_NETWORK)"
@@ -129,7 +131,9 @@ usage:
 # Common
 # ============================================================
 
-all: proxmox-default daas-all
+# The ISO upload needs the daas-iso storage, which the backend creates on its
+# first start, so the ISOs come after daas-all.
+all: proxmox-install proxmox-configure daas-all other
 
 install: proxmox-install daas-install
 
@@ -157,10 +161,18 @@ logs:
 # Proxmox
 # ============================================================
 
+# proxmox-isoupload needs the backend to have run once (see `all`)
 proxmox-default: proxmox-install proxmox-configure proxmox-isogen proxmox-isoupload
 
+# Fails with a hint while the host still runs the Debian kernel
+# (proxmox-install needs a reboot between its two runs).
+require-pve:
+	@uname -r | grep -q pve || { \
+		echo "Not running a PVE kernel yet: reboot, then run 'make proxmox-install' again."; \
+		exit 1; }
+
 proxmox-install:
-	./proxmox/install.bash -i "$(HOST_IP)" -h "$(HOST_NAME)" -d "$(HOST_DOMAIN)"
+	./proxmox/install.bash -i "$(HOST_IP)" -h "$(HOST_NAME)" -d "$(HOST_DOMAIN)" -n "$(HOST_NUMBER)"
 
 proxmox-configure:
 	./proxmox/configure.bash \
@@ -189,9 +201,9 @@ proxmox-cluster-join:
 
 proxmox-isogen:
 	$(MAKE) -C iso install
-	$(foreach t,$(ISOTYPES),$(MAKE) -C iso ISOTYPE=$(t) build &&) true
+	$(foreach t,$(ISOTYPES),$(MAKE) -C iso ISOTYPE=$(t) USERNAME=$(ISO_USER) build &&) true
 
-proxmox-isoupload:
+proxmox-isoupload: require-pve
 	./proxmox/isoupload.bash -s daas-iso $(foreach t,$(ISOTYPES),"$(ISODIR)/$(t)-daas.iso")
 
 # ============================================================
@@ -202,7 +214,7 @@ proxmox-isoupload:
 # config and images must exist before daas.service is started.
 daas-all: daas-install daas-configure daas-services daas-containers daas-start
 
-daas-install:
+daas-install: require-pve
 	./daas/install.bash -r "$(DESIGN_FOLDER)"
 
 daas-configure:

@@ -14,6 +14,13 @@ log "Starting Xtigervnc on $DISPLAY (rfb port 5900)"
     -BlacklistTimeout 1000 -BlacklistThreshold 10000 -FrameRate 60 \
     -geometry 1920x1080 -desktop localhost:0 -depth 32 -auth /root/.Xauthority &
 
+# xrdb/qtile fail if they start before the X server accepts connections
+for _ in $(seq 1 50); do
+    [[ -S /tmp/.X11-unix/X0 ]] && break
+    sleep 0.2
+done
+[[ -S /tmp/.X11-unix/X0 ]] || log "WARN: X server socket not ready after 10s"
+
 # Microphone input from the extensions container: raw PCM on :8080 -> virtual speaker
 ncsocket() {
     while true; do

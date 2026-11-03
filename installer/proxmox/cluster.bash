@@ -43,7 +43,11 @@ case "$ACTION" in
         ;;
     join)
         step "Join cluster at $CLUSTER_IP (link0 $LINK_IP)"
-        run pvecm add "$CLUSTER_IP" --link0 "$LINK_IP"
+        # Not through `run`: pvecm add asks for the root password of the
+        # cluster node and confirms its SSH fingerprint, so it needs the
+        # terminal directly.
+        info "\$ pvecm add $CLUSTER_IP --link0 $LINK_IP (interactive)"
+        pvecm add "$CLUSTER_IP" --link0 "$LINK_IP"
         ;;
 esac
 
