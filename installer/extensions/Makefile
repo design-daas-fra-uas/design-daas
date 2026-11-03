@@ -14,7 +14,7 @@ ensureKey:
 build: ensureKey
 	cd VNCService && $(DOCKER) build $(BUILDOPT) -t $(TAG) .
 
-clean: stop
+clean:
 	-$(DOCKER) rmi $(TAG)
 
 

@@ -10,6 +10,5 @@ build:
 
 clean: 
 	-$(DOCKER) rmi $(TAG)
-	rm -rf noweb
 
 

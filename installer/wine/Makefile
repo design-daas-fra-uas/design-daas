@@ -38,5 +38,4 @@ stop:
 
 clean: stop
 	-docker rmi $(TAG)
-	rm -rf noweb
 

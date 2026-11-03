@@ -10,5 +10,5 @@ all: build
 build:
 	$(DOCKER) build $(BUILDOPT) -t $(TAG) .
 
-clean: stop
+clean:
 	-$(DOCKER) rmi $(TAG)
