@@ -10,6 +10,7 @@ usage() { echo "Usage: $0 [-r <folder>]" 1>&2; exit 1; }
 # Read options
 REPO_FOLDER=
 FRONTEND_FOLDER=
+
 while getopts ":r:f:" o; do
     case "${o}" in
         r)
@@ -29,7 +30,9 @@ shift $((OPTIND-1))
 if [ ! -d "$FRONTEND_FOLDER" ] ; then
     usage
 fi
-FRONTEND_FOLDER=${FRONTEND_FOLDER%/} # Remove trailing slash
+
+FRONTEND_FOLDER=$(realpath "$FRONTEND_FOLDER")
+
 cd "$FRONTEND_FOLDER/" || exit 1
 
 cat <<EOF > docker-compose-pve.yml
@@ -51,14 +54,20 @@ docker-compose -f docker-compose-pve.yml build
 # systemd unit
 cat <<EOF > /etc/systemd/system/$SERVICE_NAME.service
 [Unit]
-Description=$SERVICE_NAME starter
-Before=getty@tty1.service
+Description=Design DaaS Frontend
+After=docker.service
+Requires=docker.service
+
 [Service]
 Type=simple
-ExecStart=$REPO_FOLDER/backend/installer/$SERVICE_NAME/start.bash
-ExecStop=$REPO_FOLDER/backend/installer/$SERVICE_NAME/stop.bash
+WorkingDirectory=$FRONTEND_FOLDER
+ExecStart=/usr/bin/docker-compose -f docker-compose-pve.yml up
+ExecStop=/usr/bin/docker-compose -f docker-compose-pve.yml down
+Restart=always
+RestartSec=5
+
 [Install]
-WantedBy=getty.target
+WantedBy=multi-user.target
 EOF
 
 systemctl daemon-reload

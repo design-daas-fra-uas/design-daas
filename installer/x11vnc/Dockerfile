@@ -12,9 +12,12 @@ RUN apt-get update -y && apt-get upgrade -y \
     htop rofi gedit pulseaudio pulseeffects \
     systemd systemd-sysv systemd-timesyncd gnome-calculator
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-RUN pip install --no-cache-dir  --break-system-packages \
-    dbus-next pika netifaces click psutil xcffib cairocffi qtile
 
+RUN pip install --no-cache-dir --break-system-packages \
+    setuptools wheel && \
+    pip install --no-cache-dir --break-system-packages \
+    dbus-next pika netifaces click psutil xcffib cairocffi qtile
+    
 # Terminal
 RUN echo 'export DISPLAY=:0' > /root/.bashrc \
     && echo 'export TERM=xterm' >> /root/.bashrc \
@@ -49,13 +52,6 @@ COPY ./autostart.sh /root/.config/qtile/autostart.sh
 RUN mkdir -p /root/daas/qmsg
 RUN mkdir -p /root/daas/env/adapter/tools
 COPY ./qmsg/ /root/daas/
-# COPY ./qmsg/env/*.py /root/daas/env/
-# COPY ./qmsg/env/adapter/*.py /root/daas/env/adapter/
-# COPY ./qmsg/env/adapter/tools/*.py /root/daas/env/adapter/tools/
-# COPY ./qmsg/qmsg/*.py /root/daas/qmsg/
-# COPY ./qmsg/qmsg/common/*.py /root/daas/qmsg/common/
-# COPY ./qmsg/qmsg/sender/*.py /root/daas/qmsg/sender/
-# COPY ./qmsg/qmsg/receiver/*.py /root/daas/qmsg/receiver/
 COPY ./daas.jpg /root/daas/env/daas.jpg
 COPY ./daas-logo.png /root/daas/env/daas-logo.png
 RUN ln -s /usr/bin/python3 /usr/bin/python

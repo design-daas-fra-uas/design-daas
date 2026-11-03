@@ -1,4 +1,4 @@
-FROM debian
+FROM debian:bookworm
 
 # Install essentials
 ENV DEBIAN_FRONTEND=noninteractive

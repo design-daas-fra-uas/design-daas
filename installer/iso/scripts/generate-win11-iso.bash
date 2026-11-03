@@ -51,7 +51,7 @@ usage() {
 
 # install
 toolinstall(){
-    sudo -E apt --yes install rsync unzip unrar isolinux 1>&2 2>/dev/null
+    sudo -E apt --yes install rsync unzip unrar-free isolinux 1>&2 2>/dev/null
 }
 # clean
 clean(){
@@ -115,9 +115,17 @@ download_tools() {
         wget -O "$INCFOLDER/tools/office/$INSTALLER_OFFICE" "$URL_OFFICE"
     fi
     if [ ! -f "$INCFOLDER/tools/office/setup.exe" ] ; then
-        unrar e "$INCFOLDER/tools/office/$INSTALLER_OFFICE" "$INCFOLDER/tools/office/"
-        sed 's#</Product>#<ExcludeApp ID="Teams" /></Product>#g' \
-            -i "$INCFOLDER/tools/office/configuration.xml"
+    	mkdir -p "$INCFOLDER/tools/office"
+    	unrar-free e -o+ \
+        	"$INCFOLDER/tools/office/$INSTALLER_OFFICE" \
+        	"$INCFOLDER/tools/office/"
+
+    	if [ -f "$INCFOLDER/tools/office/configuration.xml" ]; then
+		sed -i 's#</Product>#<ExcludeApp ID="Teams" /></Product>#g' \
+	    		"$INCFOLDER/tools/office/configuration.xml"
+    	else
+		echo "WARNING: Office configuration.xml was not extracted"
+    	fi
     fi
 }
 

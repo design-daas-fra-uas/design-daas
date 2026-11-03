@@ -1,33 +1,20 @@
-.PHONY: all prepare build ensureKey start commit stop clean clean-all
+.PHONY: all build ensureKey clean
 
 TAG := daas-0-extensions
-CMD := /bin/bash -i
-HOSTIP := 0.0.0.0
 BUILDOPT?=
+DOCKER := sudo docker
 
-all: commit
+all: build
 
 ensureKey:
 	if [ ! -f ./VNCService/id_rsa.pub ] ; then \
 		cp /root/.ssh/id_rsa.pub ./VNCService/id_rsa.pub ; \
 	fi
 
-build: | stop ensureKey
-	cd VNCService && docker build $(BUILDOPT) -t $(TAG) .
-start: build
-	sudo docker run -d \
-        -p "$(HOSTIP):631:631" \
-        -p "$(HOSTIP):8010:8010" \
-        -p "$(HOSTIP):8020:8020" \
-		--name $(TAG) --rm $(TAG)
-commit: start
-	docker commit $(TAG)
-	docker kill $(TAG)
-
-stop:
-	-docker kill $(TAG)
+build: ensureKey
+	cd VNCService && $(DOCKER) build $(BUILDOPT) -t $(TAG) .
 
 clean: stop
-	-docker rmi $(TAG)
+	-$(DOCKER) rmi $(TAG)
 
 
