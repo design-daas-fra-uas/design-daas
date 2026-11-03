@@ -1,19 +1,25 @@
+# Logging. Read by QwebServiceRuntime -> LoggerConfig (app/qweb/logging/logging.py).
+# Each log_<target> switch enables data/logs/<target>.log.
+
 [log]
 enabled = true
 log_level = "INFO"
+# Relative to qweb.toml [sys] data_path (src/data/logs)
 log_dir = "logs"
 log_prefix = "%(asctime)s-%(levelname)1.1s-%(name)-9.9s :"
 log_message = "%(message)s"
 log_details = ""
-# logdate = "%Y-%m-%d %H:%M:%S"
 log_date = "%H:%M:%S"
 log_encode = "utf-8"
 console_target = "console"
 debug_target = "debug"
 error_target = "error"
 
+# Currently not read by the code
 all_sublogs = false
 no_sublogs = false
+
+# Web request / viewer sub-logs
 log_web_enabled = true
 log_web_resize = false
 log_web_tunnel = false
@@ -22,6 +28,7 @@ log_web_switcher = false
 log_web_watcher = true
 log_web_summary = true
 
+# Log targets
 log_hypercorn = false
 log_debug = true
 log_error = true
@@ -50,14 +57,10 @@ log_automation = true
 log_adapter_qmsg = true
 log_adapter_ssh = true
 log_adapter_http = true
+
+# Also print to the console (journalctl -u daas), except these targets.
+# Other targets you can add: any, task, inst, qmsg, limit, auth, websocket
 log_console = true
 log_console_exclude = [
-  # "any",
-  # "task",
-  # "inst",
   "db",
-  # "qmsg",
-  # "limit",
-  # "auth",
-  # "websocket",
 ]

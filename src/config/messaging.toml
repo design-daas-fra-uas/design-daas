@@ -1,27 +1,40 @@
+# Communication with the agent inside each instance. Read by MessagingPlugin ->
+# InstanceControllerConfig (app/daas/common/config.py), QHubConfigBackend
+# (app/daas/messaging/qmsg/hub_backend.py) and SshAdapterConfig.
+
 [instances]
+# SSH into instances (fallback to the message queue)
 sshuser = "root"
 sshport = 22
+# Seconds
 sshopt_timeout = 1
 sshopt_strictcheck = "no"
 sshopt_nohostauth = "yes"
+# Instance network, same as vm.toml prefixip
 prefixip = "192.168.223"
+# Currently not read by the code
 proxyfile = "daas/env/CommandProxy.py"
 logcmd = true
 logresult = false
 enable_message_queue = true
+# How to detect that an instance is online: "queue" (RabbitMQ heartbeat)
+# or "icmp" (ping)
 test_method_online_state = "queue"
 
 [inst_queue]
+# RabbitMQ (daas-0-rabbit container on docker0)
 rabbitmq_host = "172.17.0.1"
+# Seconds without heartbeat until an instance counts as offline
 host_timeout = 2
+# Seconds
 cleanup_time = 2
 reconnect_time_client = 1
 reconnect_time_server = 1
+# Poll interval and total wait for RPC replies
 wait_time_ms = 1000
-wait_time_total_ms = 300000
+wait_time_total_ms = 300000  # 5 min
 log_heartbeats = true
 log_topic = "qmsg"
-
 
 [inst_ssh]
 sshuser = "root"

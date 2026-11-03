@@ -1,15 +1,22 @@
+# CephFS storage (optional). Read by CephPlugin -> CephstoreConfig
+# (app/daas/storage/ceph/ceph_config.py). Set up Ceph first with
+# `make proxmox-install-ceph*` in installer/.
+
 [cephstore]
 enabled = false
 
 [cephstore.daasfs]
 enabled = false
+# CephFS created by `make proxmox-install-ceph-cephfs`
 name = "daasfs"
 user = "admin"
 folder_public = "public"
 folder_shared = "shared"
 folder_user = "user"
+# Relative to src/
 folder_keyrings = "data/ceph/keyrings"
 folder_mount = "data/ceph/mount"
+# Mounts inside instances: Linux path / Windows drive letter
 mappings_public = { name = "public", src = "/public", dst_linux = "/mnt/public", dst_win = "x" }
 mappings_shared = { name = "shared", src = "/shared", dst_linux = "/mnt/shared", dst_win = "y" }
 mappings_user = { name = "user", src = "/user", dst_linux = "/mnt/user", dst_win = "z" }

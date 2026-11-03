@@ -1,22 +1,30 @@
+# Docker. Read by ContainerPlugin -> DockerRequestConfig / DockerServicesConfig
+# (app/daas/container/docker/DockerRequest.py).
+
 [container_request]
+# Address of the host on vmbr0 as seen by containers.
+# Set by installer/daas/configure.bash
 host = "192.168.123.1"
+# Wait after starting the service containers (ms, 0 = no wait)
 wait_services_ms = 0
-# default_vnc_port = 5900
 logrequest = true
 
-
 [service_containers]
-# IMAGE, NAME, OPTS, CPUS, MEMORY
+# Containers the backend (re)starts on startup and stops on shutdown.
+# Each entry: [IMAGE, CONTAINER_NAME, [OPTIONS], CPUS, MEMORY_BYTES]
+# OPTIONS understood: "-p HOST:PORT:PORT", "-v HOSTPATH:PATH:MODE"
+# (relative HOSTPATH = src/data/...), "--privileged".
+# The images are built by `make daas-services` in installer/.
 service_containers = [
+  # Guacamole daemon (VNC/RDP -> browser)
   [
     "daas-0-guacd",
     "daas-0-guacd",
-    [
-      "-p 127.0.0.1:4822:4822",
-    ],
+    ["-p 127.0.0.1:4822:4822"],
     2,
-    2147483648,
+    2147483648,  # 2 GiB
   ],
+  # MariaDB (only used when db.toml db_type = "mariadb")
   [
     "daas-0-mariadb",
     "daas-0-db",
@@ -25,8 +33,9 @@ service_containers = [
       "-v db/mariadb:/var/lib/mysql:rw",
     ],
     2,
-    2147483648,
+    2147483648,  # 2 GiB
   ],
+  # RabbitMQ for the instance agents, bound to the docker0 address
   [
     "daas-0-rabbit",
     "daas-0-rabbit",
@@ -35,8 +44,9 @@ service_containers = [
       "-p 172.17.0.1:5672:5672",
     ],
     2,
-    2147483648,
+    2147483648,  # 2 GiB
   ],
+  # Extensions: CUPS (631), printer websocket (8010), audio websocket (8020)
   [
     "daas-0-extensions",
     "daas-0-extensions",
@@ -44,9 +54,8 @@ service_containers = [
       "-p 127.0.0.1:631:631",
       "-p 127.0.0.1:8010:8010",
       "-p 127.0.0.1:8020:8020",
-
     ],
     2,
-    2147483648,
+    2147483648,  # 2 GiB
   ],
 ]

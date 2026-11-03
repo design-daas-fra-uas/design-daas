@@ -1,12 +1,19 @@
+# Host helpers (DHCP entries, iptables, local SSH). Read by NodePlugin ->
+# NodeControllerConfig (app/daas/node/nodecontrol.py) / SshAdapterConfig.
+
 [host_dns]
+# MAC prefix of the VMs; the VM id is appended (de:ad:be:ef:00:<vmid hex>)
 prefixmac = "de:ad:be:ef:00"
 prefixip = "192.168.123"
+# Written by the backend, read by dnsmasq (see installer/proxmox/install.bash)
 dnsmasqhosts = "/etc/dnsmasq.d/pve-hosts.conf"
 
 [host_ssh]
+# SSH to the host itself for privileged commands
 sshuser = "root"
 sshhost = "localhost"
 sshport = 22
+# Seconds
 sshopt_timeout = 1
 sshopt_strictcheck = "no"
 sshopt_nohostauth = "yes"

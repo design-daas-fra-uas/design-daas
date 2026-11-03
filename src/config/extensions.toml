@@ -1,10 +1,15 @@
+# Printing and microphone. Read by ExtensionsPlugin -> ProxyExtensionsConfig
+# (app/daas/proxy/proxy_extensions.py).
+
 [extensions]
 displayname = "design-printer"
 prefix_printer_user = "printer"
+# Address of the extensions container; empty = look it up at runtime
 service_ip = ""
+update_service_ip = true
+service_container = "daas-0-extensions"
 service_port_cups = 631
 service_port_printer = 8010
-service_port_audio = 8080
 service_proto_printer = "ws://"
-service_container = "daas-0-extensions"
-update_service_ip = true
+# Port of the microphone listener inside the instance (nc -l 8080)
+service_port_audio = 8080
