@@ -2,9 +2,8 @@ FROM debian:bookworm
 
 # Install essentials
 ENV DEBIAN_FRONTEND=noninteractive
-# Use Debian as the base image
 
-# # Install build dependencies
+# Build dependencies
 RUN apt update -y && apt upgrade -y && \
     apt install -y \
     build-essential \
@@ -24,11 +23,10 @@ RUN apt update -y && apt upgrade -y && \
     libwebp-dev \
     wget
 
-# Download guacamole-server source code
+# guacamole-server source (shipped in this folder, the Apache mirror URL is not stable)
 WORKDIR /usr/local/src
-RUN wget -O guacamole-server-1.5.4.tar.gz https://apache.org/dyn/closer.lua/guacamole/1.5.4/source/guacamole-server-1.5.4.tar.gz?action=download && \
-    tar -xzf guacamole-server-1.5.4.tar.gz && \
-    cd guacamole-server-1.5.4
+COPY guacamole-server-1.5.4.tar.gz .
+RUN tar -xzf guacamole-server-1.5.4.tar.gz && rm guacamole-server-1.5.4.tar.gz
 
 # Build guacd
 WORKDIR /usr/local/src/guacamole-server-1.5.4
@@ -36,12 +34,8 @@ RUN ./configure --with-init-dir=/etc/init.d && \
     make && \
     make install && \
     ldconfig
-RUN mkdir /etc/guacamole && \
-    echo "guacd.enable-drive: true" \
-    echo "guacd.create-drive-path: true" \
-    echo "guacd.printer-name: GuacPrint" \
-    echo "guacd.audio-enabled: true" \
-    > /etc/guacamole/guacamole.properties
+# guacamole.properties is written by entrypoint.bash
+RUN mkdir -p /etc/guacamole
 RUN apt-get install -y ghostscript cups-bsd
 
 # Expose guacd default port
