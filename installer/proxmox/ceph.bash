@@ -1,111 +1,80 @@
-#!/bin/bash
+#!/usr/bin/env bash
+#
+# Ceph setup on Proxmox. One action per call:
+#   ceph    install Ceph (quincy), init the network, create mon + mgr
+#   osd     create an OSD on a disk
+#   cephfs  create the MDS (+ standby) and the CephFS "daasfs"
+#   pool    create the RBD pool "daas-ceph" and add it as storage
 
-# Usage
+source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.bash"
+
+POOL_NAME="daas-ceph"
+FS_DAASNAME="daasfs"
+
 usage() {
-    echo "Usage: $0 [-n <ceph cidr>]" 1>&2
+    cat <<EOF >&2
+Usage: $0 -a <ceph|osd|cephfs|pool> [-n <ceph-cidr>] [-d <disk>]
+
+Options:
+    -a    Action
+    -n    Ceph network CIDR (required for 'ceph')
+    -d    Disk for the OSD (default: /dev/vdb)
+EOF
     exit 1
 }
 
-# Default params (devenv)
-CEPH_NETWORK=
+ACTION=""
+CEPH_NETWORK=""
 CEPH_DISK="/dev/vdb"
-POOL_NAME=daas-ceph
-FS_PUBNAME=pubfs
-FS_SHAREDNAME=sharedfs
-FS_USERNAME=userfs
-FS_DAASNAME=daasfs
-
-ACTION="install"
-# Read options
 while getopts ":a:n:d:" o; do
     case "$o" in
-        a)
-            ACTION=${OPTARG}
-            ;;
-        d)
-            CEPH_DISK=${OPTARG}
-            ;;
-        n)
-            CEPH_NETWORK=${OPTARG}
-            ;;
-        *)
-            usage
-            ;;
+        a) ACTION="$OPTARG" ;;
+        d) CEPH_DISK="$OPTARG" ;;
+        n) CEPH_NETWORK="$OPTARG" ;;
+        :) die "Option -$OPTARG requires an argument." ;;
+        *) usage ;;
     esac
 done
-shift $((OPTIND-1))
+shift $((OPTIND - 1))
 
-# Bail if requirements are not met
-if  [ "$CEPH_NETWORK" = "" ] ; then
-    usage
-fi
-if  [ "$ACTION" = "" ] ; then
-    usage
-fi
-
-install_ceph() {
-    echo "yJ" | sudo pveceph install -repository no-subscription -version quincy
-}
-init_network() {
-    sudo pveceph init --network "$CEPH_NETWORK"
-}
-create_monitor() {
-    sudo pveceph mon create
-}
-create_manager() {
-    sudo pveceph mgr create
-}
-create_osd() {
-    sudo pveceph osd create "$CEPH_DISK"
-}
-create_mds() {
-    pveceph mds
-}
-create_pool() {
-    sudo pveceph pool create "$POOL_NAME" -pg_num 8 --add_storages
-}
-
-# create_cephfs_public() {
-#     pveceph mds create --name $FS_PUBNAME
-#     pveceph fs create -name $FS_PUBNAME -add-storage 0  -pg_num 8
-# }
-# create_cephfs_shared() {
-#     pveceph mds create --name $FS_SHAREDNAME
-#     pveceph fs create -name $FS_SHAREDNAME -add-storage 0  -pg_num 8
-# }
-# create_cephfs_user() {
-#     pveceph mds create --name $FS_USERNAME
-#     pveceph fs create -name $FS_USERNAME -add-storage 0  -pg_num 8
-# }
-create_cephfs_daas() {
-    pveceph mds create --name "$FS_DAASNAME"
-    pveceph mds create --name "${FS_DAASNAME}-standby"
-    pveceph fs create -name "$FS_DAASNAME" -add-storage 0  -pg_num 16
-}
+[[ -n "$ACTION" ]] || usage
+require_root
+require_cmds pveceph
 
 action_ceph() {
-    install_ceph
-    init_network
-    create_monitor
-    create_manager
-    #create_osd
-    #create_mds
+    [[ -n "$CEPH_NETWORK" ]] || die "Action 'ceph' needs -n <ceph-cidr>"
+    step "Install Ceph (network $CEPH_NETWORK)"
+    # pveceph asks for confirmation ("yJ" answers both English and German prompts)
+    echo "yJ" | run pveceph install -repository no-subscription -version quincy
+    run pveceph init --network "$CEPH_NETWORK"
+    run pveceph mon create
+    run pveceph mgr create
 }
-action_pool() {
-    create_pool
+
+action_osd() {
+    step "Create OSD on $CEPH_DISK"
+    [[ -b "$CEPH_DISK" ]] || die "Not a block device: $CEPH_DISK"
+    run pveceph osd create "$CEPH_DISK"
 }
+
 action_cephfs() {
-    create_cephfs_daas
+    step "Create CephFS $FS_DAASNAME"
+    run pveceph mds create --name "$FS_DAASNAME"
+    run pveceph mds create --name "${FS_DAASNAME}-standby"
+    run pveceph fs create -name "$FS_DAASNAME" -add-storage 0 -pg_num 16
 }
 
-if [ "$ACTION" == "ceph" ] ; then
-    action_ceph
-elif [ "$ACTION" == "cephfs" ] ; then
-    action_cephfs
-elif [ "$ACTION" == "pool" ] ; then
-    action_pool
-elif [ "$ACTION" == "osd" ] ; then
-    create_osd
-fi
+action_pool() {
+    step "Create pool $POOL_NAME"
+    run pveceph pool create "$POOL_NAME" -pg_num 8 --add_storages
+}
 
+case "$ACTION" in
+    ceph)   action_ceph ;;
+    osd)    action_osd ;;
+    cephfs) action_cephfs ;;
+    pool)   action_pool ;;
+    *)      error "Unknown action: $ACTION"; usage ;;
+esac
 
+success "Ceph action '$ACTION' done"

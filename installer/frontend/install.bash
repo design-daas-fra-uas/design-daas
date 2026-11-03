@@ -1,41 +1,48 @@
-#!/bin/bash
+#!/usr/bin/env bash
+#
+# Builds the frontend image and installs frontend.service
+# (docker-compose, published on 127.0.0.1:5001).
 
-# Configurable variables
-SERVICE_NAME=frontend
-export DEBIAN_FRONTEND=noninteractive
+source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.bash"
 
-# help message
-usage() { echo "Usage: $0 [-r <folder>]" 1>&2; exit 1; }
+SERVICE_NAME="frontend"
+COMPOSE_FILE="docker-compose-pve.yml"
 
-# Read options
-REPO_FOLDER=
-FRONTEND_FOLDER=
+usage() {
+    cat <<EOF >&2
+Usage: $0 -f <frontend-folder> [-r <repo-folder>]
 
+Options:
+    -f    Frontend repository folder
+    -r    Design DaaS repository folder (unused, accepted for symmetry)
+EOF
+    exit 1
+}
+
+FRONTEND_FOLDER=""
 while getopts ":r:f:" o; do
-    case "${o}" in
-        r)
-            REPO_FOLDER=${OPTARG}
-            ;;
-        f)
-            FRONTEND_FOLDER=${OPTARG}
-            ;;
-        *)
-            usage
-            ;;
+    case "$o" in
+        r) ;;
+        f) FRONTEND_FOLDER="$OPTARG" ;;
+        :) die "Option -$OPTARG requires an argument." ;;
+        *) usage ;;
     esac
 done
-shift $((OPTIND-1))
+shift $((OPTIND - 1))
 
-# Bail if requirements are not met
-if [ ! -d "$FRONTEND_FOLDER" ] ; then
-    usage
-fi
+[[ -n "$FRONTEND_FOLDER" ]] || usage
+require_root
+require_cmds docker-compose systemctl
+require_dir "$FRONTEND_FOLDER"
+FRONTEND_FOLDER="$(realpath "$FRONTEND_FOLDER")"
 
-FRONTEND_FOLDER=$(realpath "$FRONTEND_FOLDER")
+info "Frontend: $FRONTEND_FOLDER"
 
-cd "$FRONTEND_FOLDER/" || exit 1
+# ============================================================
+step "Build frontend image"
+# ============================================================
 
-cat <<EOF > docker-compose-pve.yml
+write_file "$FRONTEND_FOLDER/$COMPOSE_FILE" <<EOF
 version: "3.3"
 services:
   web:
@@ -44,15 +51,17 @@ services:
       target: "server"
     container_name: "daas-frontend"
     restart: "always"
-    # volumes:
-    # - '/usr/src/app/node_modules'
     ports:
       - "127.0.0.1:5001:80"
 EOF
-docker-compose -f docker-compose-pve.yml build
 
-# systemd unit
-cat <<EOF > /etc/systemd/system/$SERVICE_NAME.service
+run docker-compose -f "$FRONTEND_FOLDER/$COMPOSE_FILE" --project-directory "$FRONTEND_FOLDER" build
+
+# ============================================================
+step "systemd unit: $SERVICE_NAME.service"
+# ============================================================
+
+write_file "/etc/systemd/system/$SERVICE_NAME.service" <<EOF
 [Unit]
 Description=Design DaaS Frontend
 After=docker.service
@@ -61,8 +70,8 @@ Requires=docker.service
 [Service]
 Type=simple
 WorkingDirectory=$FRONTEND_FOLDER
-ExecStart=/usr/bin/docker-compose -f docker-compose-pve.yml up
-ExecStop=/usr/bin/docker-compose -f docker-compose-pve.yml down
+ExecStart=/usr/bin/docker-compose -f $COMPOSE_FILE up
+ExecStop=/usr/bin/docker-compose -f $COMPOSE_FILE down
 Restart=always
 RestartSec=5
 
@@ -70,7 +79,7 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
 
-systemctl daemon-reload
-systemctl enable $SERVICE_NAME.service
-systemctl start $SERVICE_NAME.service
+run systemctl daemon-reload
+enable_and_restart "$SERVICE_NAME.service"
 
+success "Frontend installed (logs: journalctl -u $SERVICE_NAME -f)"

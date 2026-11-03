@@ -1,77 +1,99 @@
-#!/bin/bash
+#!/usr/bin/env bash
+#
+# Installs the Design DaaS backend on the host:
+#   - Python venv + TLS key for the backend (src/Makefile install)
+#   - nginx, jq and docker-compose
+#   - the daas systemd unit (enabled, but NOT started: run daas/configure.bash
+#     and build the service images first, then `make daas-start`)
 
-# Configurable variables
-SERVICE_NAME=daas
-export DEBIAN_FRONTEND=noninteractive
+source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.bash"
 
-# help message
-usage() { echo "Usage: $0 [-r <folder>]" 1>&2; exit 1; }
+SERVICE_NAME="daas"
+COMPOSE_VERSION="v2.24.0"
+COMPOSE_URL="https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-linux-x86_64"
+COMPOSE_BIN="/usr/bin/docker-compose"
 
-# Read options
-REPO_FOLDER=
+usage() {
+    cat <<EOF >&2
+Usage: $0 -r <repo-folder>
+
+Options:
+    -r    Design DaaS repository folder
+EOF
+    exit 1
+}
+
+REPO_FOLDER=""
 while getopts ":r:" o; do
-    case "${o}" in
-        r)
-            REPO_FOLDER=${OPTARG}
-            ;;
-        *)
-            usage
-            ;;
+    case "$o" in
+        r) REPO_FOLDER="${OPTARG%/}" ;;
+        :) die "Option -$OPTARG requires an argument." ;;
+        *) usage ;;
     esac
 done
-shift $((OPTIND-1))
+shift $((OPTIND - 1))
 
-# Bail if requirements are not met
-if [ ! -d "$REPO_FOLDER" ] ; then
-    usage
+[[ -n "$REPO_FOLDER" ]] || usage
+require_root
+require_dir "$REPO_FOLDER/src"
+
+info "Repository: $REPO_FOLDER"
+
+# ============================================================
+step "Backend Python environment"
+# ============================================================
+
+run make -C "$REPO_FOLDER/src" install
+
+# ============================================================
+step "Host packages"
+# ============================================================
+
+apt_install nginx jq curl
+
+if [[ -x "$COMPOSE_BIN" ]] && "$COMPOSE_BIN" version 2>/dev/null | grep -q "${COMPOSE_VERSION}"; then
+    info "docker-compose ${COMPOSE_VERSION} already installed"
+else
+    info "Downloading docker-compose ${COMPOSE_VERSION}"
+    run curl -fSL "$COMPOSE_URL" -o "$COMPOSE_BIN"
+    chmod +x "$COMPOSE_BIN"
+    success "Installed $("$COMPOSE_BIN" version)"
 fi
-REPO_FOLDER=${REPO_FOLDER%/} # Remove trailing slash
-cd "$REPO_FOLDER/src" || exit 1
-make install
 
-apt install -y nginx
- curl -SL \
-     https://github.com/docker/compose/releases/download/v2.24.0/docker-compose-linux-x86_64 \
-     -o /usr/bin/docker-compose
-chmod +x /usr/bin/docker-compose
-apt --yes install jq
+# ============================================================
+step "systemd unit: $SERVICE_NAME.service"
+# ============================================================
 
-
-# systemd unit
-cat <<EOF > /etc/systemd/system/$SERVICE_NAME.service
+write_file "/etc/systemd/system/$SERVICE_NAME.service" <<EOF
 [Unit]
-Description=daas starter
-Before=getty@tty1.service
-Wants=pve-cluster.service
-Wants=pvedaemon.service
-Wants=ssh.service
-Wants=nginx.service
-Wants=docker.service
-Wants=pve-storage.target
-After=pve-storage.target
-After=pve-cluster.service
-After=pvedaemon.service
-After=ssh.service
-After=nginx.service
-After=network.target
-After=docker.service
-Requires=nginx.service
-Requires=pveproxy.service
-Requires=docker.service
+Description=Design DaaS backend
+Wants=pve-cluster.service pvedaemon.service ssh.service pve-storage.target
+After=network.target pve-storage.target pve-cluster.service pvedaemon.service ssh.service nginx.service docker.service
+Requires=nginx.service pveproxy.service docker.service
 
 [Service]
 Type=simple
 ExecStart=$REPO_FOLDER/installer/$SERVICE_NAME/start.bash
 ExecStop=$REPO_FOLDER/installer/$SERVICE_NAME/stop.bash
+Restart=on-failure
+RestartSec=5
+
 [Install]
-WantedBy=getty.target
+WantedBy=multi-user.target
 EOF
 
-systemctl daemon-reload
-systemctl enable $SERVICE_NAME.service
-systemctl start $SERVICE_NAME.service
-systemctl enable nginx
-systemctl restart nginx
-systemctl enable dnsmasq
-systemctl restart dnsmasq
+run systemctl daemon-reload
+run systemctl enable "$SERVICE_NAME.service"
+enable_and_restart nginx
 
+# dnsmasq serves DHCP on vmbr1, which the backend creates on its first start.
+# Until then it may not come up, so only warn here.
+run systemctl enable dnsmasq
+if run systemctl restart dnsmasq && systemctl is-active --quiet dnsmasq; then
+    success "Service running: dnsmasq"
+else
+    warn "dnsmasq is not running yet (vmbr1 may not exist until the backend has started once)"
+fi
+
+success "Backend installed. $SERVICE_NAME.service is enabled but not started."
+info "Next: make daas-configure, make daas-services, then make daas-start"
