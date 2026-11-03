@@ -13,8 +13,8 @@ RUN apt update -y && apt upgrade -y && \
     libjpeg62-turbo-dev \
     libpng-dev \
     libossp-uuid-dev \
-    freerdp2-dev \
-    libfreerdp2-2 \
+    freerdp3-dev \
+    libfreerdp3-3 \
     libpango1.0-dev \
     libssh2-1-dev \
     libssl-dev \

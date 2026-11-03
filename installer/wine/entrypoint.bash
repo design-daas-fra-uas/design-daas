@@ -1,34 +1,51 @@
 #!/bin/bash
 
-/usr/bin/Xtigervnc :0 -rfbport 5900 -localhost=0 -SecurityTypes VncAuth,TLSVnc \
-    -PasswordFile tiger-vnc-password.txt \
-    -geometry 1920x1080 -desktop localhost:0 -depth 32 -auth /root/.Xauthority &
+set -e
+
+# VNC server
+/usr/bin/Xtigervnc :0 \
+    -rfbport 5900 \
+    -localhost=0 \
+    -SecurityTypes VncAuth,TLSVnc \
+    -PasswordFile /tiger-vnc-password.txt \
+    -geometry 1920x1080 \
+    -desktop localhost:0 \
+    -depth 24 \
+    -auth /root/.Xauthority &
+
+# SSH
 service ssh start
-pulseaudio &
 
-CMD=$*
-if [ "$CMD" == "" ] ; then
-    CMD="xterm"
-fi
+# PulseAudio
+pulseaudio --system --daemonize=yes \
+    --disallow-exit \
+    --exit-idle-time=-1
+    
+# Display configuration
+export DISPLAY=:0
 
+xrandr --output VNC-0 --mode 1280x800
+xrdb -merge /root/.Xresources
 
-DISPLAY=:0 xrandr --output VNC-0 --mode 1280x800
-#DISPLAY=:0 firefox www.google.de
-DISPLAY=:0 xrdb -merge ~/.Xresources
+# Qtile
+qtile start &
 
-DISPLAY=:0 qtile start &
+# Wait for display initialization
+sleep 2
 
+# Start Wine application as wineuser
+gosu wineuser env \
+    DISPLAY=:0 \
+    HOME=/home/wineuser \
+    WINEARCH=win64 \
+    WINEPREFIX=/home/wineuser/shared/.wine64 \
+    wine /home/wineuser/shared/.wine64/drive_c/app.exe &
 
 # lutris
 chown wineuser:wineuser -R /home/wineuser
 #sudo -u wineuser DISPLAY=:0 WINEARCH=win64 /usr/games/lutris &
 
-# Run testapp
-#DISPLAY=:0 wine /root/shared/.wine64/drive_c/app.exe &
-
-# Init wine
-#/wine-init.bash
-
-tail -f /dev/null
+# Keep container running
+wait
 
 

@@ -1,3 +1,4 @@
+
 .PHONY: all prepare build start commit stop clean clean-all
 
 TAG := wine
@@ -8,6 +9,7 @@ QMSGDIR := ../../src/app/daas/messaging
 QINSTDIR := ../../src/app/inst
 APP_URL := https://download-installer.cdn.mozilla.net/pub/thunderbird/releases/115.6.1/win64/de/Thunderbird%20Setup%20115.6.1.exe
 BUILDOPT ?=
+
 all: commit
 
 prepare:
@@ -22,12 +24,19 @@ prepare:
 	fi
 
 build: | stop prepare
-	docker build $(BUILDOPT) -t $(TAG) .
+	docker buildx build \
+		--builder wine-builder \
+		--allow security.insecure \
+		--no-cache \
+		--progress=plain \
+		--load \
+		$(BUILDOPT) \
+		-t $(TAG) .
 
 start: build
 	sudo docker run -d \
 		-p 0.0.0.0:$(PORT):$(PORT) -p 127.0.0.1:2222:22 \
-		--name $(TAG) --rm  $(TAG) $(CMD)
+		--name $(TAG) --rm $(TAG) $(CMD)
 
 commit: start
 	docker commit $(TAG)

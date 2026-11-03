@@ -2,25 +2,29 @@
 
 TAG := daas-0-rabbit
 CMD := /bin/bash -i
-HOSTIP:=172.17.0.1
+HOSTIP := 172.17.0.1
+DOCKER := sudo docker
 
 all: commit
 
-build: | stop
-	docker build -t $(TAG) .
+build: stop
+	$(DOCKER) build -t $(TAG) .
+
 start: build
-	sudo docker run -d \
-		-p $(HOSTIP):4369:4369 -e RABBITMQ_HEARTBEAT=30 -p $(HOSTIP):5672:5672 \
-		--name $(TAG) --rm $(TAG)
+	$(DOCKER) run -d \
+                --security-opt apparmor=unconfined \
+		-p $(HOSTIP):4369:4369 \
+		-e RABBITMQ_HEARTBEAT=30 \
+		-p $(HOSTIP):5672:5672 \
+		--name $(TAG) --restart unless-stopped $(TAG)
+
 commit: start
-	docker commit $(TAG)
-	docker kill $(TAG)
+	$(DOCKER) commit $(TAG)
 
 stop:
-	-docker kill $(TAG)
+	-$(DOCKER) rm -f $(TAG)
 
 clean: stop
-	-docker rmi $(TAG)
+	-$(DOCKER) rmi $(TAG)
 	rm -rf noweb
-
 

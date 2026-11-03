@@ -13,21 +13,22 @@ ensureKey:
 	fi
 
 build: | stop ensureKey
-	cd VNCService && docker build $(BUILDOPT) -t $(TAG) .
+	cd VNCService && sudo docker build $(BUILDOPT) -t $(TAG) .
+
 start: build
 	sudo docker run -d \
-        -p "$(HOSTIP):631:631" \
-        -p "$(HOSTIP):8010:8010" \
-        -p "$(HOSTIP):8020:8020" \
-		--name $(TAG) --rm $(TAG)
+                --security-opt apparmor=unconfined \
+		-p "$(HOSTIP):631:631" \
+		-p "$(HOSTIP):8010:8010" \
+		-p "$(HOSTIP):8020:8020" \
+		--name $(TAG) $(TAG)
+
 commit: start
-	docker commit $(TAG)
-	docker kill $(TAG)
+	sudo docker commit $(TAG)
+	sudo docker kill $(TAG)
 
 stop:
-	-docker kill $(TAG)
+	-sudo docker rm -f $(TAG)
 
 clean: stop
-	-docker rmi $(TAG)
-
-
+	-sudo docker rmi $(TAG)
