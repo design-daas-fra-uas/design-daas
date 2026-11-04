@@ -1,34 +1,55 @@
-.PHONY: all build prepare start commit stop clean
+# Linux desktop image for DaaS container instances, see README.md.
+# Run as root (docker, /root/.ssh/id_rsa.pub).
 
-TAG := x11vnc
-PORT ?= 5901
-CMD := /bin/bash -i
-QMSGDIR := ../../src/app/daas/messaging
-QINSTDIR := ../../src/app/inst
-PASSWORD := user1234
-BUILDOPT ?= 
-all: commit
+.PHONY: all prepare build run check shell stop clean
 
+# x11vnc: the root image name (default_x11vnc_image_name in
+# src/config/files.toml); daas.contx11: the image the sample container
+# object contx11 runs (src/app/daas/db/db_samples.py)
+TAGS := x11vnc daas.contx11
+IMAGE := $(firstword $(TAGS))
+# Test container of `make run` / `make check`
+NAME := x11vnc
+VNC_PORT ?= 5901
+SSH_PORT ?= 2221
+# Must match vnc_password in src/app/daas/objects/config_factory.py
+VNC_PASSWORD ?= user1234
+# Public key the backend logs in with (created by `make deps`)
+SSH_KEY ?= /root/.ssh/id_rsa.pub
+AGENT_SRC := ../../src/app/daas/messaging
+AGENT_ENV := ../../src/app/inst
+BUILDOPT ?=
+
+all: build
+
+# Build context: the DaaS agent from src/ and the backend's ssh key
 prepare:
-	rm -rf qmsg
-	mkdir -p qmsg/env
-	cp -r $(QMSGDIR)/* qmsg
-	cp -r $(QINSTDIR)/* qmsg/env
-	cp /root/.ssh/id_rsa.pub authorized_keys
+	test -r $(SSH_KEY) || { echo "Missing $(SSH_KEY): run 'make deps' in installer/"; exit 1; }
+	rm -rf agent
+	mkdir -p agent/env
+	cp -r $(AGENT_SRC)/* agent
+	cp -r $(AGENT_ENV)/* agent/env
+	cp $(SSH_KEY) authorized_keys
 
-build: | stop prepare
-	docker build $(BUILDOPT) -t $(TAG) .
+build: prepare
+	docker build $(BUILDOPT) --build-arg VNC_PASSWORD=$(VNC_PASSWORD) \
+		$(addprefix -t ,$(TAGS)) .
 
-start: build
-	docker run -d -p 127.0.0.1:$(PORT):5900 -p 127.0.0.1:2221:22 \
-		--name $(TAG) --rm  $(TAG) $(CMD)
+# Start a test container: VNC on 127.0.0.1:VNC_PORT, ssh on 127.0.0.1:SSH_PORT
+run: stop
+	docker run -d --rm --name $(NAME) \
+		-p 127.0.0.1:$(VNC_PORT):5900 -p 127.0.0.1:$(SSH_PORT):22 $(IMAGE)
 
-commit: start
-	#docker commit $(TAG)
-	docker kill $(TAG)
+# Start a test container, check that everything in it runs, remove it
+check:
+	./check.bash $(IMAGE) $(NAME)
+
+shell:
+	docker exec -it $(NAME) bash
 
 stop:
-	-docker kill $(TAG)
+	-docker rm -f $(NAME) 2>/dev/null
 
 clean: stop
-	-docker rmi $(TAG)
+	-docker image rm $(TAGS)
+	rm -rf agent authorized_keys
