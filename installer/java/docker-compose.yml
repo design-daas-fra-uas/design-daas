@@ -1,0 +1,68 @@
+# Java backend (users, OAuth tokens, permissions) + its MariaDB.
+#
+# Values come from installer/java/.env, which java/install.bash generates
+# from installer/daas.env. Started by java-backend.service.
+#
+#   docker-compose --env-file .env -f docker-compose.yml ps|logs -f
+
+name: daas-java
+
+services:
+  db:
+    image: mariadb:11.4
+    container_name: daas-java-db
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${JAVA_DB_NAME}
+      MARIADB_USER: ${JAVA_DB_USER}
+      MARIADB_PASSWORD: ${JAVA_DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${JAVA_DB_ROOT_PASSWORD}
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  backend:
+    build:
+      context: ${JAVA_BACKEND_FOLDER}
+    image: daas-java-backend
+    container_name: daas-java-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      # Only reachable from this host: nginx (/auth/) and the DaaS backend
+      - "127.0.0.1:${JAVA_PORT}:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${JAVA_PROFILE}
+      DB_URL: jdbc:mariadb://db:3306/${JAVA_DB_NAME}
+      DB_USERNAME: ${JAVA_DB_USER}
+      DB_PASSWORD: ${JAVA_DB_PASSWORD}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      OAUTH_KEYS_DIR: /app/keys
+      OAUTH_ISSUER: ${AUTH_PUBLIC_URL}
+      OAUTH_ACCESS_TOKEN_TTL_SECONDS: ${OAUTH_ACCESS_TOKEN_TTL_SECONDS}
+      OAUTH_REFRESH_TOKEN_TTL_DAYS: ${OAUTH_REFRESH_TOKEN_TTL_DAYS}
+      FRONTEND_URL: ${FRONTEND_PUBLIC_URL}
+      CORS_ALLOWED_ORIGINS: ${FRONTEND_PUBLIC_URL}
+      # nginx reaches the container through the docker bridge gateway, so
+      # trust X-Forwarded-For from there (needed for per-client rate limits)
+      RATE_LIMIT_TRUSTED_PROXIES: 127.0.0.1/32,::1/128,172.16.0.0/12
+      MAIL_ENABLED: ${MAIL_ENABLED}
+      MAIL_HOST: ${MAIL_HOST}
+      MAIL_PORT: ${MAIL_PORT}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_FROM: ${MAIL_FROM}
+    volumes:
+      # RSA keys for signing tokens; kept so tokens survive restarts
+      - keys:/app/keys
+
+volumes:
+  db-data:
+  keys:
