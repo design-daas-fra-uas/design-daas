@@ -1,0 +1,25 @@
+# React frontend, served by nginx in the daas-frontend container.
+#
+# Values come from installer/frontend/.env, which frontend/install.bash
+# generates (from installer/daas.env when given). Started by frontend.service.
+#
+#   docker-compose --env-file .env -f docker-compose.yml ps|logs -f
+
+name: daas-frontend
+
+services:
+  web:
+    build:
+      context: ${FRONTEND_FOLDER}
+      target: server
+      # Baked into the build; empty = the frontend's built-in defaults
+      args:
+        REACT_APP_DAAS_API_URL: ${DAAS_PUBLIC_URL:-}
+        REACT_APP_AUTH_API_URL: ${AUTH_PUBLIC_URL:-}
+        REACT_APP_OAUTH_CLIENT_ID: ${OAUTH_CLIENT_ID:-}
+    image: daas-frontend
+    container_name: daas-frontend
+    restart: unless-stopped
+    ports:
+      # nginx (:8443, upstream_front) proxies to this
+      - "127.0.0.1:5001:80"
