@@ -1,52 +1,45 @@
+# guacd, the Guacamole proxy daemon (see README.md): translates between the
+# Guacamole protocol (browser -> DaaS backend) and VNC/RDP/SSH of the
+# instances. The DaaS backend starts it as daas-0-guacd on 127.0.0.1:4822
+# (src/config/container.toml).
+
+# bookworm: guacd 1.5.4 needs FreeRDP 2, trixie only has FreeRDP 3
 FROM debian:bookworm
 
-# Install essentials
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Build dependencies
-RUN apt update -y && apt upgrade -y && \
-    apt install -y \
+# Build tools and the libraries of every guacd feature DaaS uses:
+# VNC (libvncserver), RDP (freerdp2), SSH (libssh2), images (cairo, jpeg,
+# png, webp), text (pango), sound (pulse, vorbis); ghostscript converts RDP
+# print jobs to PDF
+RUN apt-get update -y && apt-get upgrade -y \
+    && apt-get install -y \
     build-essential \
-    cmake \
-    libcairo2-dev \
-    libjpeg62-turbo-dev \
-    libpng-dev \
-    libossp-uuid-dev \
-    freerdp2-dev \
-    libfreerdp2-2 \
-    libpango1.0-dev \
-    libssh2-1-dev \
-    libssl-dev \
-    libvncserver-dev \
-    libpulse-dev \
-    libvorbis-dev \
-    libwebp-dev \
-    wget
+    libcairo2-dev libjpeg62-turbo-dev libpng-dev libwebp-dev \
+    libossp-uuid-dev libpango1.0-dev libssl-dev \
+    libvncserver-dev freerdp2-dev libssh2-1-dev \
+    libpulse-dev libvorbis-dev \
+    ghostscript \
+    && rm -rf /var/lib/apt/lists/*
 
-# guacamole-server source (shipped in this folder, the Apache mirror URL is not stable)
+# guacamole-server source, shipped in this folder (the Apache mirror URL
+# is not stable); built and installed to /usr/local, source removed
+ARG GUACD_VERSION=1.5.4
 WORKDIR /usr/local/src
-COPY guacamole-server-1.5.4.tar.gz .
-RUN tar -xzf guacamole-server-1.5.4.tar.gz && rm guacamole-server-1.5.4.tar.gz
+COPY guacamole-server-${GUACD_VERSION}.tar.gz .
+RUN tar -xzf guacamole-server-${GUACD_VERSION}.tar.gz \
+    && cd guacamole-server-${GUACD_VERSION} \
+    && ./configure \
+    && make \
+    && make install \
+    && ldconfig \
+    && cd / && rm -rf /usr/local/src/guacamole-server-*
+WORKDIR /
 
-# Build guacd
-WORKDIR /usr/local/src/guacamole-server-1.5.4
-RUN ./configure --with-init-dir=/etc/init.d && \
-    make && \
-    make install && \
-    ldconfig
-# guacamole.properties is written by entrypoint.bash
-RUN mkdir -p /etc/guacamole
-RUN apt-get install -y ghostscript cups-bsd
-
-# Expose guacd default port
+# debug logs every instruction; use info for less (docker run -e)
 ENV GUACD_LOG_LEVEL=debug
 EXPOSE 4822
 
-# Run guacd
-CMD ["guacd", "-f"]
-
-# entrypoint
-COPY ./entrypoint.bash /entrypoint.bash
-RUN chmod a+x /entrypoint.bash
-ENTRYPOINT [ "/entrypoint.bash" ]
-
+# exec: guacd is PID 1, so the container stops (and the backend notices)
+# when guacd dies
+CMD ["sh", "-c", "exec guacd -b 0.0.0.0 -L \"$GUACD_LOG_LEVEL\" -f"]
