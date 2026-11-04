@@ -1,41 +1,46 @@
-.PHONY: all prepare build start commit stop clean clean-all
+# Wine desktop image for DaaS container instances, see README.md.
+# Run as root. Builds on the x11vnc image: build that first.
 
-TAG := wine
-PORT := 5900
-CMD := /bin/bash -i
-PASSWORD := user1234
-QMSGDIR := ../../src/app/daas/messaging
-QINSTDIR := ../../src/app/inst
+.PHONY: all prepare build run check shell stop clean
+
+# wine: the root image name (default_wine_image_name in src/config/files.toml,
+# DEFAULT_CNT_IMAGE of new containers); daas.contwine: the image the sample
+# container object contwine runs (src/app/daas/db/db_samples.py)
+TAGS := wine daas.contwine
+IMAGE := $(firstword $(TAGS))
+BASE := x11vnc
+# Test container of `make run` / `make check`
+NAME := wine
+VNC_PORT ?= 5902
+SSH_PORT ?= 2222
+# Test application put into the prefix as C:\app.exe
 APP_URL := https://download-installer.cdn.mozilla.net/pub/thunderbird/releases/115.6.1/win64/de/Thunderbird%20Setup%20115.6.1.exe
 BUILDOPT ?=
-all: commit
+
+all: build
 
 prepare:
-	rm -rf qmsg
-	mkdir -p qmsg/env
-	cp -r $(QMSGDIR)/* qmsg
-	cp -r $(QINSTDIR)/* qmsg/env
-	cp /root/.ssh/id_rsa.pub authorized_keys
-	sudo chmod -R a+rwx qmsg
-	if [ ! -f ./app.exe ]; then \
-		curl -o app.exe $(APP_URL) ; \
-	fi
+	docker image inspect $(BASE) >/dev/null 2>&1 || { echo "Missing image $(BASE): run 'make x11vnc-install' in installer/ first"; exit 1; }
+	test -f app.exe || curl -fL -o app.exe "$(APP_URL)"
 
-build: | stop prepare
-	docker build $(BUILDOPT) -t $(TAG) .
+build: prepare
+	docker build $(BUILDOPT) $(addprefix -t ,$(TAGS)) .
 
-start: build
-	sudo docker run -d \
-		-p 0.0.0.0:$(PORT):$(PORT) -p 127.0.0.1:2222:22 \
-		--name $(TAG) --rm  $(TAG) $(CMD)
+# Start a test container: VNC on 127.0.0.1:VNC_PORT, ssh on 127.0.0.1:SSH_PORT
+run: stop
+	docker run -d --rm --name $(NAME) \
+		-p 127.0.0.1:$(VNC_PORT):5900 -p 127.0.0.1:$(SSH_PORT):22 $(IMAGE)
 
-commit: start
-	docker commit $(TAG)
-	docker kill $(TAG)
+# Start a test container, check the desktop and Wine in it, remove it
+check:
+	./check.bash $(IMAGE) $(NAME)
+
+shell:
+	docker exec -it $(NAME) bash
 
 stop:
-	-docker kill $(TAG)
+	-docker rm -f $(NAME) 2>/dev/null
 
 clean: stop
-	-docker rmi $(TAG)
-
+	-docker image rm $(TAGS)
+	rm -f app.exe
