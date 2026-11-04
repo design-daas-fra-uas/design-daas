@@ -4,6 +4,8 @@
 #   - sets hostname / IP values in src/config/*.toml
 #   - installs the nginx config + a self-signed certificate
 #   - seeds src/data from src/data_template
+#   - with -e <env-file>: the public URL and the login through the Java
+#     backend (auth.toml), see installer/daas.env.example
 #
 # Values are set by key name, so the script can be run again with other
 # values (it no longer depends on placeholder strings being present).
@@ -12,7 +14,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.bash"
 
 usage() {
     cat <<EOF >&2
-Usage: $0 -r <repo-folder> -h <hostname> -d <domain> [-i <ip-part>] [-s <standalone>] [-n <device>]
+Usage: $0 -r <repo-folder> -h <hostname> -d <domain> [-i <ip-part>] [-s <standalone>] [-n <device>] [-e <env-file>]
 
 Options:
     -r    Design DaaS repository folder
@@ -21,6 +23,8 @@ Options:
     -i    Last octet of this host's IP in the DaaS networks (default: 1)
     -s    Non-empty (e.g. "yes") for a standalone host without uplink bridge
     -n    Network device bridged into vmbr0 (default: enp0s4)
+    -e    Stack env file (installer/daas.env): sets the public URL and the
+          authentication against the Java backend
 EOF
     exit 1
 }
@@ -31,7 +35,8 @@ DOMAIN_NAME=""
 IP_PART=1
 STANDALONE=""
 DEVICE_NAME="enp0s4"
-while getopts ":r:h:d:i:s:n:" o; do
+ENV_FILE=""
+while getopts ":r:h:d:i:s:n:e:" o; do
     case "$o" in
         r) REPO_FOLDER="${OPTARG%/}" ;;
         h) HOST_NAME="$OPTARG" ;;
@@ -39,6 +44,7 @@ while getopts ":r:h:d:i:s:n:" o; do
         i) IP_PART="$OPTARG" ;;
         s) STANDALONE="$OPTARG" ;;
         n) DEVICE_NAME="$OPTARG" ;;
+        e) ENV_FILE="$OPTARG" ;;
         :) die "Option -$OPTARG requires an argument." ;;
         *) usage ;;
     esac
@@ -57,6 +63,11 @@ require_cmds sed grep openssl nginx systemctl
 require_dir "$REPO_FOLDER/src/config"
 
 FQDN="$HOST_NAME.$DOMAIN_NAME"
+if [[ -n "$ENV_FILE" ]]; then
+    load_stack_env "$ENV_FILE"
+    # The env file wins over -h/-d for the public name
+    FQDN="$HOST_NAME.$HOST_DOMAIN"
+fi
 CFG_FOLDER="$REPO_FOLDER/src/config"
 NGINX_SITE="/etc/nginx/sites-available/daas.conf"
 NGINX_ENABLED="/etc/nginx/sites-enabled/daas.conf"
@@ -71,8 +82,27 @@ info "Device:      $DEVICE_NAME"
 step "Backend config ($CFG_FOLDER)"
 # ============================================================
 
-set_toml_value "$CFG_FOLDER/qweb.toml"      hostip              "$FQDN"
-set_toml_value "$CFG_FOLDER/proxy.toml"     viewer_host         "$FQDN"
+# Public URL of the DaaS backend (viewer links, templates). Without an env
+# file it is https://FQDN:443.
+PUBLIC_PROTO="https"
+PUBLIC_HOST="$FQDN"
+PUBLIC_PORT=443
+if [[ -n "$ENV_FILE" ]]; then
+    [[ "$DAAS_PUBLIC_URL" =~ ^(https?)://([^/:]+)(:([0-9]+))?(/.*)?$ ]] \
+        || die "DAAS_PUBLIC_URL is not a URL like https://host[:port]: $DAAS_PUBLIC_URL"
+    PUBLIC_PROTO="${BASH_REMATCH[1]}"
+    PUBLIC_HOST="${BASH_REMATCH[2]}"
+    PUBLIC_PORT="${BASH_REMATCH[4]:-$([[ $PUBLIC_PROTO == https ]] && echo 443 || echo 80)}"
+    [[ -z "${BASH_REMATCH[5]}" || "${BASH_REMATCH[5]}" == / ]] \
+        || warn "DAAS_PUBLIC_URL has a path; the DaaS backend must be served at the root, ignoring it"
+fi
+info "Public URL:  $PUBLIC_PROTO://$PUBLIC_HOST:$PUBLIC_PORT"
+set_toml_value "$CFG_FOLDER/qweb.toml"      hostproto           "$PUBLIC_PROTO"
+set_toml_value "$CFG_FOLDER/qweb.toml"      hostip              "$PUBLIC_HOST"
+set_toml_value "$CFG_FOLDER/qweb.toml"      hostport            "$PUBLIC_PORT" raw
+set_toml_value "$CFG_FOLDER/proxy.toml"     viewer_protocol     "$PUBLIC_PROTO"
+set_toml_value "$CFG_FOLDER/proxy.toml"     viewer_host         "$PUBLIC_HOST"
+set_toml_value "$CFG_FOLDER/proxy.toml"     viewer_port         "$PUBLIC_PORT" raw
 set_toml_value "$CFG_FOLDER/vm.toml"        node                "$HOST_NAME"
 set_toml_value "$CFG_FOLDER/vm.toml"        hostIp              "192.168.123.$IP_PART"
 set_toml_value "$CFG_FOLDER/vm.toml"        bridge_cidr_daas    "192.168.123.$IP_PART/24"
@@ -111,6 +141,29 @@ else
     else
         warn "Device $DEVICE_NAME not found, skipping dhclient (use -n to set it)"
     fi
+fi
+
+# ============================================================
+step "Authentication (auth.toml)"
+# ============================================================
+
+if [[ -z "$ENV_FILE" ]]; then
+    info "No env file given (-e), leaving auth.toml as it is"
+elif [[ "$DAAS_AUTH_MODE" == local ]]; then
+    info "Local authentication: every request runs as the default user"
+    set_toml_value "$CFG_FOLDER/auth.toml" authenticator_type "local"
+else
+    # The DaaS backend talks to the Java backend directly on this host and
+    # logs in with the admin account to check permissions.
+    info "Remote authentication through the Java backend (127.0.0.1:$JAVA_PORT)"
+    warn_default_secret ADMIN_PASSWORD
+    set_toml_value "$CFG_FOLDER/auth.toml" authenticator_type   "remote"
+    set_toml_value "$CFG_FOLDER/auth.toml" enable_auth_endpoint "$DAAS_AUTH_CHECK_ENDPOINTS" raw
+    set_toml_value "$CFG_FOLDER/auth.toml" url                  "http://127.0.0.1:$JAVA_PORT"
+    set_toml_value "$CFG_FOLDER/auth.toml" clientid             "$OAUTH_CLIENT_ID"
+    set_toml_value "$CFG_FOLDER/auth.toml" scope                "admin"
+    set_toml_value "$CFG_FOLDER/auth.toml" username             "$ADMIN_EMAIL"
+    set_toml_value "$CFG_FOLDER/auth.toml" password             "$ADMIN_PASSWORD"
 fi
 
 # ============================================================

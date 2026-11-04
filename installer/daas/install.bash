@@ -67,8 +67,8 @@ step "systemd unit: $SERVICE_NAME.service"
 write_file "/etc/systemd/system/$SERVICE_NAME.service" <<EOF
 [Unit]
 Description=Design DaaS backend
-Wants=pve-cluster.service pvedaemon.service ssh.service pve-storage.target
-After=network.target pve-storage.target pve-cluster.service pvedaemon.service ssh.service nginx.service docker.service
+Wants=pve-cluster.service pvedaemon.service ssh.service pve-storage.target java-backend.service
+After=network.target pve-storage.target pve-cluster.service pvedaemon.service ssh.service nginx.service docker.service java-backend.service
 Requires=nginx.service pveproxy.service docker.service
 
 [Service]
@@ -96,4 +96,4 @@ else
 fi
 
 success "Backend installed. $SERVICE_NAME.service is enabled but not started."
-info "Next: make daas-configure, make daas-services, then make daas-start"
+info "Next: make daas-configure, make daas-services, then make daas-restart"
