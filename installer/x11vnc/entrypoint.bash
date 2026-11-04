@@ -2,8 +2,8 @@
 #
 # Entrypoint of the x11vnc desktop image. Starts, in this order:
 #   sshd           :22    the backend runs commands in the instance over ssh
-#   Xtigervnc :0   :5900  the desktop, VNC_GEOMETRY (default 1920x1080);
-#                         guacd connects here (password file /tiger-vnc-password.txt)
+#   Xtigervnc :0   :5900  the desktop, 1920x1080; guacd connects here (VNC
+#                         password file /tiger-vnc-password.txt)
 #   pulseaudio     :4713  sound: virtual_speaker / virtual_mic, TCP for the
 #                         extensions container
 #   mic listener   :8080  raw PCM from the extensions container -> virtual_speaker
@@ -30,13 +30,12 @@ log "Starting sshd"
 service ssh start
 
 export DISPLAY=:0
-VNC_GEOMETRY="${VNC_GEOMETRY:-1920x1080}"
 
-log "Starting Xtigervnc on $DISPLAY (rfb port 5900, $VNC_GEOMETRY)"
+log "Starting Xtigervnc on $DISPLAY (rfb port 5900, 1920x1080)"
 /usr/bin/Xtigervnc "$DISPLAY" -rfbport 5900 -localhost=0 -SecurityTypes VncAuth,TLSVnc \
     -PasswordFile /tiger-vnc-password.txt \
     -BlacklistTimeout 1000 -BlacklistThreshold 10000 -FrameRate 60 \
-    -geometry "$VNC_GEOMETRY" -desktop localhost:0 -depth 32 -auth /root/.Xauthority &
+    -geometry 1920x1080 -desktop localhost:0 -depth 32 -auth /root/.Xauthority &
 # xrdb/qtile fail if they start before the X server accepts connections
 wait_for "X server" test -S /tmp/.X11-unix/X0
 

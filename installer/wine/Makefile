@@ -1,5 +1,5 @@
 # Wine desktop image for DaaS container instances, see README.md.
-# Run as root. Builds on the x11vnc image: build that first.
+# Run as root (docker, /root/.ssh/id_rsa.pub).
 
 .PHONY: all prepare build run check shell stop clean
 
@@ -8,23 +8,35 @@
 # container object contwine runs (src/app/daas/db/db_samples.py)
 TAGS := wine daas.contwine
 IMAGE := $(firstword $(TAGS))
-BASE := x11vnc
 # Test container of `make run` / `make check`
 NAME := wine
 VNC_PORT ?= 5902
 SSH_PORT ?= 2222
+# Must match vnc_password in src/app/daas/objects/config_factory.py
+VNC_PASSWORD ?= user1234
+# Public key the backend logs in with (created by `make deps`)
+SSH_KEY ?= /root/.ssh/id_rsa.pub
+AGENT_SRC := ../../src/app/daas/messaging
+AGENT_ENV := ../../src/app/inst
 # Test application put into the prefix as C:\app.exe
 APP_URL := https://download-installer.cdn.mozilla.net/pub/thunderbird/releases/115.6.1/win64/de/Thunderbird%20Setup%20115.6.1.exe
 BUILDOPT ?=
 
 all: build
 
+# Build context: the DaaS agent from src/, the backend's ssh key, the test app
 prepare:
-	docker image inspect $(BASE) >/dev/null 2>&1 || { echo "Missing image $(BASE): run 'make x11vnc-install' in installer/ first"; exit 1; }
+	test -r $(SSH_KEY) || { echo "Missing $(SSH_KEY): run 'make deps' in installer/"; exit 1; }
+	rm -rf agent
+	mkdir -p agent/env
+	cp -r $(AGENT_SRC)/* agent
+	cp -r $(AGENT_ENV)/* agent/env
+	cp $(SSH_KEY) authorized_keys
 	test -f app.exe || curl -fL -o app.exe "$(APP_URL)"
 
 build: prepare
-	docker build $(BUILDOPT) $(addprefix -t ,$(TAGS)) .
+	docker build $(BUILDOPT) --build-arg VNC_PASSWORD=$(VNC_PASSWORD) \
+		$(addprefix -t ,$(TAGS)) .
 
 # Start a test container: VNC on 127.0.0.1:VNC_PORT, ssh on 127.0.0.1:SSH_PORT
 run: stop
@@ -43,4 +55,4 @@ stop:
 
 clean: stop
 	-docker image rm $(TAGS)
-	rm -f app.exe
+	rm -rf agent authorized_keys app.exe
