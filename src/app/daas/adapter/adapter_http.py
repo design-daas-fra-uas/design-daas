@@ -36,15 +36,25 @@ class HttpAdapter(Loggable):
         self,
         method: str,
         url: str,
-        header: dict[str, str] = {},
-        cookies: dict[str, str] = {},
-        params: dict[str, str] = {},
-        data: dict[str, Any] = {},
-        files: dict[str, Any] = {},
+        header=None,
+        cookies=None,
+        params=None,
+        data=None,
+        files=None,
     ) -> tuple[aiohttp.ClientResponse, dict]:
         """
         Perform request with specified parameters
         """
+        if files is None:
+            files = {}
+        if data is None:
+            data = {}
+        if params is None:
+            params = {}
+        if header is None:
+            header = {}
+        if cookies is None:
+            cookies = {}
         encoded_data: dict[str, Any] | str = data
         if "Content-Type" in header:
             if header["Content-Type"] == "application/json":

@@ -168,7 +168,7 @@ class DaasBaseObject(DaasObject):
 
     async def stop_prepare(self, instance: InstanceObject, force: bool) -> bool:
         """Prepare instance stop"""
-        # await self.disconnect(instance, force)
+        await self.disconnect(instance, force)
         return True
 
     async def stop_finalize(self, instance: InstanceObject) -> bool:

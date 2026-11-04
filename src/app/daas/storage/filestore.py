@@ -17,7 +17,7 @@ class Filestore(FilestoreDocker):
         init_fs = await self.initialize_filesystem()
         init_perm = await self.initialize_permissions()
         success = init_fs and init_perm and init_db
-        if success is False:
+        if not success:
             self._log_error("Filestore NOT initialized")
         return success
 

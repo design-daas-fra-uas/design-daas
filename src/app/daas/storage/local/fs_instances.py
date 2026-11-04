@@ -31,7 +31,7 @@ class FilestoreInstances(FilestorePermissions):
         instance = await dbase.get_instance_by_adr(adr)
         cmd = CMD_WIN_READFILE
         if instance is not None:
-            if windows is False:
+            if not windows:
                 cmd = CMD_LINUX_READFILE
             statusfile = await self.get_inst_file_status(os_username, windows, False)
             ret = await instance.inst_vminvoke_ssh(cmd=cmd, args=f"{statusfile}")

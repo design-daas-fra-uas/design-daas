@@ -23,9 +23,15 @@ class ContainerEnvironmentBase(ContainerPhase):
         Loggable.__init__(self, LogTarget.OBJECT)
 
     async def env_create(
-        self, files: list[File] = [], installers: list[str] = [], args: dict = {}
+        self, files=None, installers=None, args=None
     ) -> Optional[Environment]:
         """Derives new environment"""
+        if args is None:
+            args = {}
+        if installers is None:
+            installers = []
+        if files is None:
+            files = []
         from app.daas.db.database import Database
 
         dbase = await get_database(Database)

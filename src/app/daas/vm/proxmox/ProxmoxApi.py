@@ -149,10 +149,6 @@ class ApiProxmox(Loggable):
         """
         Configures proxmox network
         """
-        br0 = None
-        br1 = None
-        br8 = None
-        br9 = None
         check_br0, _ = await self.prox_network_status(self.config_prox.node, "vmbr0")
         if check_br0.status != 200:
             self._log_info(f"vmbr0 {self.config_prox.bridge_cidr_daas}")

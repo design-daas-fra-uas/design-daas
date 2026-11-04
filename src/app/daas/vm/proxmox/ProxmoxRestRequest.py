@@ -4,7 +4,6 @@ import json as json_parser
 import aiohttp
 from typing import Optional
 from dataclasses import dataclass
-from quart.utils import run_sync
 from app.daas.adapter.adapter_http import HttpAdapter, HttpAdapterConfig
 from app.qweb.logging.logging import LogTarget, Loggable
 
@@ -80,7 +79,7 @@ class ProxmoxRestRequest(Loggable):
             method, url, params, data, files
         )
         self.__log_request(response, json)
-        if response is not None and response.status >= 200 and response.status < 300:
+        if response is not None and 200 <= response.status < 300:
             json_data = json["data"]
             if isinstance(json_data, str) and json_data != "":
                 resp, data = await self.__read_task_sync(vmnode, 1, json_data)
@@ -96,7 +95,7 @@ class ProxmoxRestRequest(Loggable):
             ts_session = self.currentSession["time"]
             ts_now = datetime.datetime.now().timestamp()
             ts_diff = ts_now - ts_session
-            # self._log_info(f"Session lifetime: {ts_diff}")
+            self._log_info(f"Session lifetime: {ts_diff}")
             if ts_diff > self.configRest.session_lifetime:
                 self._log_info(f"Reset Session: {ts_diff}")
                 self.currentSession = None
@@ -141,7 +140,7 @@ class ProxmoxRestRequest(Loggable):
                         "cookie": data["ticket"],
                         "time": cur_time,
                     }
-            # self._log_info(f"{response.status:3} -> Session created: {cur_time}")
+            self._log_info(f"{response.status:3} -> Session created: {cur_time}")
         return result
 
     async def __read_task_sync(
@@ -180,7 +179,7 @@ class ProxmoxRestRequest(Loggable):
     def __log_request(self, response, data):
         if response is None:
             return
-        if response.status >= 200 and response.status < 300:
+        if 200 <= response.status < 300:
             method = response.request_info.method
             msg = ""
             if self.configHttp.logrequests:

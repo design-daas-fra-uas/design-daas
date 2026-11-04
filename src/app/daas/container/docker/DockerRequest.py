@@ -237,12 +237,16 @@ class DockerRequest(Loggable):
         cpus: int,
         memory_b: int,
         privileged: bool = False,
-        ports: list[str] = [],
-        volumes: list[str] = [],
+        ports = None,
+        volumes = None,
     ) -> tuple:
         """
         Starts a new container based on specified image
         """
+        if volumes is None:
+            volumes = []
+        if ports is None:
+            ports = []
         if self.docker is None:
             return 1, "", "No docker env"
         container_config = self._create_run_config(

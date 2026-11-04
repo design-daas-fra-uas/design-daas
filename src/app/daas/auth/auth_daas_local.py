@@ -17,9 +17,9 @@ class DaasLocalAuthenticator(DaasAuthenticatorBase):
 
     async def verify_user(self, req: ProcessorRequest, info: BlueprintInfo) -> QwebUser:
         """Verifies only user"""
-        result = QwebUser()
+        QwebUser()
         if self.config.enable_auth_user:
-            # self._log_info(f"200 -> DaaS Local Auth for bearer {req.bearer} {info.url}")
+            self._log_info(f"200 -> DaaS Local Auth for bearer {req.bearer} {info.url}")
             result = await self.return_default_user()
         else:
             result = await self.return_default_user()
@@ -29,11 +29,9 @@ class DaasLocalAuthenticator(DaasAuthenticatorBase):
         self, req: ProcessorRequest, info: BlueprintInfo
     ) -> QwebUser:
         """Verifies only endpoint"""
-        result = QwebUser()
+        QwebUser()
         if self.config.enable_auth_endpoint:
-            # self._log_info(
-            #     f"200 -> DaaS Local Auth for endpoint {req.bearer} ({info.url})"
-            # )
+            self._log_info(f"200 -> DaaS Local Auth for endpoint {req.bearer} ({info.url})")
             result = await self.return_default_user()
         else:
             result = await self.return_default_user()

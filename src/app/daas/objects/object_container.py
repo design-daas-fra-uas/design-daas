@@ -79,9 +79,11 @@ class ContainerObject(ContainerConfigBase):
         userid: int,
         connect: bool,
         object_mode: str = "",
-        args: dict = {},
+            args=None,
     ) -> Optional[InstanceObject]:
         """Starts environment instance"""
+        if args is None:
+            args = {}
         assert await self.verify_demand(userid)
         inst = await self.env_start(env, userid, connect, object_mode, args, True)
         if inst is not None:
@@ -94,9 +96,11 @@ class ContainerObject(ContainerConfigBase):
         userid: int,
         connect: bool,
         object_mode: str = "",
-        args: dict = {},
+            args=None,
     ) -> Optional[InstanceObject]:
         """Runs environment instance"""
+        if args is None:
+            args = {}
         assert await self.verify_demand(userid)
         inst = await self.env_start(env, userid, connect, object_mode, args, True)
         if inst is not None:
