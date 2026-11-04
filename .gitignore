@@ -4,3 +4,8 @@
 /site/
 /installer/**/id_rsa*
 __pycache__/
+
+# Stack settings with secrets
+/installer/daas.env
+/installer/java/.env
+/installer/frontend/.env
