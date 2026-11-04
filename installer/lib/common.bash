@@ -167,23 +167,145 @@ write_file() {
     success "Wrote: $target"
 }
 
-# set_toml_value FILE KEY VALUE: set `KEY = "VALUE"` in FILE.
-# The key is matched by name, so this works whatever the current value is
-# and can be re-run with different values.
+# set_toml_value FILE KEY VALUE [raw]: set `KEY = "VALUE"` in FILE
+# (with "raw": `KEY = VALUE`, for booleans and numbers).
+# The first line starting with KEY is replaced, so this works whatever the
+# current value is and can be re-run with different values. VALUE may hold
+# any character; it is escaped for TOML. Keys whose name contains
+# "password" are not printed in the log.
 set_toml_value() {
-    local file="$1" key="$2" value="$3" current new
+    local file="$1" key="$2" value="$3" mode="${4:-string}" current new shown tmp
     require_file "$file"
     if ! current="$(grep -m1 -E "^[[:space:]]*${key}[[:space:]]*=" "$file")"; then
         warn "Key '$key' not found in $file, skipping"
         return 0
     fi
-    new="${key} = \"${value}\""
+    if [[ "$mode" == raw ]]; then
+        new="${key} = ${value}"
+    else
+        value="${value//\\/\\\\}"
+        value="${value//\"/\\\"}"
+        new="${key} = \"${value}\""
+    fi
+    shown="$new"
+    if [[ "$key" == *password* ]]; then
+        shown="${key} = <hidden>"
+    fi
     if [[ "$current" == "$new" ]]; then
-        info "$(basename "$file"): $key already \"$value\""
+        info "$(basename "$file"): $shown (unchanged)"
         return 0
     fi
-    sed -i -E "0,/^[[:space:]]*${key}[[:space:]]*=/s#^[[:space:]]*${key}[[:space:]]*=.*#${new//&/\\&}#" "$file"
-    success "$(basename "$file"): ${current} -> ${new}"
+    tmp="$(mktemp)"
+    # Replacement via ENVIRON: awk -v would interpret backslashes
+    NEW_LINE="$new" awk -v key="$key" '
+        !done && $0 ~ "^[[:space:]]*" key "[[:space:]]*=" { print ENVIRON["NEW_LINE"]; done = 1; next }
+        { print }
+    ' "$file" > "$tmp"
+    cat "$tmp" > "$file"
+    rm -f "$tmp"
+    if [[ "$key" == *password* ]]; then
+        success "$(basename "$file"): $shown"
+    else
+        success "$(basename "$file"): ${current} -> ${new}"
+    fi
+}
+
+# load_env_file FILE: export KEY=value lines from FILE.
+# Values are taken literally (no $ expansion, unlike `source`), so passwords
+# may contain any character. Surrounding single/double quotes are removed.
+load_env_file() {
+    local file="$1" line key value
+    require_file "$file"
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        line="${line%$'\r'}"
+        [[ "$line" =~ ^[[:space:]]*(#|$) ]] && continue
+        if [[ ! "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+            warn "$file: ignoring invalid line: $line"
+            continue
+        fi
+        key="${BASH_REMATCH[1]}"
+        value="${BASH_REMATCH[2]}"
+        if [[ "$value" =~ ^\"(.*)\"$ || "$value" =~ ^\'(.*)\'$ ]]; then
+            value="${BASH_REMATCH[1]}"
+        fi
+        export "$key=$value"
+    done < "$file"
+    info "Loaded settings from $file"
+}
+
+# load_stack_env FILE: load installer/daas.env and fill in derived defaults
+# (folders, public URLs). See daas.env.example for the meaning of each key.
+load_stack_env() {
+    local file="$1" repo
+    load_env_file "$file"
+    repo="$(cd "$DAAS_INSTALLER_DIR/.." && pwd)"
+
+    [[ -n "${HOST_NAME:-}" ]] || die "HOST_NAME is not set in $file"
+    [[ -n "${HOST_DOMAIN:-}" ]] || die "HOST_DOMAIN is not set in $file"
+    export FQDN="$HOST_NAME.$HOST_DOMAIN"
+
+    export FRONTEND_FOLDER="${FRONTEND_FOLDER:-$(dirname "$repo")/design-daas-application-frontend}"
+    export JAVA_BACKEND_FOLDER="${JAVA_BACKEND_FOLDER:-$(dirname "$repo")/design-daas-backend-java}"
+    export DAAS_PUBLIC_URL="${DAAS_PUBLIC_URL:-https://$FQDN}"
+    export FRONTEND_PUBLIC_URL="${FRONTEND_PUBLIC_URL:-https://$FQDN:8443}"
+    export AUTH_PUBLIC_URL="${AUTH_PUBLIC_URL:-$FRONTEND_PUBLIC_URL/auth}"
+    # No trailing slashes: the apps append "/path"
+    DAAS_PUBLIC_URL="${DAAS_PUBLIC_URL%/}"
+    FRONTEND_PUBLIC_URL="${FRONTEND_PUBLIC_URL%/}"
+    AUTH_PUBLIC_URL="${AUTH_PUBLIC_URL%/}"
+
+    export DAAS_AUTH_MODE="${DAAS_AUTH_MODE:-remote}"
+    export DAAS_AUTH_CHECK_ENDPOINTS="${DAAS_AUTH_CHECK_ENDPOINTS:-false}"
+    export OAUTH_CLIENT_ID="${OAUTH_CLIENT_ID:-test-client}"
+    export JAVA_PORT="${JAVA_PORT:-8080}"
+    export JAVA_PROFILE="${JAVA_PROFILE:-prod}"
+
+    [[ "$DAAS_AUTH_MODE" == remote || "$DAAS_AUTH_MODE" == local ]] \
+        || die "DAAS_AUTH_MODE must be 'remote' or 'local' (got '$DAAS_AUTH_MODE')"
+    [[ "$DAAS_AUTH_CHECK_ENDPOINTS" == true || "$DAAS_AUTH_CHECK_ENDPOINTS" == false ]] \
+        || die "DAAS_AUTH_CHECK_ENDPOINTS must be 'true' or 'false'"
+    [[ "$JAVA_PORT" =~ ^[0-9]+$ ]] || die "JAVA_PORT must be a number (got '$JAVA_PORT')"
+
+    debug "FQDN=$FQDN DAAS=$DAAS_PUBLIC_URL FRONTEND=$FRONTEND_PUBLIC_URL AUTH=$AUTH_PUBLIC_URL"
+}
+
+# warn_default_secret NAME: warn if a secret still has its example value
+warn_default_secret() {
+    local name="$1"
+    if [[ -z "${!name:-}" ]]; then
+        die "$name is empty; set it in the env file"
+    elif [[ "${!name}" == change-me* ]]; then
+        warn "$name still has its example value, change it in the env file"
+    fi
+}
+
+# write_compose_env FILE KEY...: write KEY='value' lines for docker-compose
+# (--env-file) from the current environment. Values are single-quoted so
+# compose takes them literally (no $ interpolation); a single quote cannot
+# be escaped there. The file is mode 600, it may hold passwords.
+write_compose_env() {
+    local file="$1" key value
+    shift
+    {
+        echo "# Generated by the Design DaaS installer. Do not edit."
+        for key in "$@"; do
+            value="${!key:-}"
+            [[ "$value" != *"'"* ]] || die "$key must not contain a single quote (')"
+            printf "%s='%s'\n" "$key" "$value"
+        done
+    } | write_file "$file"
+    chmod 600 "$file"
+}
+
+# check_active UNIT: fail with the unit's last log lines unless it is running
+check_active() {
+    local unit="$1"
+    if systemctl is-active --quiet "$unit"; then
+        success "Service running: $unit"
+    else
+        journalctl -u "$unit" -n 50 --no-pager || true
+        die "Service failed to start: $unit"
+    fi
 }
 
 # enable_and_restart UNIT...: enable units, (re)start them and verify they run
@@ -192,11 +314,36 @@ enable_and_restart() {
     for unit in "$@"; do
         run systemctl enable "$unit"
         run systemctl restart "$unit"
-        if systemctl is-active --quiet "$unit"; then
-            success "Service running: $unit"
-        else
-            systemctl status --no-pager "$unit" || true
-            die "Service failed to start: $unit"
-        fi
+        check_active "$unit"
     done
+}
+
+# wait_http URL [TRIES]: wait until URL gives any HTTP answer (5s per try,
+# default 60 tries). Returns 1 on timeout.
+wait_http() {
+    local url="$1" tries="${2:-60}" i code
+    for (( i = 1; i <= tries; i++ )); do
+        code="$(curl -s -o /dev/null -w '%{http_code}' -X POST "$url" || true)"
+        if [[ "$code" != 000 ]]; then
+            success "$url answers (HTTP $code after $(( (i - 1) * 5 ))s)"
+            return 0
+        fi
+        (( i % 6 == 0 )) && info "Still waiting for $url ($(( i * 5 ))s)..."
+        sleep 5
+    done
+    return 1
+}
+
+# remove_unit NAME: stop, disable and delete /etc/systemd/system/NAME.service
+remove_unit() {
+    local unit="$1.service" file="/etc/systemd/system/$1.service"
+    if [[ ! -f "$file" ]]; then
+        info "$unit is not installed"
+        return 0
+    fi
+    run systemctl disable --now "$unit"
+    rm -f "$file"
+    run systemctl daemon-reload
+    systemctl reset-failed "$unit" 2>/dev/null || true
+    success "Removed $unit"
 }

@@ -5,17 +5,27 @@ SHELL := /bin/bash
 # ============================================================
 
 DESIGN_FOLDER := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/..)
-FRONTEND_FOLDER ?= $(abspath $(DESIGN_FOLDER)/../design-daas-application-frontend)
+
+# Stack settings shared by DaaS, frontend and Java backend
+# (copy daas.env.example to daas.env, or `make env`)
+ENV_FILE ?= $(DESIGN_FOLDER)/installer/daas.env
+# env_get KEY: value of KEY in ENV_FILE (empty if unset). Read with sed instead
+# of `include` so values with $ or quotes are not mangled by make.
+env_get = $(shell [ -f "$(ENV_FILE)" ] && sed -n 's/^$(1)=//p' "$(ENV_FILE)" | tail -n1 | sed -e 's/^"\(.*\)"$$/\1/' -e "s/^'\(.*\)'$$/\1/")
+# -e <file> for the scripts when the env file exists
+ENV_OPT = $(if $(wildcard $(ENV_FILE)),-e "$(ENV_FILE)")
+
+FRONTEND_FOLDER ?= $(or $(call env_get,FRONTEND_FOLDER),$(abspath $(DESIGN_FOLDER)/../design-daas-application-frontend))
 
 ISODIR := iso/iso
 ISOTYPES := win10 win11 debian12
 
-# User configuration (override on the command line: make HOST_NAME=pve2 ...)
-HOST_NUMBER ?= 11
-HOST_IP ?= 10.0.2.15
-HOST_NAME ?= pve1
-HOST_DOMAIN ?= daas-design.de
-NET_DEVICE ?= enp0s4
+# Host configuration: command line > environment > ENV_FILE > default
+HOST_NUMBER ?= $(or $(call env_get,HOST_NUMBER),11)
+HOST_IP ?= $(or $(call env_get,HOST_IP),10.0.2.15)
+HOST_NAME ?= $(or $(call env_get,HOST_NAME),pve1)
+HOST_DOMAIN ?= $(or $(call env_get,HOST_DOMAIN),daas-design.de)
+NET_DEVICE ?= $(or $(call env_get,NET_DEVICE),enp0s4)
 ISO_USER ?= root
 
 CEPH_DISK ?= /dev/vdb
@@ -24,34 +34,39 @@ CEPH_NETWORK ?= 192.168.100.0/24
 CLUSTER_NAME ?= clustertest
 CLUSTER_IP ?= 192.168.200.11
 
-STANDALONE ?=
+STANDALONE ?= $(call env_get,STANDALONE)
 LINK_IP ?=
 
 # Logging is controlled by DAAS_LOG_FILE (empty disables, default
 # /var/log/daas-installer.log) and DAAS_DEBUG=1; make passes both through.
 
-# Services
-SERVICES := frontend.service daas.service \
-            pve-firewall.service pvedaemon.service \
-            pve-ha-crm.service pve-ha-lrm.service \
-            pve-lxc-syscalld.service pvefw-logger.service \
-            pveproxy.service pvescheduler.service \
-            pvestatd.service spiceproxy.service
+# Services managed by service.bash, in start order
+COMPONENTS := java daas frontend
+ACTIONS := start stop restart status logs delete
+LIFECYCLE := $(foreach c,$(COMPONENTS),$(addprefix $(c)-,$(ACTIONS)))
+SERVICE_CMD = ./service.bash $(ENV_OPT)
+# PURGE=1: *-delete / *-reinstall also delete the service's data
+PURGE ?=
+PURGE_OPT = $(if $(PURGE),-p)
+
+# Installer steps depend on each other; never run them in parallel
+.NOTPARALLEL:
 
 # ============================================================
 # Targets
 # ============================================================
 
 .PHONY: default usage all install configure other \
-        start stop status logs \
+        $(ACTIONS) reinstall $(LIFECYCLE) \
         proxmox-default proxmox-install proxmox-configure \
         proxmox-install-ceph proxmox-install-ceph-osd \
         proxmox-install-ceph-cephfs proxmox-install-ceph-pool \
         proxmox-cluster-create proxmox-cluster-join \
         proxmox-isogen proxmox-isoupload require-pve \
         daas-all daas-install daas-configure daas-services daas-containers \
-        daas-start daas-stop \
-        frontend-all frontend-install frontend-configure
+        daas-reinstall \
+        frontend-all frontend-install frontend-configure frontend-reinstall \
+        env require-env java-install java-reinstall stack-all stack-configure
 
 default: usage
 
@@ -69,6 +84,12 @@ usage:
 	@echo "  make proxmox-install      # 2nd run: Proxmox VE, docker, dnsmasq"
 	@echo "  make daas-all             # backend: install, configure, images, start"
 	@echo "  make frontend-all         # frontend (needs $(FRONTEND_FOLDER))"
+	@echo ""
+	@echo "STACK (DaaS + Java backend + frontend, settings in ENV_FILE)"
+	@echo "  env                       Create $(notdir $(ENV_FILE)) from daas.env.example"
+	@echo "  stack-all                 java-install, daas-configure, frontend-all, daas-restart"
+	@echo "  stack-configure           Re-apply ENV_FILE to DaaS + nginx (no rebuilds)"
+	@echo "  java-install              Java backend + its MariaDB (java-backend.service)"
 	@echo ""
 	@echo "COMMON"
 	@echo "  all                       proxmox-install/configure + daas-all + other"
@@ -95,17 +116,27 @@ usage:
 	@echo "  daas-configure            src/config/*.toml, nginx, src/data"
 	@echo "  daas-services             Build guacd, rabbit, mariadb, extensions images"
 	@echo "  daas-containers           Build x11vnc and wine desktop images"
-	@echo "  daas-start / daas-stop    (Re)start / stop daas.service"
+	@echo "  daas-reinstall            delete, install, configure, restart"
 	@echo ""
 	@echo "FRONTEND"
 	@echo "  frontend-all              configure + install"
-	@echo "  frontend-install"
-	@echo "  frontend-configure"
+	@echo "  frontend-install          Build the image from the current code, (re)start"
+	@echo "  frontend-configure        nginx site :8443"
+	@echo "  frontend-reinstall        delete + install"
 	@echo ""
-	@echo "CONTROL"
-	@echo "  start / stop              Start / stop all services"
-	@echo "  status                    Show service status"
-	@echo "  logs                      Follow the backend + frontend logs"
+	@echo "JAVA BACKEND (auth + permissions, needs ENV_FILE)"
+	@echo "  java-install              Build the image from the current code, (re)start"
+	@echo "  java-reinstall            delete + install (database is kept)"
+	@echo ""
+	@echo "SERVICES  <svc> = java | daas | frontend"
+	@echo "  <svc>-start / -stop / -restart / -status / -logs"
+	@echo "  <svc>-delete              Remove the service (keeps its data)"
+	@echo "  <svc>-reinstall           Delete, then install the current code"
+	@echo "  PURGE=1                   With -delete/-reinstall: also delete the data"
+	@echo "                            (java: DB + keys, daas: src/data + nginx site,"
+	@echo "                            frontend: nginx site)"
+	@echo "  start / stop / restart / status / logs / delete / reinstall"
+	@echo "                            The same for all three services"
 	@echo ""
 	@echo "CONFIGURATION"
 	@echo "  HOST_NUMBER=$(HOST_NUMBER)"
@@ -121,6 +152,7 @@ usage:
 	@echo "  CLUSTER_IP=$(CLUSTER_IP)"
 	@echo "  LINK_IP=$(LINK_IP)"
 	@echo "  FRONTEND_FOLDER=$(FRONTEND_FOLDER)"
+	@echo "  ENV_FILE=$(ENV_FILE) $(if $(wildcard $(ENV_FILE)),(found),(missing: make env))"
 	@echo ""
 	@echo "LOGGING"
 	@echo "  DAAS_LOG_FILE=<path>      Log file (default /var/log/daas-installer.log)"
@@ -145,17 +177,15 @@ other: proxmox-isogen proxmox-isoupload
 # Control
 # ============================================================
 
-start:
-	systemctl start $(SERVICES)
+# <svc>-<action>, e.g. java-restart, frontend-delete (see service.bash)
+$(LIFECYCLE):
+	$(SERVICE_CMD) $(lastword $(subst -, ,$@)) $(if $(filter %-delete,$@),$(PURGE_OPT)) $(firstword $(subst -, ,$@))
 
-stop:
-	systemctl stop $(SERVICES)
+# start, stop, ... on all services (stop/delete in reverse order)
+$(ACTIONS):
+	$(SERVICE_CMD) $@ $(if $(filter delete,$@),$(PURGE_OPT)) all
 
-status:
-	-systemctl --no-pager status $(SERVICES)
-
-logs:
-	journalctl -f -u daas.service -u frontend.service
+reinstall: java-reinstall daas-reinstall frontend-reinstall
 
 # ============================================================
 # Proxmox
@@ -212,7 +242,7 @@ proxmox-isoupload: require-pve
 
 # Order matters: the backend starts the service containers itself, so the
 # config and images must exist before daas.service is started.
-daas-all: daas-install daas-configure daas-services daas-containers daas-start
+daas-all: daas-install daas-configure daas-services daas-containers daas-restart
 
 daas-install: require-pve
 	./daas/install.bash -r "$(DESIGN_FOLDER)"
@@ -224,7 +254,8 @@ daas-configure:
 		-d "$(HOST_DOMAIN)" \
 		-i "$(HOST_NUMBER)" \
 		-n "$(NET_DEVICE)" \
-		-s "$(STANDALONE)"
+		-s "$(STANDALONE)" \
+		$(ENV_OPT)
 
 daas-services:
 	$(MAKE) -C guacd build
@@ -236,15 +267,10 @@ daas-containers:
 	$(MAKE) -C x11vnc commit
 	$(MAKE) -C wine commit
 
-daas-start:
-	systemctl restart daas.service
-	@sleep 2
-	@systemctl is-active --quiet daas.service \
-		&& echo "daas.service running (logs: journalctl -u daas -f)" \
-		|| { journalctl -u daas.service -n 50 --no-pager; exit 1; }
-
-daas-stop:
-	systemctl stop daas.service
+# Fresh venv and unit from the current code; images are kept
+# (rebuild them with daas-services / daas-containers)
+daas-reinstall:
+	$(MAKE) daas-delete daas-install daas-configure daas-restart
 
 # ============================================================
 # Frontend
@@ -253,10 +279,44 @@ daas-stop:
 frontend-all: frontend-configure frontend-install
 
 frontend-install:
-	./frontend/install.bash -r "$(DESIGN_FOLDER)" -f "$(FRONTEND_FOLDER)"
+	./frontend/install.bash -r "$(DESIGN_FOLDER)" -f "$(FRONTEND_FOLDER)" $(ENV_OPT)
 
 frontend-configure:
 	./frontend/configure.bash \
 		-r "$(DESIGN_FOLDER)" \
 		-f "$(FRONTEND_FOLDER)" \
-		-h "$(HOST_NAME)"
+		-h "$(HOST_NAME)" \
+		$(ENV_OPT)
+
+# PURGE=1 also removed the nginx site, so configure it again
+frontend-reinstall:
+	$(MAKE) frontend-delete $(if $(PURGE),frontend-configure) frontend-install
+
+# ============================================================
+# Stack: DaaS + Java backend + frontend
+# ============================================================
+
+env:
+	@if [ -f "$(ENV_FILE)" ]; then \
+		echo "$(ENV_FILE) already exists"; \
+	else \
+		install -m 600 daas.env.example "$(ENV_FILE)"; \
+		echo "Created $(ENV_FILE): set HOST_*, ADMIN_* and JAVA_DB_* there"; \
+	fi
+
+require-env:
+	@[ -f "$(ENV_FILE)" ] || { echo "Missing $(ENV_FILE): run 'make env' and edit it"; exit 1; }
+
+java-install: require-env
+	./java/install.bash -e "$(ENV_FILE)"
+
+java-reinstall: require-env
+	$(MAKE) java-delete java-install
+
+# Java first: the DaaS backend checks logins against it
+stack-all: require-env java-install daas-configure frontend-all daas-restart
+
+# Apply changed settings without rebuilding (frontend URLs are baked into
+# its build, so changing them needs frontend-install; Java settings need
+# java-install)
+stack-configure: require-env daas-configure frontend-configure daas-restart
