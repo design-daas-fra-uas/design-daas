@@ -40,8 +40,15 @@ LINK_IP ?=
 # Logging is controlled by DAAS_LOG_FILE (empty disables, default
 # /var/log/daas-installer.log) and DAAS_DEBUG=1; make passes both through.
 
-# Services managed by service.bash, in start order
-COMPONENTS := java daas frontend
+# Everything service.bash controls (see its header for what each one is)
+SERVICES := java daas frontend
+CONTAINERS := guacd rabbit db extensions
+IMAGES := x11vnc wine
+HOST := nginx dnsmasq docker proxmox
+COMPONENTS := $(SERVICES) $(CONTAINERS) $(IMAGES) $(HOST) iso
+# Folder in installer/ with the Makefile of each image
+IMAGE_DIR_db := mariadb
+image_dir = $(or $(IMAGE_DIR_$(1)),$(1))
 ACTIONS := start stop restart status logs delete
 LIFECYCLE := $(foreach c,$(COMPONENTS),$(addprefix $(c)-,$(ACTIONS)))
 SERVICE_CMD = ./service.bash $(ENV_OPT)
@@ -58,7 +65,8 @@ PURGE_OPT = $(if $(PURGE),-p)
 
 .PHONY: default usage help all install configure other \
         $(ACTIONS) reinstall $(LIFECYCLE) \
-        images images-delete proxmox-ensure \
+        images images-delete proxmox-ensure iso-install iso-reinstall \
+        $(foreach c,$(CONTAINERS) $(IMAGES),$(c)-install $(c)-reinstall) \
         proxmox-default proxmox-install proxmox-configure \
         proxmox-install-ceph proxmox-install-ceph-osd \
         proxmox-install-ceph-cephfs proxmox-install-ceph-pool \
@@ -87,29 +95,34 @@ usage:
 	@echo "  make install              Install EVERYTHING (Proxmox, images, Java, DaaS,"
 	@echo "                            frontend, ISOs). On a fresh Debian it stops after"
 	@echo "                            the PVE kernel: reboot and run it again."
-	@echo "  make start | stop | restart"
-	@echo "  make status | logs"
-	@echo "  make reinstall            After code changes: delete + install java, daas,"
-	@echo "                            frontend from the current code (data is kept)"
+	@echo "  make start | stop | restart   java, daas, frontend (daas starts the containers)"
+	@echo "  make status               Everything, one line each"
+	@echo "  make logs                 Follow java, daas, frontend"
+	@echo "  make reinstall            After code changes: delete + install the services,"
+	@echo "                            service containers and desktop images"
 	@echo "  make configure            Re-apply $(notdir $(ENV_FILE)) (no rebuilds)"
-	@echo "  make images               Rebuild the service + desktop images"
-	@echo "                            (after changes in extensions/, x11vnc/, wine/, ...)"
-	@echo "  make delete               Remove java, daas, frontend"
-	@echo "  make images-delete        Remove the service + desktop images"
+	@echo "  make delete               Remove services, containers and images"
 	@echo ""
 	@echo "  Options: PURGE=1          delete/reinstall also delete the data"
 	@echo "                            (java: DB + keys, daas: src/data + nginx site,"
-	@echo "                            frontend: nginx site)"
+	@echo "                            frontend: nginx site, db: src/data/db/mariadb)"
 	@echo "           SKIP_ISOS=1      install without generating/uploading ISOs"
 	@echo ""
-	@echo "ONE SERVICE  <svc> = java | daas | frontend"
-	@echo "  <svc>-start / -stop / -restart / -status / -logs"
-	@echo "  <svc>-delete / -reinstall"
+	@echo "ONE COMPONENT  make <component>-<action>"
+	@echo "  service    java daas frontend           install start stop restart status logs delete reinstall"
+	@echo "  container  guacd rabbit db extensions   install start stop restart status logs delete reinstall"
+	@echo "  image      x11vnc wine                  install status delete reinstall"
+	@echo "  host       nginx dnsmasq docker proxmox start stop restart status logs"
+	@echo "  iso                                     install status delete reinstall"
+	@echo "  Groups:    make images | images-delete | daas-services | daas-containers"
+	@echo "  e.g.       make db-restart   make db-logs   make extensions-reinstall"
+	@echo ""
+	@echo "DETAILS"
 	@echo "  java-install              Build from the current code, (re)start"
 	@echo "  daas-install              venv, nginx, docker-compose, systemd unit"
 	@echo "  daas-configure            src/config/*.toml, nginx, src/data"
-	@echo "  daas-services             Build guacd, rabbit, mariadb, extensions images"
-	@echo "  daas-containers           Build x11vnc and wine desktop images"
+	@echo "  daas-services             Install guacd, rabbit, db, extensions"
+	@echo "  daas-containers           Install x11vnc, wine"
 	@echo "  frontend-install          Build from the current code, (re)start"
 	@echo "  frontend-configure        nginx site :8443"
 	@echo ""
@@ -169,12 +182,12 @@ all: install
 # java-install for those)
 configure: require-env daas-configure frontend-configure daas-restart
 
-other: proxmox-isogen proxmox-isoupload
+other: iso-install
 
 images: daas-services daas-containers
 
 images-delete:
-	$(foreach d,guacd rabbit mariadb extensions x11vnc wine,$(MAKE) -C $(d) clean &&) true
+	$(SERVICE_CMD) delete $(PURGE_OPT) containers images
 
 # ============================================================
 # Control
@@ -188,7 +201,37 @@ $(LIFECYCLE):
 $(ACTIONS):
 	$(SERVICE_CMD) $@ $(if $(filter delete,$@),$(PURGE_OPT)) all
 
-reinstall: require-env java-reinstall daas-reinstall frontend-reinstall
+# Everything from the current code: services, service containers and
+# desktop images (data is kept unless PURGE=1). The DaaS backend starts the
+# containers again when it restarts.
+reinstall: require-env
+	$(MAKE) java-reinstall
+	$(MAKE) $(addsuffix -delete,$(CONTAINERS) $(IMAGES)) images
+	$(MAKE) daas-reinstall frontend-reinstall
+
+# ============================================================
+# Images: service containers + desktop images
+# ============================================================
+
+# Build the image; a running container is restarted from the new image
+$(addsuffix -install,$(CONTAINERS)): %-install:
+	$(MAKE) -C $(call image_dir,$*) build
+	@if docker ps -q --filter "name=^daas-0-$*$$" | grep -q .; then \
+		$(SERVICE_CMD) restart $*; fi
+
+$(addsuffix -reinstall,$(CONTAINERS)): %-reinstall:
+	$(MAKE) $*-delete $*-install $*-start
+
+$(addsuffix -install,$(IMAGES)): %-install:
+	$(MAKE) -C $* commit
+
+$(addsuffix -reinstall,$(IMAGES)): %-reinstall:
+	$(MAKE) $*-delete $*-install
+
+iso-install: proxmox-isogen proxmox-isoupload
+
+iso-reinstall:
+	$(MAKE) iso-delete iso-install
 
 # ============================================================
 # Proxmox
@@ -270,15 +313,9 @@ daas-configure:
 		-s "$(STANDALONE)" \
 		$(ENV_OPT)
 
-daas-services:
-	$(MAKE) -C guacd build
-	$(MAKE) -C rabbit build
-	$(MAKE) -C mariadb build
-	$(MAKE) -C extensions build
+daas-services: $(addsuffix -install,$(CONTAINERS))
 
-daas-containers:
-	$(MAKE) -C x11vnc commit
-	$(MAKE) -C wine commit
+daas-containers: $(addsuffix -install,$(IMAGES))
 
 # Fresh venv and unit from the current code; images are kept
 # (rebuild them with daas-services / daas-containers)
