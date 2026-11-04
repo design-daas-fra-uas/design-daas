@@ -4,7 +4,7 @@
 [container_request]
 # Address of the host on vmbr0 as seen by containers.
 # Set by installer/daas/configure.bash
-host = "192.168.123.1"
+host = "192.168.123.11"
 # Wait after starting the service containers (ms, 0 = no wait)
 wait_services_ms = 0
 logrequest = true

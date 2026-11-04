@@ -4,10 +4,10 @@
 [auth]
 # "local": every request runs as [auth.local] default user
 # "remote": tokens are checked against the OAuth backend in [auth.remote]
-authenticator_type = "local"
+authenticator_type = "remote"
 enable_auth_user = true
 enable_auth_token = true
-enable_auth_endpoint = true
+enable_auth_endpoint = false
 # Check that loaded objects belong to the requesting user
 enable_entity_verification = true
 enable_verify_tls = false
@@ -22,8 +22,8 @@ default_username = "default_user"
 
 [auth.remote]
 # WARNING: real-looking account in git; replace for a real deployment
-url = "https://backend.application.daas-design.de"
+url = "http://127.0.0.1:8080"
 clientid = "test-client"
 scope = "admin"
-username = "johannes.bouche@fb2.fra-uas.de"
-password = "Design.2024"
+username = "admin@design.local"
+password = "Admin123!"
