@@ -125,7 +125,8 @@ class NodeController(Loggable):
         """Adds the desired dns host in the dnsmasq config"""
         file = f"{self.config.dnsmasqhosts}"
         line = (
-            f"dhcp-host={self.config.prefixmac}:{vmid:x},id:" f",daas-{vmid},{adr},1m"
+            # id:* = match by mac only; clones send the client-id of their template
+            f"dhcp-host={self.config.prefixmac}:{vmid:x},id:*" f",daas-{vmid},{adr},1m"
         )
         cmd = f"echo {line} | tee -a {file} > /dev/null"
         return self.adapter.ssh_call(cmd)

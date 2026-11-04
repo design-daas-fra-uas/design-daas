@@ -96,6 +96,9 @@ class HeartbeatSender:
             self.connect()
             try:
                 if self.channel is not None:
+                    # Re-read: dhcp may hand out the reserved address after start
+                    if self.config.force_ip == "":
+                        self.ip_address = self.tools.get_own_ip()
                     message = HeartbeatMessage(
                         datetime.now().timestamp(), self.name, self.ip_address
                     )

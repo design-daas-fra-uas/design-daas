@@ -1,3 +1,4 @@
+import getpass
 import os
 import subprocess
 from dataclasses import dataclass
@@ -73,11 +74,27 @@ class SshAdapter(Loggable):
             self._log_error(f"{str(ex)} -> {args}", 1)
             raise OSError("Ssh execution failed for unknown reason!") from ex
 
+    def _is_local_self(self) -> bool:
+        """True if the target is this host as the user running the backend"""
+        return (
+            self.config.sshhost in ("localhost", "127.0.0.1")
+            and self.config.sshuser == getpass.getuser()
+        )
+
     def ssh_call(self, args: str) -> tuple[int, str, str]:
         """
         Spawns a process with given arguments
         """
-        full_command = [
+        # No ssh to ourselves: root has no key for root@localhost
+        if self._is_local_self():
+            full_command = ["bash", "-c", args]
+        else:
+            full_command = self._ssh_command(args)
+        self._log_info(f"SSHARGS: {full_command}")
+        return self._run_ssh_command(args, full_command)
+
+    def _ssh_command(self, args: str) -> list[str]:
+        return [
             "ssh",
             "-o",
             f"ConnectTimeout={self.config.sshopt_timeout}",
@@ -95,7 +112,8 @@ class SshAdapter(Loggable):
             args,
             "&",
         ]
-        self.__log_info(f"SSHARGS: {full_command}")
+
+    def _run_ssh_command(self, args: str, full_command: list[str]) -> tuple[int, str, str]:
         # pylint: disable=broad-exception-caught
         try:
             process = subprocess.run(

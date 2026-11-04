@@ -138,6 +138,8 @@ class QHubInstance:
             request.request_args,
         )
         code, std_out, std_err = self.execute_via_proxy(request)
+        if self.config_hub.force_ip == "":
+            self.ip_address = self.tools.get_own_ip()
         response = RpcResponse(
             datetime.now().timestamp(),
             request,
