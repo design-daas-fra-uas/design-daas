@@ -6,8 +6,8 @@ to indicate that the client is online.
 from dataclasses import asdict, dataclass
 from datetime import datetime
 import json
-import time
 import asyncio
+import threading
 import logging
 import pika
 from typing import Optional
@@ -59,12 +59,13 @@ class HeartbeatSender:
         self.connection: Optional[pika.BlockingConnection] = None
         self.channel: Optional[pika.channel.Channel] = None
         self.task: Optional[asyncio.Task] = None
+        self._stop_event = threading.Event()
 
     def connect(self) -> None:
         """
         Establish a connection to RabbitMQ. If the connection fails, retry after a delay.
         """
-        while True:
+        while not self._stop_event.is_set():
             try:
                 self.connection = pika.BlockingConnection(
                     pika.ConnectionParameters(host=self.config.rabbitmq_host)
@@ -80,20 +81,33 @@ class HeartbeatSender:
                             f"Connected to RabbitMQ at {self.config.rabbitmq_host}",
                         )
                         break
-            except pika.exceptions.AMQPConnectionError as exe:
+            except pika.exceptions.AMQPError as exe:
                 self.__log_error(
                     f"Connection failed, retrying in {self.config.reconnect_time} seconds... Error: {exe}",
                 )
-                time.sleep(self.config.reconnect_time)
+                self._stop_event.wait(self.config.reconnect_time)
+
+    def close(self) -> None:
+        """
+        Close the connection, ignoring errors of an already broken one.
+        """
+        try:
+            if self.connection is not None and self.connection.is_open:
+                self.connection.close()
+        except pika.exceptions.AMQPError as exe:
+            self.__log_error(f"Error on close: {exe}")
+        self.connection = None
+        self.channel = None
 
     def send_heartbeat(self) -> None:
         """
-        Send a heartbeat message to the RabbitMQ exchange. This method is called periodically.
+        Send a heartbeat message to the RabbitMQ exchange every heartbeat_timeout
+        seconds. Runs in its own thread, which owns the connection (pika is not
+        thread-safe).
         """
-        while True:
-            if self.connection is not None:
-                self.connection.close()
-            self.connect()
+        while not self._stop_event.is_set():
+            if self.channel is None:
+                self.connect()
             try:
                 if self.channel is not None:
                     # Re-read: dhcp may hand out the reserved address after start
@@ -108,21 +122,22 @@ class HeartbeatSender:
                         routing_key=self.config.routing_key,
                         body=json.dumps(asdict(message)),
                     )
-            except pika.exceptions.AMQPConnectionError as exe:
+                    # Answer the broker's heartbeats between two messages
+                    self.connection.process_data_events(time_limit=0)
+            except pika.exceptions.AMQPError as exe:
                 self.__log_error(
                     f"Failed to send heartbeat, reconnecting... Error: {exe}"
                 )
-            if self.connection is not None:
-                self.connection.close()
-                self.connection = None
-            time.sleep(self.config.heartbeat_timeout)
+                self.close()
+            self._stop_event.wait(self.config.heartbeat_timeout)
+        self.close()
 
     async def start(self) -> None:
         """
         Start the HeartbeatSender as an asynchronous task.
         """
         if self.task is None or self.task.done():
-            self.connect()
+            self._stop_event.clear()
             self.task = asyncio.create_task(asyncio.to_thread(self.send_heartbeat))
             self.__log_info("HeartbeatSender task started.")
 
@@ -131,7 +146,7 @@ class HeartbeatSender:
         Stop the HeartbeatSender and its associated task.
         """
         if self.task is not None:
-            self.task.cancel()
+            self._stop_event.set()
             await self.task
             self.__log_info("HeartbeatSender task stopped.")
 

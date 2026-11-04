@@ -167,7 +167,6 @@ class QHubInstance:
         :param process_request: A callable function that processes the RPC request.
         """
         if self.task_rpc_server is None:
-            self.rpc_server.connect()
             self.task_rpc_server = self.rpc_server.run_in_thread()
             self.logger.info("RpcServer task started.")
 
