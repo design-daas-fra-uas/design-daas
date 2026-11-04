@@ -124,7 +124,7 @@ class DockerRequest(Loggable):
         """Build image"""
         if self.docker is None:
             return 1, "", "No docker env"
-        if os.path.exists(dockerfile) is False:
+        if not os.path.exists(dockerfile):
             return 2, "", f"File is not present: '{dockerfile}'"
         path = os.path.dirname(dockerfile)
 

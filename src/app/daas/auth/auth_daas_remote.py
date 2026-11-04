@@ -117,7 +117,6 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
 
     async def get_endpoint_permission(self, endpoint: str, userid: int) -> dict:
         """Get user details"""
-        endpoint = "debug"
         url = f"{self.cfg_auth.remote.url}/permissions/{endpoint}/{userid}"
         response, data = await self.__request_api("get", url)
         if response is None or response.status != 200:
@@ -139,8 +138,7 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
         if endpoint_name.startswith("/"):
             endpoint_name = endpoint_name[1:]
 
-        # data = {"token": bearer, "function_name": endpoint_name}
-        data = {"token": bearer, "function_name": "debug"}
+        data = {"token": bearer, "function_name": endpoint_name}
         response, resp_data = await self.__request_api(
             "post", url, access_token=bearer, data=data
         )

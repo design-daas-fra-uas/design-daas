@@ -1,7 +1,7 @@
 """DaaS local authenticator"""
 
 from app.daas.auth.auth_daas import DaasAuthenticatorBase
-from app.qweb.auth.auth_qweb import QwebAuthenticatorBase, QwebUser
+from app.qweb.auth.auth_qweb import QwebUser
 from app.qweb.blueprints.blueprint_info import BlueprintInfo
 from app.qweb.common.config import QwebAuthenticatorConfig
 from app.qweb.processing.processor import ProcessorRequest

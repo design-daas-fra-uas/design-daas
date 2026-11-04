@@ -95,7 +95,7 @@ class DaasAuthenticatorBase(QwebAuthenticatorBase):
                 if "id_owner" in element:
                     testid = element["id_owner"]
                     result = testid in (0, owner)
-                    if result is False:
+                    if not result:
                         break
                 else:
                     result = True

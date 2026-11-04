@@ -51,7 +51,7 @@ class QwebServiceRuntime(Loggable):
 
         data = self.get_config("logging.toml")
         self.cfg_log = LoggerConfig(**data["log"])
-        if self.cfg_log.log_dir.startswith("/") is False:
+        if not self.cfg_log.log_dir.startswith("/"):
             self.cfg_log.log_dir = (
                 f"{self.cfg_qweb.sys.root_path}"
                 f"/{self.cfg_qweb.sys.data_path}"
@@ -168,7 +168,7 @@ class QwebServiceRuntime(Loggable):
         result = True
         for layer in layers:
             ret = self.layers.add(layer.name, layer)
-            if ret is False:
+            if not ret:
                 result = False
                 break
         return result
@@ -178,7 +178,7 @@ class QwebServiceRuntime(Loggable):
         result = True
         for backend in backends:
             ret = self.backends.add(backend.name, backend)
-            if ret is False:
+            if not ret:
                 result = False
                 break
         return result
@@ -187,7 +187,7 @@ class QwebServiceRuntime(Loggable):
         """Adds new backend"""
         result = True
         ret = self.backends.add(backend.name, backend)
-        if ret is False:
+        if not ret:
             result = False
         else:
             backend.registered = True
@@ -198,7 +198,7 @@ class QwebServiceRuntime(Loggable):
         result = True
         for name in names:
             ret = self.backends.remove(name)
-            if ret is False:
+            if not ret:
                 result = False
                 break
         return result

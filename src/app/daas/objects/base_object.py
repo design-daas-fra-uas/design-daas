@@ -262,7 +262,7 @@ class DaasBaseObject(DaasObject):
     def is_windows(self) -> bool:
         """Checks if current object is a windows object"""
         if self.is_machine():
-            if self.os_type in ("win10, win11"):
+            if self.os_type in "win10, win11":
                 return True
         return False
 

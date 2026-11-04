@@ -28,7 +28,7 @@ class HttpAdapter(Loggable):
     def __init__(self, cfg: HttpAdapterConfig) -> None:
         Loggable.__init__(self, LogTarget.HTTP)
         self.config = cfg
-        if self.config.verify_tls is False:
+        if not self.config.verify_tls:
             urllib3.disable_warnings()
 
     # pylint: disable=too-many-arguments,unused-argument,dangerous-default-value
@@ -74,7 +74,7 @@ class HttpAdapter(Loggable):
 
         try:
             ssl_context = ssl.create_default_context()
-            if self.config.verify_tls is False:
+            if not self.config.verify_tls:
                 ssl_context.check_hostname = False
                 ssl_context.verify_mode = ssl.CERT_NONE
             async with aiohttp.ClientSession() as session:

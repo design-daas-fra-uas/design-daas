@@ -68,7 +68,7 @@ class SshAdapter(Loggable):
             if process.stderr is not None:
                 std_err = str(process.stderr)
             self._print_result(args, process.returncode, std_out, std_err)
-            return (process.returncode, std_out, std_err)
+            return process.returncode, std_out, std_err
         except Exception as ex:
             self._log_error(f"{str(ex)} -> {args}", 1)
             raise OSError("Ssh execution failed for unknown reason!") from ex
@@ -95,7 +95,7 @@ class SshAdapter(Loggable):
             args,
             "&",
         ]
-        # self.__log_info(f"SSHARGS: {full_command}")
+        self.__log_info(f"SSHARGS: {full_command}")
         # pylint: disable=broad-exception-caught
         try:
             process = subprocess.run(
@@ -118,7 +118,7 @@ class SshAdapter(Loggable):
             if std_err.endswith("\n"):
                 std_err = std_err[:-1]
             self._print_result(args, process.returncode, std_out, std_err)
-            return (process.returncode, std_out, std_err)
+            return process.returncode, std_out, std_err
         except UnicodeDecodeError as exe:
             self._log_error(f"UnicodeDecodeError Exception raised: {exe}", -1)
             return -1, "", f"UnicodeDecodeError Exception raised: {exe}"
