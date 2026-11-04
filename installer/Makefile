@@ -222,8 +222,13 @@ $(addsuffix -install,$(CONTAINERS)): %-install:
 $(addsuffix -reinstall,$(CONTAINERS)): %-reinstall:
 	$(MAKE) $*-delete $*-install $*-start
 
+# The sample objects contx11/contwine (db_samples.py) run daas.cont<name>
+IMAGE_TAG_x11vnc := daas.contx11
+IMAGE_TAG_wine := daas.contwine
+
 $(addsuffix -install,$(IMAGES)): %-install:
 	$(MAKE) -C $* commit
+	docker tag $*:latest $(IMAGE_TAG_$*):latest
 
 $(addsuffix -reinstall,$(IMAGES)): %-reinstall:
 	$(MAKE) $*-delete $*-install

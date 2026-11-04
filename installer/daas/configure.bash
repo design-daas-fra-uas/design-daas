@@ -170,7 +170,12 @@ fi
 step "nginx"
 # ============================================================
 
-"$DAAS_INSTALLER_DIR/daas/mkcert.bash" -o "$HOST_NAME" -c "$FQDN"
+# frontend/configure.bash serves frontN.cluster.local (N = trailing digit of
+# the hostname) on :8443 with the same certificate
+FRONT_ID=0
+[[ "$HOST_NAME" =~ ([123])$ ]] && FRONT_ID="${BASH_REMATCH[1]}"
+"$DAAS_INSTALLER_DIR/daas/mkcert.bash" -o "$HOST_NAME" -c "$FQDN" \
+    -a "front${FRONT_ID}.cluster.local"
 
 run cp "$DAAS_INSTALLER_DIR/daas/nginx.conf" /etc/nginx/nginx.conf
 sed -e "s#pve1.cluster.local#$FQDN#g" "$DAAS_INSTALLER_DIR/daas/daas.conf" \
