@@ -62,7 +62,10 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
         """Verifies endpoint"""
         result = QwebUser()
         user = await self.verify_user(req, info)
-        if user.authenticated and self.config.enable_auth_endpoint:
+        # Endpoint permissions disabled: a verified user is enough
+        if not self.config.enable_auth_endpoint:
+            return user
+        if user.authenticated:
 
             response_remote = await self.get_endpoint_permission(
                 info.name, user.id_user
@@ -85,6 +88,9 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
 
     async def get_user_session(self, bearer: str) -> dict:
         """Verify bearer"""
+        # An empty bearer would fall back to the backend's own admin token
+        if not bearer:
+            return {}
         url = f"{self.cfg_auth.remote.url}/oauth2/user/session"
         response, data = await self.__request_api("get", url, access_token=bearer)
         if response is None or response.status != 200:
@@ -125,7 +131,7 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
         return data
 
     async def get_endpoint_permission_by_viewer_token(
-        self, endpoint: str, token: str
+        self
     ) -> dict:
         return {}
 
@@ -176,8 +182,10 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
 
     # pylint: disable=dangerous-default-value
     async def __request_api(
-        self, method: str, url: str, *, access_token: str = "", data: dict = {}
+        self, method: str, url: str, *, access_token: str = "", data=None
     ) -> tuple[aiohttp.ClientResponse, dict]:
+        if data is None:
+            data = {}
         chosen = await self.__choose_bearer_token(access_token)
         header = {
             "Authorization": f"Bearer {chosen}",

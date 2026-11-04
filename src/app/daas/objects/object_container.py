@@ -139,7 +139,7 @@ class ContainerObject(ContainerConfigBase):
     async def cfg_set_target(
         self, obj: str, env: Optional[Environment], args: dict
     ) -> QwebResult:
-        if await self.configure_target(obj, env, args):
+        if await self.configure_target(obj, env):
             return QwebResult(200, {})
         return QwebResult(400, {}, 1, "Error on target config")
 
@@ -151,7 +151,7 @@ class ContainerObject(ContainerConfigBase):
         env: Optional[Environment],
         args: dict,
     ) -> QwebResult:
-        if await self.copy_installers(files, installers, userid, env, args):
+        if await self.copy_installers(files, installers, userid, env):
             return QwebResult(200, {})
         return QwebResult(400, {}, 1, "error on installer_deploy")
 
@@ -170,7 +170,7 @@ class ContainerObject(ContainerConfigBase):
         env: Optional[Environment],
         args: dict,
     ) -> QwebResult:
-        if await self.copy_installers(files, installers, userid, env, args):
+        if await self.copy_installers(files, installers, userid, env):
             if await self.execute_tasks(installers, env, args):
                 return QwebResult(200, {})
         return QwebResult(400, {}, 1, "error on installation")

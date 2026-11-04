@@ -31,7 +31,7 @@ class ContainerBase(DaasBaseObject):
                 self.id_docker, tag, self.hw_cpus, self.hw_memory * 1024, False, [], []
             )
             if code == 0:
-                if await self.start_finalize(userid, True, object_mode=object_mode):
+                if await self.start_finalize(userid, object_mode=object_mode):
                     return await self._return_connected_instance(connect)
         return None
 

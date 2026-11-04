@@ -1,3 +1,4 @@
+import asyncio
 import os
 import aiohttp
 from dataclasses import dataclass
@@ -6,6 +7,7 @@ from app.daas.vm.proxmox.ProxmoxRestRequest import ProxmoxRestRequest, ProxmoxRe
 from app.daas.vm.proxmox.ProxmoxConfigStore import (
     ProxmoxConfigStore,
     ProxmoxConfigStoreConfig,
+    create_vmconf_template,
 )
 from app.qweb.logging.logging import LogTarget, Loggable
 
@@ -371,10 +373,14 @@ class ApiProxmox(Loggable):
             iso_installer=iso_installer,
             keyboard_layout=keyboard_layout,
         )
-
-        return await self.rest.session_request_sync(
+        args = obj.pop("args", "")
+        result, data = await self.rest.session_request_sync(
             "post", vmnode, url, params={}, data=obj, files={}
         )
+        if result is not None and result.status == 200 and args != "":
+            if not await self.__set_args_as_root(vmid, args):
+                return None, {}
+        return result, data
 
     async def prox_vmdelete(
         self, vmnode: str, vmid: int
@@ -405,10 +411,33 @@ class ApiProxmox(Loggable):
         Posts new vm config to proxmox api
         """
         url = f"nodes/{vmnode}/qemu/{vmid}/config"
+        cfg = dict(cfg)
+        args = cfg.pop("args", "")
         result, data = await self.rest.session_request_sync(
             "post", vmnode, url, params={}, data=cfg, files={}
         )
+        if result is not None and result.status == 200 and args != "":
+            if not await self.__set_args_as_root(vmid, args):
+                return None, {}
         return result, data
+
+    async def __set_args_as_root(self, vmid: int, args: str) -> bool:
+        """
+        Sets the qemu 'args' of a vm with `qm set` on this host.
+        Proxmox lets only root@pam set 'args', the api user may be another one.
+        The backend runs as root and on the proxmox node (single node setup).
+        """
+        proc = await asyncio.create_subprocess_exec(
+            "qm", "set", str(vmid), "--args", args,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        _, err = await proc.communicate()
+        if proc.returncode != 0:
+            self._log_error(f"qm set args failed for {vmid}: {err.decode().strip()}")
+            return False
+        self._log_info(f"qm set args for {vmid}: {args}")
+        return True
 
     # pylint: disable=too-many-arguments
     async def prox_vmconfig_set_pre_install(
@@ -455,7 +484,7 @@ class ApiProxmox(Loggable):
         """
         Posts new vm config to proxmox api
         """
-        cfg = self.config_store.create_vmconf_template(vmid, name, keyboard_layout)
+        cfg = create_vmconf_template(vmid, name, keyboard_layout)
         return await self.prox_vmconfig_set(vmnode, vmid, cfg)
 
     async def prox_vmclone(

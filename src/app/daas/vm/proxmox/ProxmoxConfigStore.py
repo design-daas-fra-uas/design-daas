@@ -105,7 +105,8 @@ class ProxmoxConfigStore(Loggable):
             "cores": cores,
             "sockets": 1,
             "memory": memsize,
-            "ostype": ostype,
+            # Proxmox knows "l26" only; "l26vm" is the DaaS name for a debian vm
+            "ostype": "l26" if ostype == "l26vm" else ostype,
             "machine": "pc-q35-8.0",
             "net0": f"virtio={mac},bridge={self.cfg.bridge_name_daas}",
             **select_for_os(windows=disk_windows, debian=disk_debian),

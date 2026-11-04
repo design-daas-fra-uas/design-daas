@@ -59,7 +59,7 @@ class ContainerConfigBase(ContainerEnvironmentBase):
         return await dbase.update_environment(env)
 
     async def configure_target(
-        self, obj: str, env: Optional[Environment], args: dict
+        self, obj: str, env: Optional[Environment]
     ) -> bool:
         from app.daas.db.database import Database
 
@@ -81,7 +81,6 @@ class ContainerConfigBase(ContainerEnvironmentBase):
         installers: list[str],
         userid: int,
         env: Optional[Environment],
-        args: dict,
     ) -> bool:
         store = await get_backend_component(BackendName.FILE, Filestore)
         instance = await self._get_inst_by_env(env)

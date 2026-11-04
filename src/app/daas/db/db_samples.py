@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from app.daas.common.model import (
     DaasObject,
     Environment,
@@ -12,6 +13,9 @@ from app.daas.common.model import (
 from app.daas.objects.object_application import ApplicationObject
 from app.daas.objects.object_machine import MachineObject
 from app.daas.objects.object_container import ContainerObject
+
+# src/data of this checkout, wherever the repo lives
+DATA_DIR = Path(__file__).resolve().parents[3] / "data"
 
 
 @dataclass
@@ -123,7 +127,7 @@ class SampleRegistry:
                 os_type="win10",
                 name="",
                 version="1.2.3",
-                localpath=f"/home/design-daas/src/data/shared/{owner}/win10DummyFile.file",
+                localpath=f"{DATA_DIR}/shared/{owner}/win10DummyFile.file",
                 remotepath="C:/Users/root",
                 filesize=79,
                 created_at=datetime.now(),
@@ -134,7 +138,7 @@ class SampleRegistry:
                 os_type="win11",
                 name="",
                 version="1.2.3",
-                localpath=f"/home/design-daas/src/data/shared/{owner}/win11DummyFile.file",
+                localpath=f"{DATA_DIR}/shared/{owner}/win11DummyFile.file",
                 remotepath="C:/Users/root",
                 filesize=79,
                 created_at=datetime.now(),
@@ -145,7 +149,7 @@ class SampleRegistry:
                 os_type="l26",
                 name="testfile",
                 version="1.2.3",
-                localpath=f"/home/design-daas/src/data/shared/{owner}/deb12DummyFile.file",
+                localpath=f"{DATA_DIR}/shared/{owner}/deb12DummyFile.file",
                 remotepath="/root",
                 filesize=79,
                 created_at=datetime.now(),
@@ -156,7 +160,7 @@ class SampleRegistry:
                 os_type="l26",
                 name="thunderbird.exe",
                 version="1.2.3",
-                localpath=f"/home/design-daas/src/data/shared/{owner}/thunderbirdFile.file",
+                localpath=f"{DATA_DIR}/shared/{owner}/thunderbirdFile.file",
                 remotepath="/root/shared/.wine64/drive_c",
                 filesize=79,
                 created_at=datetime.now(),
@@ -645,7 +649,7 @@ class SampleRegistry:
                 hw_cpus=2,
                 hw_memory=4 * 1024**3,
                 hw_disksize=8 * 1024**3,
-                os_installer=f"/home/design-daas/src/data/docker/{owner}/contx11/Dockerfile",
+                os_installer=f"{DATA_DIR}/docker/{owner}/contx11/Dockerfile",
                 vnc_port_system=-1,
                 vnc_port_instance=5900,
                 viewer_contype="instvnc",
@@ -677,7 +681,7 @@ class SampleRegistry:
                 hw_cpus=2,
                 hw_memory=4 * 1024**3,
                 hw_disksize=8 * 1024**3,
-                os_installer=f"/home/design-daas/src/data/docker/{owner}/contwine/Dockerfile",
+                os_installer=f"{DATA_DIR}/docker/{owner}/contwine/Dockerfile",
                 vnc_port_system=-1,
                 vnc_port_instance=5900,
                 viewer_contype="instvnc",

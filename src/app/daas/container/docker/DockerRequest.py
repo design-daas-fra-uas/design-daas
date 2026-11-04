@@ -207,6 +207,7 @@ class DockerRequest(Loggable):
         )
         try:
             await self.docker_container_stop(cfg.name, True)
+            self._remove_stale_container(cfg.name)
             self._log_info(f"Running service: {cfg.name}")
             container = self.docker.containers.run(**container_config)
             if container is not None:
@@ -254,6 +255,7 @@ class DockerRequest(Loggable):
         )
         try:
             await self.docker_container_stop(name, True)
+            self._remove_stale_container(name)
             container = self.docker.containers.run(**container_config)
             if container is not None:
                 name = container.name
@@ -263,6 +265,16 @@ class DockerRequest(Loggable):
         except Exception as exe:
             self._log_error(f"  1 -> Exception raised1: {exe}")
         return 1, "", "Container was not created!"
+
+    def _remove_stale_container(self, name: str):
+        """
+        Removes a non-running container (created/exited) that would block
+        `containers.run` with a name conflict
+        """
+        for cont in self.docker.containers.list(all=True, filters={"name": name}):
+            if cont.name == name and cont.status != "running":
+                cont.remove(force=True)
+                self._log_info(f"Removed stale container {cont.short_id} ({name})")
 
     async def docker_container_stop(self, name: str, force: bool) -> tuple:
         """
