@@ -7,7 +7,6 @@ from app.daas.common.enums import BackendName
 from app.daas.common.model import DaasObject
 from app.daas.node.nodecontrol import NodeController
 from app.daas.objects.object_instance import InstanceObject
-from app.daas.proxy.proxy_extensions import ProxyExtensions
 from app.daas.vm.proxmox.ProxmoxApi import ApiProxmox
 from app.plugins.platform.messaging.messaging_backend import MessagingBackend
 from app.qweb.common.common import SystemTaskArgs
@@ -70,7 +69,7 @@ class PostbootTask(Loggable):
 
     async def wait_for_boot(self, inst: InstanceObject) -> bool:
         online = await inst.check_online_state()
-        while online is False:
+        while not online:
             online = await inst.check_online_state()
             await asyncio.sleep(1)
             self._log_info("Loop wait postboot task")
@@ -100,7 +99,7 @@ class PostbootTask(Loggable):
 
     async def wait_for_shutdown(self, inst: InstanceObject) -> bool:
         online = await inst.check_online_state()
-        if online is False:
+        if not online:
             self._log_info(f"Shutdown-Wait not needed (instance={inst.id})", True)
             return True
 

@@ -27,7 +27,7 @@ class CloneTask(CloneTaskBase):
     async def _handle_state_baseimage(self) -> bool:
         await self._update_state("Wait for instance boot (baseimage)")
         online = await self.inst.check_online_state()
-        while online is False:
+        while not online:
             online = await self.inst.check_online_state()
             await asyncio.sleep(1)
         self._log_info("Finalize baseimage")

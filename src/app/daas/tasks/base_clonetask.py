@@ -1,4 +1,4 @@
-from dataclasses import asdict, dataclass
+from dataclasses import asdict
 from typing import Optional
 from quart import json
 from app.daas.common.model import Environment, File
