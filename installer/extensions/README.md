@@ -36,7 +36,7 @@ Ubuntu 22.04 with:
 - Container **`daas-0-extensions`** from image **`daas-0-extensions`**.
 - The **DaaS backend starts it** on its own start and stops it on its stop
   (`[service_containers]` in `src/config/container.toml`), with ports
-  631, 8010 (and 8020, unused) published on `127.0.0.1`.
+  631 and 8010 published on `127.0.0.1`.
 - Settings in `src/config/extensions.toml`: printer name prefix
   (`printer` + user id), ports, display name of the printer in the
   instances (`design-printer`).
@@ -79,8 +79,6 @@ From `installer/extensions/` (working on the image itself), as root:
   the instances print. Never publish 631 on a public address.
 - cups-pdf sometimes passes a broken byte in the PDF name to the
   post-processing hook; `postprocess.sh` looks the file up by its job number.
-- Port 8020 in `container.toml` is a leftover of the old audio server and
-  can be removed.
 
 ## Files
 
@@ -94,4 +92,3 @@ From `installer/extensions/` (working on the image itself), as root:
 | `VNCService/scripts/cupsd.conf` | CUPS config |
 | `check.bash` | Smoke test behind `make check` |
 | `Makefile` | build, check, clean |
-| `Backend/`, `webapp/` | Prototype from the original printer/microphone work (a Node control backend and a React test page). Not built, not used by DaaS |
