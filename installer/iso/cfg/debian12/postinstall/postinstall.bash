@@ -12,15 +12,13 @@ pip install --break-system-packages psutil pika netifaces click \
     cairocffi dbus-next qtile
 
 # SSH
-if [[ -f /opt/postinstall/ssh/id_rsa.pub ]] ; then
-    mkdir -p /root/.ssh
-    cp /opt/postinstall/ssh/id_rsa* /root/.ssh/
-    chmod 0700 /root/.ssh/id_rsa*
-fi
 if [[ -f /opt/postinstall/ssh/sshd_config ]] ; then
     cp /opt/postinstall/ssh/sshd_config /etc/ssh/sshd_config
 fi
+# Only the backend's public key: it logs in here, the VM never logs in elsewhere
+mkdir -p -m 700 /root/.ssh
 cp /opt/postinstall/ssh/authorized_keys /root/.ssh/authorized_keys
+chmod 600 /root/.ssh/authorized_keys
 systemctl disable ssh.service
 
 # pulseaudio
