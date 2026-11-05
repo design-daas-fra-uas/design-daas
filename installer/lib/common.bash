@@ -130,7 +130,7 @@ require_root() {
 require_cmds() {
     local cmd
     for cmd in "$@"; do
-        command -v "$cmd" >/dev/null 2>&1 || die "Required command not found: $cmd"
+        command -v "$cmd" >/dev/null 2>&1 || die "Required command not found: $cmd (install the dependencies: make deps)"
     done
 }
 
