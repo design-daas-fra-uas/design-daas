@@ -13,15 +13,11 @@ OUTNAME=${VOLNAME}-23H2_German_x64_unattend
 INFOLDER=$OUTFOLDER/$ISONAME
 OUTFILE=$OUTFOLDER/${OUTNAME}
 VIRTIOFOLDER=$OUTFOLDER/${ISONAME_VIO}
-# Enable link at: https://www.microsoft.com/de-de/software-download/windows10ISO
-URL_WIN="https://software.download.prss.microsoft.com/dbazure/Win11_23H2_German_x64v2.iso?t=b00a5577-dd76-445c-bb14-325a855593d8&P1=1727830683&P2=601&P3=2&P4=ZYD5moomMv6b5FgWCYk%2bHX3l4UWYMLh8ME8V4Nrjye5l7ECGucuzsDSojlmWQGS4eNfmTYoM5UUgGsKluKy0NialBEGm%2bgMoMqQg3%2b%2bWgzvaAxbWob083Gz3UtjTdT%2bCt%2bUFnj8Z4D3OyKUU0%2bQhrPX%2f4TaWFXDrxARSdusl8MrSaWWPZGDNNRgtPGi9fxX3hGoqPS95kHSdwekMtE8PvbsLZfiEYn4aB2H51YhtoLCzhg6t%2bSVRSvN6xau00M27LsiyTDSRlbR2gtPzj0Vctkpy0pREuLl5%2btWziqXv%2fppJl6EdCBXHa4OHnspm55osHAEMvnIxjdPhW6BeDl%2fyjw%3d%3d"
 URL_VIRTIO="https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.266-1/virtio-win-0.1.266.iso"
 URL_PYTHON="https://www.python.org/ftp/python/3.11.4/python-3.11.4-amd64.exe"
 URL_FIREFOX="https://download-installer.cdn.mozilla.net/pub/firefox/releases/115.0.3/win64/de/Firefox%20Setup%20115.0.3.msi"
 URL_PSTOOLS="https://download.sysinternals.com/files/PSTools.zip"
-URL_OFFICE="https://web.opendrive.com/api/v1/download/file.json/NTNfNDQzNDYxOTdfSTB6ZkM?inline=0"
 URL_TIGHTVNC="https://www.tightvnc.com/download/2.8.81/tightvnc-2.8.81-gpl-setup-64bit.msi"
-INSTALLER_OFFICE="DE_Office_2021_Professional_Plus_64Bit_v.exe"
 URL_WINGET="https://aka.ms/getwinget"
 URL_VCLIBS="https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx"
 URL_XAML="https://github.com/microsoft/microsoft-ui-xaml/releases/download/v2.8.6/Microsoft.UI.Xaml.2.8.x64.appx"
@@ -51,7 +47,7 @@ usage() {
 
 # install
 toolinstall(){
-    sudo -E apt --yes install rsync unzip unrar-free isolinux 1>&2 2>/dev/null
+    sudo -E apt --yes install rsync unzip isolinux genisoimage 1>&2 2>/dev/null
 }
 # clean
 clean(){
@@ -60,73 +56,53 @@ clean(){
     sudo rm -rf "$MODFOLDER"
 }
 
+# fetch URL FILE: download FILE once; a failed download leaves no file
+# behind (wget -O alone leaves an empty one, which counts as "downloaded")
+fetch() {
+    [ -s "$2" ] && return 0
+    mkdir -p "$(dirname "$2")"
+    if wget -O "$2.part" "$1" && [ -s "$2.part" ] ; then
+        mv "$2.part" "$2"
+    else
+        rm -f "$2.part"
+        echo "ERROR: download failed: $1" 1>&2
+        return 1
+    fi
+}
 # Download
 download() {
     mkdir -p "$ISOFOLDER"
-    if [ ! -f "$ISOFILE" ] ; then
-        wget -O "$ISOFILE" "$URL_WIN"
+    # Microsoft only offers Windows 11 23H2 downloads through a browser page with
+    # links that expire after 24h, so the ISO cannot be downloaded here
+    if [ ! -s "$ISOFILE" ] ; then
+        echo "ERROR: $ISOFILE is missing or empty." 1>&2
+        echo "Download Windows 11 23H2 (German, x64) from" 1>&2
+        echo "  https://www.microsoft.com/de-de/software-download/windows11" 1>&2
+        echo "and save it as $ISOFILE" 1>&2
+        return 1
     fi
-    if [ ! -f "$ISOFILE_VIO" ] ; then
-        wget -O "$ISOFILE_VIO" "$URL_VIRTIO"
-    fi
+    fetch "$URL_VIRTIO" "$ISOFILE_VIO"
 }
 download_tools() {
     mkdir -p "$INCFOLDER/tools"
-    if [ ! -f "$INCFOLDER/tools/python-3.11.4-amd64.exe" ] ; then
-        wget -O "$INCFOLDER/tools/python-3.11.4-amd64.exe" "$URL_PYTHON"
-    fi
-    if [ ! -f "$INCFOLDER/tools/Firefox_Setup_115.0.3.msi" ] ; then
-        wget -O "$INCFOLDER/tools/Firefox_Setup_115.0.3.msi" "$URL_FIREFOX"
-    fi
-    if [ ! -f "$INCFOLDER/tools/tightvnc-2.8.81-gpl-setup-64bit.msi" ] ; then
-        wget -O "$INCFOLDER/tools/tightvnc-2.8.81-gpl-setup-64bit.msi" "$URL_TIGHTVNC"
-    fi
-    if [ ! -f "$INCFOLDER/tools/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle" ] ; then
-        wget -O "$INCFOLDER/tools/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle" "$URL_WINGET"
-    fi
-    if [ ! -f "$INCFOLDER/tools/Microsoft.VCLibs.x64.14.00.Desktop.appx" ] ; then
-        wget -O "$INCFOLDER/tools/Microsoft.VCLibs.x64.14.00.Desktop.appx" "$URL_VCLIBS"
-    fi
-    if [ ! -f "$INCFOLDER/tools/Microsoft.UI.Xaml.2.8.x64.appx" ] ; then
-        wget -O "$INCFOLDER/tools/Microsoft.UI.Xaml.2.8.x64.appx" "$URL_XAML"
-    fi
-    if [ ! -f "$INCFOLDER/tools/ceph_reef_beta.msi" ] ; then
-        wget -O "$INCFOLDER/tools/ceph_reef_beta.msi" "$URL_CEPH"
-    fi
-    if [ ! -f "$INCFOLDER/tools/Dokan_x64-1.0.5.1000.msi" ] ; then
-        wget -O "$INCFOLDER/tools/Dokan_x64-1.0.5.1000.msi" "$URL_DOKANY1"
-    fi
-    if [ ! -f "$INCFOLDER/tools/Dokan_x64.msi" ] ; then
-        wget -O "$INCFOLDER/tools/Dokan_x64.msi" "$URL_DOKANY2"
-    fi
-    if [ ! -f "$INCFOLDER/tools/DokanSetup_redist-1.0.5.1000.exe" ] ; then
-        wget -O "$INCFOLDER/tools/DokanSetup_redist-1.0.5.1000.exe" "$URL_DOKANYSETUP"
-    fi
+    fetch "$URL_PYTHON" "$INCFOLDER/tools/python-3.11.4-amd64.exe" || return 1
+    fetch "$URL_FIREFOX" "$INCFOLDER/tools/Firefox_Setup_115.0.3.msi" || return 1
+    fetch "$URL_TIGHTVNC" "$INCFOLDER/tools/tightvnc-2.8.81-gpl-setup-64bit.msi" || return 1
+    fetch "$URL_WINGET" "$INCFOLDER/tools/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle" || return 1
+    fetch "$URL_VCLIBS" "$INCFOLDER/tools/Microsoft.VCLibs.x64.14.00.Desktop.appx" || return 1
+    fetch "$URL_XAML" "$INCFOLDER/tools/Microsoft.UI.Xaml.2.8.x64.appx" || return 1
+    fetch "$URL_CEPH" "$INCFOLDER/tools/ceph_reef_beta.msi" || return 1
+    fetch "$URL_DOKANY1" "$INCFOLDER/tools/Dokan_x64-1.0.5.1000.msi" || return 1
+    fetch "$URL_DOKANY2" "$INCFOLDER/tools/Dokan_x64.msi" || return 1
+    fetch "$URL_DOKANYSETUP" "$INCFOLDER/tools/DokanSetup_redist-1.0.5.1000.exe" || return 1
 
     mkdir -p "$INCFOLDER/env"
-    if [ ! -f "$INCFOLDER/env/PSTools.zip" ] ; then
-        wget -O "$INCFOLDER/env/PSTools.zip" "$URL_PSTOOLS"
-    fi
+    fetch "$URL_PSTOOLS" "$INCFOLDER/env/PSTools.zip" || return 1
     if [ ! -d "$INCFOLDER/env/PSTools" ] ; then
         unzip "$INCFOLDER/env/PSTools.zip" -d "$INCFOLDER/env/PSTools"
     fi
-    mkdir -p "$INCFOLDER/tools/office"
-    if [ ! -f "$INCFOLDER/tools/office/$INSTALLER_OFFICE" ] ; then
-        wget -O "$INCFOLDER/tools/office/$INSTALLER_OFFICE" "$URL_OFFICE"
-    fi
-    if [ ! -f "$INCFOLDER/tools/office/setup.exe" ] ; then
-    	mkdir -p "$INCFOLDER/tools/office"
-    	unrar-free e -o+ \
-        	"$INCFOLDER/tools/office/$INSTALLER_OFFICE" \
-        	"$INCFOLDER/tools/office/"
-
-    	if [ -f "$INCFOLDER/tools/office/configuration.xml" ]; then
-		sed -i 's#</Product>#<ExcludeApp ID="Teams" /></Product>#g' \
-	    		"$INCFOLDER/tools/office/configuration.xml"
-    	else
-		echo "WARNING: Office configuration.xml was not extracted"
-    	fi
-    fi
+    # Office is not installed (its line in postinstall.bat is commented out):
+    # put a licensed Office Deployment Tool setup in tools/office to use it
 }
 
 # Mount and extract

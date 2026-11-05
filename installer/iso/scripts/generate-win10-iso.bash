@@ -13,15 +13,11 @@ OUTNAME=${VOLNAME}-22H2_German_x64_unattend
 INFOLDER=$OUTFOLDER/$ISONAME
 OUTFILE=$OUTFOLDER/${OUTNAME}
 VIRTIOFOLDER=$OUTFOLDER/${ISONAME_VIO}
-# Enable link at: https://www.microsoft.com/de-de/software-download/windows10ISO
-URL_WIN="https://software.download.prss.microsoft.com/dbazure/Win10_22H2_German_x64v1.iso?t=d00249f6-b289-4d03-82d3-8cb0b549345c&P1=1727830592&P2=601&P3=2&P4=imzKlIRAyyB1Dy6D51Sc6nOyFIigyA4saJLVBP4%2fYzoihad6IV2nqmmpHK%2flH6uIiZDsIIIcKyqprcuOiFtTcKtExqTHoHuIAU5%2bUN%2blDHeW7hKI18lqEALskT0PzswZlUm5PJqLvwi2Wv8BNg3LyK4K0d%2f0B0b74VN%2bmMDfXjsd9c1ribCOBFluDbCsra3dJm6%2b4dlaXKR5FpVJkuMx7JWA7pj7JNTYGUe4UfdxdM1RPCmpuzeBy9Ww6jsICv29K%2fPmfEw72P57v9ta7LSAwdEu0x3ex0gayMi2%2bE0HQtCrDpuhIoiqREYqaark1BJosix90yMAQsfUBvJ9%2b3HG%2bA%3d%3d"
 URL_VIRTIO="https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.266-1/virtio-win-0.1.266.iso"
 URL_PYTHON="https://www.python.org/ftp/python/3.11.4/python-3.11.4-amd64.exe"
 URL_FIREFOX="https://download-installer.cdn.mozilla.net/pub/firefox/releases/115.0.3/win64/de/Firefox%20Setup%20115.0.3.msi"
 URL_PSTOOLS="https://download.sysinternals.com/files/PSTools.zip"
-URL_OFFICE="https://public.boxcloud.com/d/1/b1!SIlDeNnzgjmpSyIw3RJmuU5gFwrSF9RZQtKKYRLhR40d9cjPwlpM6gUgyIllL7Jb-1lc8rCPtt_EPsSqv3ylIYezMeWcREDI5C7_YLQZi9xsrmU_AvjpM47E9IDTKc36WAmow5jKdU3OzRqOgWSHR4vepnREYoWj2-do4Mxfro8XD4HBevd4YgOBngkPKUsT3Q7hDpFqzxo5zZ5OVw8RZeyY11NWxMQx-ujD4S7CKjTPtrjlMPb39J_6qP-Nk4an0iFU8iDClEKMKkSupOvdcdCbM7MzEqDP4jZPJWfGma89Homq7zCkYMAjAWorUXPs-eDzrDY4wq5UdhYO5LpmYCgO_xmYsD2Zan35CVtWcflhmKU7Ij5UufwHmu-ZbN6J8CBdfid4STX8bblHotWKL5r654mACQCWLc2nY22_Yshe6oRPsFBNGCNLs4Avcs_8kZAg4c1XUxv3H9DuIGmklV0evnuhOJP9g0KbX-e6zOrVLlT2MoZwYGHgEoyCdSo6uPyztuH82LwNxvuqum5c0QsJmAC7lbP1FWKGoI17o0ZrmZR9N4VA0dITvR-dxAmoKTQQ8t1DDvMxSJLV86LmIEEXZVRs1xjkc5gn8q4OiWGNQKEz7QHJa2i-ZSY1KMiEw6E9CxjC149PUNaFqICgiAM3NoD2g6prwu51mLR57TyaJPRH9c-6ooVaYPX_6QgDOVvVjLsQUhHFAoSe1Ulbs-LI9vQWkekYNY9Ku7XdS3fC1T7HlUU9-_tE7iWgijU48wSZOBf7rTK9GLStUfqxcphZib_1K9ncsURKpOm2rXP8ok9lohQTK8lHkLDYQduJGQKfa_no3v4qtLlaXMsaQKiCB3qWhjoM3OrtB-GyFjx6bi_Hmbol9znNWra3hNZnBb8jtWbDUGqzxft7CUfmCC3aR-ej2msVDWwp-XgfFKrWpM-OIyRsz7nY6IxXNdYn4Xx0uqinYGYHnday2agRpst7VH7_T2UvtFEZBj1hx47VbiCyONNPAKiSV2JpHY-tmZUYAdg06RpVJjQCx1oI3n2HzWkfPdhI0BCa60NRuOg9zIutZFTuOkDLRXCinudfrtEh4JMv-7WWv1OP_TPtSpv4l0OmXMLRibvPjDjUFqw77NYTzwDfTaLr-FHU-IlSQDFmt9CUOf4kaOJ421eDy6JX8YHoZR5Y5wV9EWNNPH3INLUu7cnDTx9oa0OZsYc1CCb2lmwbPcPgDAWU3xeYvd9LI1RpKW33ll530n8rhd5Ipl3xo82UhPLZNdtGkSLJBwGsZjpZuoXzZs6z-nKBbSmwpCphQKVue2dtnfwn/download"
 URL_TIGHTVNC="https://www.tightvnc.com/download/2.8.81/tightvnc-2.8.81-gpl-setup-64bit.msi"
-INSTALLER_OFFICE="DE_Office_2021_Professional_Plus_64Bit_v.exe"
 URL_WINGET="https://aka.ms/getwinget"
 URL_VCLIBS="https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx"
 URL_XAML="https://github.com/microsoft/microsoft-ui-xaml/releases/download/v2.8.6/Microsoft.UI.Xaml.2.8.x64.appx"
@@ -50,7 +46,7 @@ usage() {
 
 # install
 toolinstall(){
-    sudo -E apt --yes install rsync unzip unrar-free isolinux 1>&2 2>/dev/null
+    sudo -E apt --yes install rsync unzip isolinux genisoimage 1>&2 2>/dev/null
 }
 # clean
 clean(){
@@ -59,74 +55,53 @@ clean(){
     sudo rm -rf "$MODFOLDER"
 }
 
+# fetch URL FILE: download FILE once; a failed download leaves no file
+# behind (wget -O alone leaves an empty one, which counts as "downloaded")
+fetch() {
+    [ -s "$2" ] && return 0
+    mkdir -p "$(dirname "$2")"
+    if wget -O "$2.part" "$1" && [ -s "$2.part" ] ; then
+        mv "$2.part" "$2"
+    else
+        rm -f "$2.part"
+        echo "ERROR: download failed: $1" 1>&2
+        return 1
+    fi
+}
 # Download
 download() {
     mkdir -p "$ISOFOLDER"
-    if [ ! -f "$ISOFILE" ] ; then
-        wget -O "$ISOFILE" "$URL_WIN"
+    # Microsoft only offers Windows 10 22H2 downloads through a browser page with
+    # links that expire after 24h, so the ISO cannot be downloaded here
+    if [ ! -s "$ISOFILE" ] ; then
+        echo "ERROR: $ISOFILE is missing or empty." 1>&2
+        echo "Download Windows 10 22H2 (German, x64) from" 1>&2
+        echo "  https://www.microsoft.com/de-de/software-download/windows10ISO" 1>&2
+        echo "and save it as $ISOFILE" 1>&2
+        return 1
     fi
-    if [ ! -f "$ISOFILE_VIO" ] ; then
-        wget -O "$ISOFILE_VIO" "$URL_VIRTIO"
-    fi
+    fetch "$URL_VIRTIO" "$ISOFILE_VIO"
 }
 download_tools() {
     mkdir -p "$INCFOLDER/tools"
-    if [ ! -f "$INCFOLDER/tools/python-3.11.4-amd64.exe" ] ; then
-        wget -O "$INCFOLDER/tools/python-3.11.4-amd64.exe" "$URL_PYTHON"
-    fi
-    if [ ! -f "$INCFOLDER/tools/Firefox_Setup_115.0.3.msi" ] ; then
-        wget -O "$INCFOLDER/tools/Firefox_Setup_115.0.3.msi" "$URL_FIREFOX"
-    fi
-    if [ ! -f "$INCFOLDER/tools/tightvnc-2.8.81-gpl-setup-64bit.msi" ] ; then
-        wget -O "$INCFOLDER/tools/tightvnc-2.8.81-gpl-setup-64bit.msi" "$URL_TIGHTVNC"
-    fi
-    if [ ! -f "$INCFOLDER/tools/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle" ] ; then
-        wget -O "$INCFOLDER/tools/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle" "$URL_WINGET"
-    fi
-    if [ ! -f "$INCFOLDER/tools/Microsoft.VCLibs.x64.14.00.Desktop.appx" ] ; then
-        wget -O "$INCFOLDER/tools/Microsoft.VCLibs.x64.14.00.Desktop.appx" "$URL_VCLIBS"
-    fi
-    if [ ! -f "$INCFOLDER/tools/Microsoft.UI.Xaml.2.8.x64.appx" ] ; then
-        wget -O "$INCFOLDER/tools/Microsoft.UI.Xaml.2.8.x64.appx" "$URL_XAML"
-    fi
-    if [ ! -f "$INCFOLDER/tools/ceph_reef_beta.msi" ] ; then
-        wget -O "$INCFOLDER/tools/ceph_reef_beta.msi" "$URL_CEPH"
-    fi
-    if [ ! -f "$INCFOLDER/tools/Dokan_x64-1.0.5.1000.msi" ] ; then
-        wget -O "$INCFOLDER/tools/Dokan_x64-1.0.5.1000.msi" "$URL_DOKANY1"
-    fi
-    if [ ! -f "$INCFOLDER/tools/Dokan_x64.msi" ] ; then
-        wget -O "$INCFOLDER/tools/Dokan_x64.msi" "$URL_DOKANY2"
-    fi
-    if [ ! -f "$INCFOLDER/tools/DokanSetup_redist-1.0.5.1000.exe" ] ; then
-        wget -O "$INCFOLDER/tools/DokanSetup_redist-1.0.5.1000.exe" "$URL_DOKANYSETUP"
-    fi
+    fetch "$URL_PYTHON" "$INCFOLDER/tools/python-3.11.4-amd64.exe" || return 1
+    fetch "$URL_FIREFOX" "$INCFOLDER/tools/Firefox_Setup_115.0.3.msi" || return 1
+    fetch "$URL_TIGHTVNC" "$INCFOLDER/tools/tightvnc-2.8.81-gpl-setup-64bit.msi" || return 1
+    fetch "$URL_WINGET" "$INCFOLDER/tools/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle" || return 1
+    fetch "$URL_VCLIBS" "$INCFOLDER/tools/Microsoft.VCLibs.x64.14.00.Desktop.appx" || return 1
+    fetch "$URL_XAML" "$INCFOLDER/tools/Microsoft.UI.Xaml.2.8.x64.appx" || return 1
+    fetch "$URL_CEPH" "$INCFOLDER/tools/ceph_reef_beta.msi" || return 1
+    fetch "$URL_DOKANY1" "$INCFOLDER/tools/Dokan_x64-1.0.5.1000.msi" || return 1
+    fetch "$URL_DOKANY2" "$INCFOLDER/tools/Dokan_x64.msi" || return 1
+    fetch "$URL_DOKANYSETUP" "$INCFOLDER/tools/DokanSetup_redist-1.0.5.1000.exe" || return 1
 
     mkdir -p "$INCFOLDER/env"
-    if [ ! -f "$INCFOLDER/env/PSTools.zip" ] ; then
-        wget -O "$INCFOLDER/env/PSTools.zip" "$URL_PSTOOLS"
-    fi
+    fetch "$URL_PSTOOLS" "$INCFOLDER/env/PSTools.zip" || return 1
     if [ ! -d "$INCFOLDER/env/PSTools" ] ; then
         unzip "$INCFOLDER/env/PSTools.zip" -d "$INCFOLDER/env/PSTools"
     fi
-    mkdir -p "$INCFOLDER/tools/office"
-    if [ ! -f "$INCFOLDER/tools/office/$INSTALLER_OFFICE" ] ; then
-        wget -O "$INCFOLDER/tools/office/$INSTALLER_OFFICE" "$URL_OFFICE"
-    fi
-    if [ ! -f "$INCFOLDER/tools/office/setup.exe" ] ; then
-    	mkdir -p "$INCFOLDER/tools/office"
-    	
-    	unrar-free e -o+ \
-        	"$INCFOLDER/tools/office/$INSTALLER_OFFICE" \
-        	"$INCFOLDER/tools/office/"
-        
-        if [ -f "$INCFOLDER/tools/office/configuration.xml" ]; then
-        	sed -i 's#</Product>#<ExcludeApp ID="Teams" /></Product>#g' \
-            		"$INCFOLDER/tools/office/configuration.xml"
-    	else
-        	echo "WARNING: Office configuration.xml was not extracted"
-    	fi
-    fi
+    # Office is not installed (its line in postinstall.bat is commented out):
+    # put a licensed Office Deployment Tool setup in tools/office to use it
 }
 
 # Mount and extract
@@ -262,15 +237,15 @@ case "$ACTION" in
         ;;
     "download")
         [[ -z "$ISONAME" ]] && echo "No Isoname specified" && usage && exit 1
-        download
-        download_tools
+        download || exit 1
+        download_tools || exit 1
         ;;
     "generate")
         [[ -z "$ISONAME" ]] && echo "No Isoname specified" && usage && exit 1
         clean
         #toolinstall
-        download
-        download_tools
+        download || exit 1
+        download_tools || exit 1
         copybase
         copyaddons
         updateuser

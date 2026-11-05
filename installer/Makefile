@@ -18,7 +18,9 @@ ENV_OPT = $(if $(wildcard $(ENV_FILE)),-e "$(ENV_FILE)")
 FRONTEND_FOLDER ?= $(or $(call env_get,FRONTEND_FOLDER),$(abspath $(DESIGN_FOLDER)/../design-daas-application-frontend))
 
 ISODIR := iso/iso
-ISOTYPES := win10 win11 debian12
+# ISOs built by iso-install. Windows needs a manually downloaded Windows ISO
+# (iso/README.md): ISOTYPES="debian12 win10 win11"
+ISOTYPES ?= debian12
 
 # Host configuration: command line > environment > ENV_FILE > default
 HOST_NUMBER ?= $(or $(call env_get,HOST_NUMBER),11)
@@ -308,7 +310,7 @@ proxmox-cluster-join:
 
 proxmox-isogen:
 	$(MAKE) -C iso install
-	$(foreach t,$(ISOTYPES),$(MAKE) -C iso ISOTYPE=$(t) USERNAME=$(ISO_USER) build &&) true
+	$(foreach t,$(ISOTYPES),$(MAKE) -C iso ISOTYPE=$(t) USERNAME=$(ISO_USER) build check &&) true
 
 proxmox-isoupload: require-pve
 	./proxmox/isoupload.bash -s daas-iso $(foreach t,$(ISOTYPES),"$(ISODIR)/$(t)-daas.iso")
