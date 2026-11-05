@@ -42,7 +42,7 @@ restart the backend (nginx is only reloaded).
 | `src/config/container.toml` | host address for the containers |
 | `src/config/auth.toml` | login through the auth service (`DAAS_AUTH_MODE`, `ADMIN_EMAIL`, `OAUTH_CLIENT_ID`) |
 | Proxmox user `daas@pve` | created with the Administrator role when missing; its password is set to `PVE_API_PASSWORD` when that does not log in |
-| `src/config/local/vm.toml`, `local/auth.toml` | **the secrets** (`PVE_API_PASSWORD`, `ADMIN_PASSWORD`), root-only and not in git; the backend merges them over the tracked files (see `src/config/README.md`) |
+| `src/config/local/vm.toml`, `local/auth.toml`, `local/db.toml` | **the secrets** (`PVE_API_PASSWORD`, `ADMIN_PASSWORD`, `DAAS_DB_PASSWORD`), root-only and not in git; the backend merges them over the tracked files (see `src/config/README.md`) |
 | `/etc/nginx/ssl/` | local CA `daas-ca.crt` (once) + certificate for every public name (`DAAS_PUBLIC_URL`, `FRONTEND_PUBLIC_URL`, `AUTH_PUBLIC_URL`), see `mkcert.bash` |
 | `/etc/nginx/nginx.conf`, `sites-enabled/daas.conf` | from `nginx.conf` / `daas.conf` here; server name = host of `DAAS_PUBLIC_URL` |
 | `/etc/dnsmasq.conf` | DHCP on vmbr1 (`.50`–`.75`), gateway `192.168.223.HOST_NUMBER` |
@@ -74,6 +74,7 @@ can be repeated with other values.
 | `mkcert.bash` | Local CA + server certificate |
 | `nginx.conf`, `daas.conf` | nginx main config and the DaaS site |
 | `check.bash` | The test behind `make daas-check` |
+| `migrate-sqlite-to-mariadb.py` | One-time copy of the backend's data from SQLite into MariaDB (see `mariadb/README.md`) |
 
 ## Things to know
 

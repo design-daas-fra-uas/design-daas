@@ -68,9 +68,6 @@ keyboard, mouse, sound) before committing. `make install` with the default
 
 - A failed download or build never leaves a broken `guacamole.js`: the
   file is written to a temp file and moved into place at the end.
-- The extensions webapp (`installer/extensions/webapp`) has its own copy of
-  the client from npm (`guacamole-common-js` 1.5.0); this folder does not
-  change it.
 - Earlier this folder used a git submodule (`upstream/`); its `.gitmodules`
   entry pointed to an old path and never worked in this repo layout, so it
   was replaced by the pinned download.

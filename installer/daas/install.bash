@@ -48,7 +48,12 @@ step "Backend Python environment"
 # src/Makefile install deletes and rebuilds the venv; do not pull it away
 # under a running backend
 if [[ -x "$REPO_FOLDER/src/.venv/bin/python3" ]]; then
-    info "Keeping the existing venv (make daas-reinstall rebuilds it)"
+    # A newer version may need more packages: install what is missing
+    # (VENV_INST in src/Makefile), keep the rest as it is
+    packages="$(MAKEFLAGS= MAKELEVEL= make -s --no-print-directory -C "$REPO_FOLDER/src" --eval 'print-venv-packages: ; @echo $(VENV_INST)' print-venv-packages)"
+    # shellcheck disable=SC2086
+    run "$REPO_FOLDER/src/.venv/bin/pip" install --quiet --disable-pip-version-check $packages
+    info "Kept the existing venv, added missing packages (make daas-reinstall rebuilds it)"
 else
     run make -C "$REPO_FOLDER/src" install
 fi

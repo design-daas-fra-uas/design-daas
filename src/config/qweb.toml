@@ -15,7 +15,7 @@ allow_credentials = false
 [handler]
 enable_debugging = true
 # Registers the TestPlugin and its /test/* routes
-enable_testing = true
+enable_testing = false
 enable_timings = false
 # Echo exceptions / request args in API responses
 enable_exceptions_echo = false

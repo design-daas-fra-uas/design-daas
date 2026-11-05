@@ -40,20 +40,18 @@ service_containers = [
     "daas-0-rabbit",
     "daas-0-rabbit",
     [
-      "-p 172.17.0.1:4369:4369",
       "-p 172.17.0.1:5672:5672",
     ],
     2,
     2147483648,  # 2 GiB
   ],
-  # Extensions: CUPS (631), printer websocket (8010), audio websocket (8020)
+  # Extensions: CUPS (631), printer websocket (8010)
   [
     "daas-0-extensions",
     "daas-0-extensions",
     [
       "-p 127.0.0.1:631:631",
       "-p 127.0.0.1:8010:8010",
-      "-p 127.0.0.1:8020:8020",
     ],
     2,
     2147483648,  # 2 GiB

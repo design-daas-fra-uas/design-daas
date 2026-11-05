@@ -24,10 +24,10 @@ connect from their container IPs, not from localhost).
 - The **DaaS backend starts it** on its own start and stops it on its stop
   (`[service_containers]` in `src/config/container.toml`), with 2 CPUs and
   2 GiB memory.
-- Ports, bound to `172.17.0.1` (the docker0 bridge address), so only the
-  host and the containers reach it, not the network outside:
-  - `5672`: AMQP, what the backend and the agents use
-  - `4369`: epmd, only needed for RabbitMQ clustering
+- Port `5672` (AMQP, what the backend and the agents use), bound to
+  `172.17.0.1` (the docker0 bridge address), so only the host and the
+  containers reach it, not the network outside. (`4369`, epmd for
+  RabbitMQ clustering, is not published: DaaS runs a single broker.)
 - The agents connect to `172.17.0.1:5672` (`rabbit_ip` in
   `src/app/daas/messaging/runner_instance.py`), the backend too
   (`rabbitmq_host` in `src/config/messaging.toml`).
@@ -73,8 +73,6 @@ docker exec daas-0-rabbit rabbitmqctl list_connections user peer_host state
 - **Security**: `guest`/`guest` with access from every address. That is
   acceptable only because the ports are bound to `172.17.0.1`; never
   publish them on a public address.
-- Port `4369` is published but not needed by DaaS (only for clustering);
-  it can be removed from `src/config/container.toml`.
 - The backend opens a new AMQP connection for every RPC call to an
   instance (`hub_backend.py`), about 5 per second on a running system.
   It works, but fills the broker log with connect/close lines.

@@ -13,7 +13,7 @@ After `make install` one host runs the whole stack:
 | DaaS backend | Python API that creates and controls the instances (`daas.service`) | `https://<host>` (nginx :443) |
 | Frontend | React web app the users work in (`frontend.service`) | `https://<host>:8443` |
 | auth service | Users, login (OAuth), permissions (`daas-auth.service`) + its own MariaDB | `https://<host>:8443/auth` |
-| Service containers | `guacd`, `rabbit`, `db` (MariaDB), `extensions`; started and stopped by the DaaS backend | docker |
+| Service containers | `guacd`, `rabbit`, `db` (MariaDB: the DaaS backend's database), `extensions`; started and stopped by the DaaS backend | docker |
 | Desktop images | `x11vnc`, `wine`; the DaaS backend starts one container per instance | docker |
 | ISOs | Unattended install ISOs (win10, win11, debian12) in the `daas-iso` storage | Proxmox |
 
@@ -118,6 +118,11 @@ sets them in `daas.env` and re-runs the steps that use them.
 | `make delete` | Remove services, containers and images (data is kept) |
 | `make <command> PURGE=1` | `delete` / `reinstall` also delete the data (auth DB + keys, `src/data`, nginx sites, the DaaS MariaDB) |
 
+**`PURGE=1` deletes data for good**, including `src/data/db/mariadb`, the
+DaaS backend's whole database. Back it up first (`docker exec daas-0-mariadb
+sh -c 'mariadb-dump -uroot -p"$MARIADB_ROOT_PASSWORD" mergedb' > daas.sql`)
+and the auth service (`make auth-backup`).
+
 Frontend URLs and auth service settings are baked into their builds, so after
 changing those in `daas.env` run `make frontend-install` / `make auth-install`
 instead of `make configure`.
@@ -156,6 +161,7 @@ this repository is public.
 |---|---|
 | `PVE_API_PASSWORD` (Proxmox account `daas@pve` of the backend) | `make daas-configure daas-restart` (configure sets it in Proxmox) |
 | `ADMIN_PASSWORD` (admin of the auth service, also used by the backend) | `make auth-admin-password daas-configure daas-restart` |
+| `DAAS_DB_PASSWORD` (DaaS backend's MariaDB) | see `mariadb/README.md` (only applied to a new data folder) |
 
 Generate one with `head -c 48 /dev/urandom | base64 | tr -dc A-Za-z0-9 | head -c 32`.
 
