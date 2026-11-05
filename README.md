@@ -58,55 +58,24 @@ Use it to install all components seperately.
 git clone git@github.com:nuromedia/design-daas.git
 ```
 
-#### Install Custom Proxmox Kernel
+#### Install everything
+
+Clone the frontend and the Java backend repositories next to this one, then
+as root:
 
 ```bash
-cd installer
-export HOST_NAME=pve HOST_DOMAIN=cluster.local HOST_IP=10.0.2.15 HOST_NUMBER=111
-make proxmox-install
-shutdown -r now
+cd design-daas/installer
+make env            # creates installer/daas.env: set host name, IP and passwords there
+make install        # stops after the Proxmox kernel on a fresh Debian:
+reboot
+make install        # run it again after the reboot
+make status
 ```
 
-#### Install Proxmox
-
-```bash
-cd installer
-export HOST_NAME=pve HOST_DOMAIN=cluster.local HOST_IP=10.0.2.15 HOST_NUMBER=111
-make proxmox-install
-```
-
-#### Install Design Platform
-
-```bash
-cd installer
-export HOST_NAME=pve HOST_DOMAIN=cluster.local HOST_IP=10.0.2.15 HOST_NUMBER=111
-make daas-all STANDALONE=yes
-```
-
-#### Install Design Service Containers
-
-```bash
-cd installer
-export HOST_NAME=pve HOST_DOMAIN=cluster.local HOST_IP=10.0.2.15 HOST_NUMBER=111
-make daas-services
-```
-
-#### Install Design Templates
-
-```bash
-cd installer
-export HOST_NAME=pve HOST_DOMAIN=cluster.local HOST_IP=10.0.2.15 HOST_NUMBER=111
-make daas-containers # Baseimages Docker
-make proxmox-isogen  # Baseimages VM
-```
-
-#### Install Frontend
-
-```bash
-cd installer
-export HOST_NAME=pve HOST_DOMAIN=cluster.local HOST_IP=10.0.2.15 HOST_NUMBER=111
-make frontend-all
-```
+`make install` runs every step in order: Proxmox, host dependencies, DaaS
+backend, Docker images, Java backend, frontend, ISOs. What each step does,
+what you get and all other `make` commands are described in
+[installer/README.md](installer/README.md).
 
 ## Usage
 
@@ -118,9 +87,9 @@ Both are reachable by using any modern web browser.
 - [Video: Usage](https://www.youtube.com/watch?v=nZoH-ngyu9E)
 
 ```bash
-systemctl restart nginx
-systemctl restart daas
-systemctl restart frontend
+make -C installer status
+make -C installer restart   # java, daas, frontend
+make -C installer logs
 ```
 
 ## Acknowledgments
