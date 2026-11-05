@@ -18,11 +18,11 @@ audio straight to the instance (`pacat` to its port 8080, see
 
 ## What is in the image (`VNCService/`)
 
-Ubuntu 22.04 with:
+Ubuntu 24.04 with:
 
 - **CUPS + cups-pdf** on port 631, open to the network (`scripts/cupsd.conf`)
   so the instances can print over IPP
-- **server.js** (Node.js 18, express) on port 8010:
+- **server.js** (Node.js 24 LTS, express) on port 8010:
   - websocket `/vnc/printer?id=<name>`: creates the PDF printer `<name>`
     (`scripts/create_printer.sh`) and streams every PDF printed on it to
     the socket (`file-begin`, `file-chunk`..., `file-end`), then deletes it
