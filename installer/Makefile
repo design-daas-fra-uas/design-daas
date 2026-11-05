@@ -78,7 +78,7 @@ PURGE_OPT = $(if $(PURGE),-p)
         daas-all daas-install daas-configure daas-services daas-containers daas-check \
         daas-reinstall \
         frontend-all frontend-install frontend-configure frontend-reinstall frontend-check \
-        env require-env java-install java-reinstall
+        env require-env java-install java-reinstall java-check java-backup
 
 default: usage
 
@@ -125,7 +125,8 @@ usage:
 	@echo ""
 	@echo "ONE COMPONENT  make <component>-<action>"
 	@echo "  service    java daas frontend           install start stop restart status logs delete reinstall"
-	@echo "             frontend-check: test the running frontend like a browser"
+	@echo "             daas-check, frontend-check, java-check: test the running service"
+	@echo "             java-backup: save the Java users/permissions + signing keys"
 	@echo "  container  guacd rabbit db extensions   install start stop restart status logs delete reinstall"
 	@echo "  image      x11vnc wine                  install status delete reinstall"
 	@echo "  host       nginx dnsmasq docker proxmox start stop restart status logs"
@@ -337,6 +338,10 @@ daas-configure:
 		-s "$(STANDALONE)" \
 		$(ENV_OPT)
 
+# Checks the running backend (changes nothing)
+daas-check: require-env
+	./daas/check.bash -e "$(ENV_FILE)"
+
 # Fresh venv and unit from the current code; images are kept
 # (rebuild them with make images)
 daas-reinstall:
@@ -383,6 +388,14 @@ require-env:
 
 java-install: require-env
 	./java/install.bash -e "$(ENV_FILE)"
+
+# Checks the running Java backend (changes nothing)
+java-check: require-env
+	./java/check.bash -e "$(ENV_FILE)"
+
+# Saves the database (users, permissions) and signing keys to java/backups/
+java-backup:
+	./java/backup.bash
 
 java-reinstall: require-env
 	$(MAKE) java-delete java-install

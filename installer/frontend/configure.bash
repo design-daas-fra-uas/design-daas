@@ -96,7 +96,6 @@ sed -e "s#front1.cluster.local#${FRONT_DOMAIN}#g" \
     "$CONFIG_SOURCE" | write_file "$NGINX_CONFIG"
 run ln -sfn "$NGINX_CONFIG" "$NGINX_ENABLED"
 
-run nginx -t
-enable_and_restart nginx
+reload_nginx
 
 success "Frontend reachable at https://$FRONT_DOMAIN:8443 once frontend.service is running"
