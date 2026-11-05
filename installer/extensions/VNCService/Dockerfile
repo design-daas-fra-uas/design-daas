@@ -1,15 +1,15 @@
 # Extensions container: printing for the instances (see ../README.md).
 # The DaaS backend starts it as daas-0-extensions (src/config/container.toml)
 # and reaches it over ssh (create printers) and the websocket on :8010.
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Node.js 18 (nodesource), CUPS with the cups-pdf printer driver, ssh for
+# Node.js 24 LTS (nodesource), CUPS with the cups-pdf printer driver, ssh for
 # the backend, curl for scripts/postprocess.sh
 RUN apt-get update && \
     apt-get install -y curl openssh-server && \
-    curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+    curl -fsSL https://deb.nodesource.com/setup_24.x | bash - && \
     apt-get install -y nodejs cups cups-pdf && \
     rm -rf /var/lib/apt/lists/*
 
