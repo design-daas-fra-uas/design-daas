@@ -12,4 +12,4 @@ else
     echo "Printer $NAME does not exist."
 fi
 
-return 0
+exit 0

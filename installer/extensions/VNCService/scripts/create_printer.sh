@@ -31,4 +31,4 @@ else
     lpadmin -p "$NAME" -o printer-is-shared=true
 fi
 
-return 0
+exit 0
