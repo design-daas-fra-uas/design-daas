@@ -11,7 +11,7 @@ DESIGN_FOLDER := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/..)
 ENV_FILE ?= $(DESIGN_FOLDER)/installer/daas.env
 # env_get KEY: value of KEY in ENV_FILE (empty if unset). Read with sed instead
 # of `include` so values with $ or quotes are not mangled by make.
-env_get = $(shell [ -f "$(ENV_FILE)" ] && sed -n 's/^$(1)=//p' "$(ENV_FILE)" | tail -n1 | sed -e 's/^"\(.*\)"$$/\1/' -e "s/^'\(.*\)'$$/\1/")
+env_get = $(shell [ -f "$(ENV_FILE)" ] && sed -n 's/^$(1)=//p' "$(ENV_FILE)" 2>/dev/null | tail -n1 | sed -e 's/^"\(.*\)"$$/\1/' -e "s/^'\(.*\)'$$/\1/")
 # -e <file> for the scripts when the env file exists
 ENV_OPT = $(if $(wildcard $(ENV_FILE)),-e "$(ENV_FILE)")
 
@@ -63,11 +63,12 @@ PURGE_OPT = $(if $(PURGE),-p)
 # Targets
 # ============================================================
 
-.PHONY: default usage help all install configure other \
+.PHONY: default usage help all install configure deps \
         $(ACTIONS) reinstall $(LIFECYCLE) \
-        images images-delete proxmox-ensure iso-install iso-reinstall \
+        images images-delete containers-install images-install \
+        proxmox-ensure iso-install iso-reinstall \
         $(foreach c,$(CONTAINERS) $(IMAGES),$(c)-install $(c)-reinstall) \
-        proxmox-default proxmox-install proxmox-configure \
+        proxmox-install \
         proxmox-install-ceph proxmox-install-ceph-osd \
         proxmox-install-ceph-cephfs proxmox-install-ceph-pool \
         proxmox-cluster-create proxmox-cluster-join \
@@ -87,20 +88,32 @@ help: usage
 
 usage:
 	@echo ""
-	@echo "Design DaaS - Installation"
-	@echo "=========================="
+	@echo "Design DaaS - Installation (details: README.md in this folder)"
+	@echo "=============================================================="
+	@echo ""
+	@echo "FIRST INSTALL (as root, on Debian 12)"
+	@echo "  1. make env               Create $(notdir $(ENV_FILE)), then edit it (host, passwords)"
+	@echo "  2. make install           Install everything. On a fresh Debian it stops after"
+	@echo "                            the PVE kernel: reboot, then run it again."
+	@echo "  3. make status            Check that everything runs"
+	@echo ""
+	@echo "  make install runs these steps, each one can also be run alone:"
+	@echo "    proxmox-install         [1/7] Proxmox VE (two runs, reboot in between)"
+	@echo "    deps                    [2/7] All host packages, docker-compose, root SSH key"
+	@echo "    daas-install            [3/7] DaaS backend: Python venv, daas.service"
+	@echo "    daas-configure                $(notdir $(ENV_FILE)) -> src/config/*.toml, nginx, TLS, dnsmasq"
+	@echo "    images                  [4/7] Docker images: containers-install + images-install"
+	@echo "    java-install            [5/7] Java backend (users, login) + its MariaDB"
+	@echo "    frontend-all            [6/7] Frontend: nginx site :8443 + build + frontend.service"
+	@echo "    daas-restart                  Start the DaaS backend (it starts the containers)"
+	@echo "    iso-install             [7/7] Build the install ISOs, upload them (skip: SKIP_ISOS=1)"
 	@echo ""
 	@echo "EVERYDAY"
-	@echo "  make env                  Once: create $(notdir $(ENV_FILE)), then edit it"
-	@echo "  make install              Install EVERYTHING (Proxmox, images, Java, DaaS,"
-	@echo "                            frontend, ISOs). On a fresh Debian it stops after"
-	@echo "                            the PVE kernel: reboot and run it again."
 	@echo "  make start | stop | restart   java, daas, frontend (daas starts the containers)"
 	@echo "  make status               Everything, one line each"
 	@echo "  make logs                 Follow java, daas, frontend"
-	@echo "  make reinstall            After code changes: delete + install the services,"
-	@echo "                            service containers and desktop images"
 	@echo "  make configure            Re-apply $(notdir $(ENV_FILE)) (no rebuilds)"
+	@echo "  make reinstall            After code changes: rebuild services and images"
 	@echo "  make delete               Remove services, containers and images"
 	@echo ""
 	@echo "  Options: PURGE=1          delete/reinstall also delete the data"
@@ -114,20 +127,10 @@ usage:
 	@echo "  image      x11vnc wine                  install status delete reinstall"
 	@echo "  host       nginx dnsmasq docker proxmox start stop restart status logs"
 	@echo "  iso                                     install status delete reinstall"
-	@echo "  Groups:    make images | images-delete | daas-services | daas-containers"
+	@echo "  Groups:    make containers-install | images-install | images | images-delete"
 	@echo "  e.g.       make db-restart   make db-logs   make extensions-reinstall"
 	@echo ""
-	@echo "DETAILS"
-	@echo "  java-install              Build from the current code, (re)start"
-	@echo "  daas-install              venv, nginx, docker-compose, systemd unit"
-	@echo "  daas-configure            src/config/*.toml, nginx, src/data"
-	@echo "  daas-services             Install guacd, rabbit, db, extensions"
-	@echo "  daas-containers           Install x11vnc, wine"
-	@echo "  frontend-install          Build from the current code, (re)start"
-	@echo "  frontend-configure        nginx site :8443"
-	@echo ""
-	@echo "PROXMOX"
-	@echo "  proxmox-install           Install Proxmox (two runs with a reboot between)"
+	@echo "PROXMOX (optional, multi-host setups)"
 	@echo "  proxmox-install-ceph      Install Ceph (mon + mgr)"
 	@echo "  proxmox-install-ceph-osd  Create OSD on CEPH_DISK"
 	@echo "  proxmox-install-ceph-cephfs"
@@ -162,29 +165,56 @@ usage:
 # Everything at once
 # ============================================================
 
+# stage N TITLE: banner between the steps of `make install`
+stage = @printf '\n\033[1m==== [%s/7] %s ====\033[0m\n\n' "$(1)" "$(2)"
+
 # Order matters:
-#   - nginx.conf (daas-configure) before the frontend site
+#   - Proxmox first: its 1st run needs a reboot before anything else
+#   - deps before every other step: they only check for their tools
+#   - daas-configure writes nginx.conf + the certificate the frontend site uses
 #   - the images before daas.service: the backend starts the containers
 #   - Java before the DaaS backend: it checks logins against it
 #   - the ISO upload needs the daas-iso storage, which the backend creates
 #     on its first start
-install: require-env proxmox-ensure require-pve \
-         daas-install daas-configure images \
-         java-install frontend-all daas-restart \
-         $(if $(SKIP_ISOS),,other)
+install: require-env
+	$(call stage,1,Proxmox VE)
+	$(MAKE) proxmox-ensure require-pve
+	$(call stage,2,Host dependencies)
+	$(MAKE) deps
+	$(call stage,3,DaaS backend)
+	$(MAKE) daas-install daas-configure
+	$(call stage,4,Docker images)
+	$(MAKE) images
+	$(call stage,5,Java backend)
+	$(MAKE) java-install
+	$(call stage,6,Frontend + start)
+	$(MAKE) frontend-all daas-restart
+	$(call stage,7,ISOs)
+	$(if $(SKIP_ISOS),@echo "Skipped (SKIP_ISOS=1)",$(MAKE) iso-install)
 	@echo ""
 	@echo "Everything installed. Check with: make status"
+	@echo "Then open $(or $(call env_get,FRONTEND_PUBLIC_URL),https://$(HOST_NAME).$(HOST_DOMAIN):8443) (see README.md: Using it)"
 
 all: install
+
+deps:
+	./deps/install.bash
 
 # Re-apply the env file without rebuilding (frontend URLs are baked into
 # its build and Java settings into its container: use frontend-install /
 # java-install for those)
 configure: require-env daas-configure frontend-configure daas-restart
 
-other: iso-install
+# Service containers (started by the DaaS backend) + desktop images
+images: containers-install images-install
 
-images: daas-services daas-containers
+containers-install: $(addsuffix -install,$(CONTAINERS))
+
+images-install: $(addsuffix -install,$(IMAGES))
+
+# Old names
+daas-services: containers-install
+daas-containers: images-install
 
 images-delete:
 	$(SERVICE_CMD) delete $(PURGE_OPT) containers images
@@ -222,13 +252,10 @@ $(addsuffix -install,$(CONTAINERS)): %-install:
 $(addsuffix -reinstall,$(CONTAINERS)): %-reinstall:
 	$(MAKE) $*-delete $*-install $*-start
 
-# The sample objects contx11/contwine (db_samples.py) run daas.cont<name>
-IMAGE_TAG_x11vnc := daas.contx11
-IMAGE_TAG_wine := daas.contwine
-
+# Each image's Makefile builds it with both its tags (x11vnc + daas.contx11,
+# wine + daas.contwine)
 $(addsuffix -install,$(IMAGES)): %-install:
-	$(MAKE) -C $* commit
-	docker tag $*:latest $(IMAGE_TAG_$*):latest
+	$(MAKE) -C $* build
 
 $(addsuffix -reinstall,$(IMAGES)): %-reinstall:
 	$(MAKE) $*-delete $*-install
@@ -242,9 +269,6 @@ iso-reinstall:
 # Proxmox
 # ============================================================
 
-# proxmox-isoupload needs the backend to have run once (see `all`)
-proxmox-default: proxmox-install proxmox-configure proxmox-isogen proxmox-isoupload
-
 # Fails with a hint while the host still runs the Debian kernel
 # (proxmox-install needs a reboot between its two runs).
 require-pve:
@@ -255,8 +279,7 @@ require-pve:
 # For `make install`: skip Proxmox when it is already set up, so a re-run
 # does not upgrade the whole system
 proxmox-ensure:
-	@if uname -r | grep -q pve && command -v pveversion >/dev/null \
-		&& command -v docker >/dev/null && command -v dnsmasq >/dev/null; then \
+	@if uname -r | grep -q pve && command -v pveversion >/dev/null; then \
 		echo "Proxmox already installed ($$(pveversion)), skipping proxmox-install"; \
 	else \
 		$(MAKE) proxmox-install; \
@@ -264,13 +287,6 @@ proxmox-ensure:
 
 proxmox-install:
 	./proxmox/install.bash -i "$(HOST_IP)" -h "$(HOST_NAME)" -d "$(HOST_DOMAIN)" -n "$(HOST_NUMBER)"
-
-proxmox-configure:
-	./proxmox/configure.bash \
-		-r "$(DESIGN_FOLDER)" \
-		-h "$(HOST_NAME)" \
-		-d "$(HOST_DOMAIN)" \
-		-i "$(HOST_NUMBER)"
 
 proxmox-install-ceph:
 	./proxmox/ceph.bash -a ceph -n "$(CEPH_NETWORK)"
@@ -303,7 +319,7 @@ proxmox-isoupload: require-pve
 
 # Order matters: the backend starts the service containers itself, so the
 # config and images must exist before daas.service is started.
-daas-all: daas-install daas-configure daas-services daas-containers daas-restart
+daas-all: daas-install daas-configure images daas-restart
 
 daas-install: require-pve
 	./daas/install.bash -r "$(DESIGN_FOLDER)"
@@ -318,12 +334,8 @@ daas-configure:
 		-s "$(STANDALONE)" \
 		$(ENV_OPT)
 
-daas-services: $(addsuffix -install,$(CONTAINERS))
-
-daas-containers: $(addsuffix -install,$(IMAGES))
-
 # Fresh venv and unit from the current code; images are kept
-# (rebuild them with daas-services / daas-containers)
+# (rebuild them with make images)
 daas-reinstall:
 	$(MAKE) daas-delete daas-install daas-configure daas-restart
 
