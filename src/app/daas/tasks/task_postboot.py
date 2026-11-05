@@ -135,15 +135,19 @@ class PostbootTask(Loggable):
         return True
 
     async def _add_printer(self, instance: InstanceObject):
+        from app.daas.proxy.proxy_extensions import ProxyExtensions
+
         self._log_info(f"Adding printer for {instance.host}")
-        # Disabled: the printer is not installed inside the desktop (see
-        # src/app/REVIEW.md, "Printing inside desktops"). To enable, use:
-        # extensions = await get_backend_component(
-        #     BackendName.EXTENSIONS, ProxyExtensions
-        # )
-        # iswin = instance.app.os_type in ("win10", "win11")
-        # result = await extensions.add_printer_instance(
-        #     instance.host, instance.app.id_owner, iswin
-        # )
-        return True
-        # return result
+        extensions = await get_backend_component(
+            BackendName.EXTENSIONS, ProxyExtensions
+        )
+        owner = instance.app.id_owner
+        # The desktop's printer forwards to the owner's queue on the print
+        # service, so that queue must exist before the first job
+        if not await extensions.add_printer_service(instance.host, owner):
+            self._log_error(f"Printer service queue not created for owner {owner}")
+            return False
+        iswin = instance.app.os_type in ("win10", "win11")
+        added = await extensions.add_printer_instance(instance.host, owner, iswin)
+        self._log_info(f"Printer added for {instance.host}: {added}")
+        return added
