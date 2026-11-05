@@ -262,15 +262,15 @@ case "$ACTION" in
         ;;
     "download")
         [[ -z "$ISONAME" ]] && echo "No Isoname specified" && usage && exit 1
-        download
-        download_tools
+        download || exit 1
+        download_tools || exit 1
         ;;
     "generate")
         [[ -z "$ISONAME" ]] && echo "No Isoname specified" && usage && exit 1
         clean
         # toolinstall
-        download
-        download_tools
+        download || exit 1
+        download_tools || exit 1
         copybase
         copyaddons
         updateuser
