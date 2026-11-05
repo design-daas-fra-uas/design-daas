@@ -3,6 +3,7 @@
 # Configures the Design DaaS backend for this host:
 #   - sets hostname / IP values in src/config/*.toml
 #   - installs the nginx config + a self-signed certificate
+#   - configures dnsmasq (DHCP for the instances on vmbr1)
 #   - seeds src/data from src/data_template
 #   - with -e <env-file>: the public URL and the login through the Java
 #     backend (auth.toml), see installer/daas.env.example
@@ -59,7 +60,7 @@ if (( (IP_PART >= 50 && IP_PART <= 75) || (IP_PART >= 100 && IP_PART <= 104) ));
 fi
 
 require_root
-require_cmds sed grep openssl nginx systemctl
+require_cmds sed grep openssl nginx dnsmasq systemctl
 require_dir "$REPO_FOLDER/src/config"
 
 FQDN="$HOST_NAME.$DOMAIN_NAME"
@@ -184,6 +185,39 @@ run ln -sfn "$NGINX_SITE" "$NGINX_ENABLED"
 
 run nginx -t
 enable_and_restart nginx
+
+# ============================================================
+step "dnsmasq (DHCP for instances on vmbr1)"
+# ============================================================
+
+# vmbr1 address of this host (bridge_cidr_inst above). The backend
+# masquerades instance traffic, so this is the instances' default gateway.
+INST_GATEWAY="192.168.223.$IP_PART"
+info "Instance gateway (vmbr1): $INST_GATEWAY"
+write_file /etc/dnsmasq.conf <<EOF
+server=8.8.8.8
+interface=vmbr1
+dhcp-range=192.168.223.50,192.168.223.75,1m
+dhcp-option=vmbr1,3,$INST_GATEWAY
+dhcp-option=vmbr1,6,8.8.8.8
+dhcp-leasefile=/var/lib/misc/dnsmasq.leases
+conf-dir=/etc/dnsmasq.d,.bak
+EOF
+write_file /etc/dnsmasq.d/pve-hosts.conf <<EOF
+dhcp-host=de:ad:be:ef:00:64,id:vm100,192.168.223.100,1m
+dhcp-host=de:ad:be:ef:00:65,id:vm100,192.168.223.101,1m
+dhcp-host=de:ad:be:ef:00:66,id:vm100,192.168.223.102,1m
+dhcp-host=de:ad:be:ef:00:67,id:vm100,192.168.223.103,1m
+dhcp-host=de:ad:be:ef:00:68,id:vm100,192.168.223.104,1m
+EOF
+# vmbr1 is created by the backend on its first start, so dnsmasq may not
+# come up before that
+run systemctl enable dnsmasq
+if run systemctl restart dnsmasq && systemctl is-active --quiet dnsmasq; then
+    success "Service running: dnsmasq"
+else
+    warn "dnsmasq is not running yet (vmbr1 is created when the backend starts)"
+fi
 
 # ============================================================
 step "Runtime data (src/data)"
