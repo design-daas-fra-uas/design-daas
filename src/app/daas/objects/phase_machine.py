@@ -82,7 +82,20 @@ class MachinePhase(MachineBase):
         from app.daas.db.database import Database
 
         dbase = await get_database(Database)
-        return await dbase.suggest_vmid()
+        vmid = await dbase.suggest_vmid()
+        if vmid < 100:
+            return vmid
+        # Proxmox may hold VMs the database does not know (created by hand,
+        # or left over from a reset database): never reuse their id
+        api = await get_backend_component(BackendName.VM, ApiProxmox)
+        resp, data = await api.prox_vmlist(api.config_prox.node)
+        if resp is None or resp.status != 200:
+            self._log_info("Could not list Proxmox VMs for a free VMID")
+            return -1
+        used = {int(vm["vmid"]) for vm in data.get("data", [])}
+        while vmid in used:
+            vmid += 1
+        return vmid if vmid <= 254 else -1
 
     async def _phase_new_init(self, args: dict, keep_connections: bool = False) -> bool:
         from app.daas.db.database import Database

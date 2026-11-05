@@ -188,21 +188,42 @@ class DaasBaseObject(DaasObject):
         """delete the instance."""
         from app.daas.db.database import Database
 
-        deleted = False
-        clean = False
         dbase = await get_database(Database)
         if self.is_machine():
-            api = await get_backend_component(BackendName.VM, ApiProxmox)
-            resp, _ = await api.prox_vmdelete(api.config_prox.node, self.id_proxmox)
-            deleted = resp.status == 200
+            deleted = await self._delete_vm()
         else:
-            api = await get_backend_component(BackendName.CONTAINER, DockerRequest)
-            tag = await self.get_container_tag()
-            code, _, _ = await api.docker_image_delete(tag)
-            deleted = code == 0
+            deleted = await self._delete_image()
         if deleted is True:
-            clean = await dbase.delete_daas_object(self)
-        return clean
+            return await dbase.delete_daas_object(self)
+        return False
+
+    async def _delete_vm(self) -> bool:
+        api = await get_backend_component(BackendName.VM, ApiProxmox)
+        node = api.config_prox.node
+        resp, data = await api.prox_vmdelete(node, self.id_proxmox)
+        if resp is not None and resp.status == 200 and data.get("exitstatus") == "OK":
+            return True
+        # Already gone (removed in Proxmox, or a reset database): only the row is left
+        resp_list, vms = await api.prox_vmlist(node)
+        if resp_list is not None and resp_list.status == 200:
+            if all(int(vm["vmid"]) != self.id_proxmox for vm in vms.get("data", [])):
+                self._log_info(f"VM {self.id_proxmox} does not exist, removing {self.id}")
+                return True
+        self._log_error(f"Deleting VM {self.id_proxmox} failed: {data}")
+        return False
+
+    async def _delete_image(self) -> bool:
+        api = await get_backend_component(BackendName.CONTAINER, DockerRequest)
+        tag = await self.get_container_tag()
+        code, _, msg = await api.docker_image_delete(tag)
+        if code == 0:
+            return True
+        # Already gone: only the row is left
+        if msg == "Image not found":
+            self._log_info(f"Image {tag} does not exist, removing {self.id}")
+            return True
+        self._log_error(f"Deleting image {tag} failed: {msg}")
+        return False
 
     async def set_contype(self, contype: str):
         """Sets extended object mode"""
