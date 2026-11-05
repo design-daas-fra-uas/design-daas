@@ -48,6 +48,7 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
                         id_user=userdict["user_id"],
                         name=userdict["name"],
                         authenticated=True,
+                        role=userdict.get("role") or "",
                     )
                     self._log_request(
                         f"200 ->   HTTP Remote Auth success for user '{result.id_user}'"

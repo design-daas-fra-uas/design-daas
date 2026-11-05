@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <!--*************************************************
 Windows 10 Answer File Generator
 Created using Windows AFG found at:
@@ -7,8 +8,6 @@ Installation Notes
 Location:
 Notes: Enter your comments here...
 **************************************************-->
-
-<?xml version="1.0" encoding="utf-8"?>
 <unattend xmlns="urn:schemas-microsoft-com:unattend">
     <settings pass="windowsPE">
         <component name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="x86"
@@ -146,9 +145,6 @@ Notes: Enter your comments here...
                 <AcceptEula>true</AcceptEula>
                 <FullName>user</FullName>
                 <Organization></Organization>
-                <ProductKey>
-                    <Key>W269N-WFGWX-YVC9B-4J6C9-T83GX</Key>
-                </ProductKey>
             </UserData>
         </component>
     </settings>
@@ -196,7 +192,6 @@ Notes: Enter your comments here...
             xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
             <ComputerName>-PC</ComputerName>
-            <ProductKey>W269N-WFGWX-YVC9B-4J6C9-T83GX</ProductKey>
         </component>
     </settings>
     <settings pass="oobeSystem">

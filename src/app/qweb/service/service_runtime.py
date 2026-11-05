@@ -288,10 +288,19 @@ class QwebServiceRuntime(Loggable):
         return self.app
 
     async def __stop_app(self) -> bool:
-        for name, backend in self.backends.backends.items():
+        # Reverse start order: the container backend started the service
+        # containers (MariaDB, RabbitMQ) first, so it must stop them last,
+        # after the database and messaging backends have disconnected
+        for name, backend in reversed(list(self.backends.backends.items())):
             if isinstance(backend, QwebBackend):
                 self._log_info(f"Stopping backend {name}")
-                await backend.disconnect()
+                try:
+                    await backend.disconnect()
+                except Exception as exe:
+                    t = type(exe)
+                    self._log_info(
+                        f"Error stopping backend {name}: {t.__module__}.{t.__qualname__}: {exe}"
+                    )
 
         self._log_info("Stopping Service")
         if self.service_task is not None:

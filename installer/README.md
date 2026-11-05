@@ -79,7 +79,7 @@ Each step prints a banner like `==== [4/7] Docker images ====`:
 | 4/7 | `images` | Builds the service containers (`containers-install`) and the desktop images (`images-install`). |
 | 5/7 | `auth-install` | Builds and starts the auth service; creates the admin account on its first start and checks the login. |
 | 6/7 | `frontend-all` `daas-restart` | nginx site :8443, builds and starts the frontend, then starts the DaaS backend (which starts the containers and creates the Proxmox storages and bridges). |
-| 7/7 | `iso-install` | Builds the ISOs and uploads them to Proxmox. Takes long; skip it with `make install SKIP_ISOS=1` and run `make iso-install` later. |
+| 7/7 | `iso-install` | Builds the three ISOs (Debian 12, Windows 10, Windows 11; Windows downloads about 11 GB from Microsoft once) and uploads them to Proxmox. Takes long the first time; `make install SKIP_ISOS=1` skips it, `make iso-install` runs it later |
 
 Every step is safe to run again, so after an error: fix the cause and run
 `make install` again (or just the failed step's target).

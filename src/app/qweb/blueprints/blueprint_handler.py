@@ -166,9 +166,7 @@ class BlueprintHandler(BlueprintHandlerBase):
             )
 
         # Onership
-        verified = await self.__verify_entity_ownerships(
-            ctx.objects.objects, authres.id_user
-        )
+        verified = await self.__verify_entity_ownerships(ctx.objects.objects, authres)
         if verified is False:
             self._log_error("Error during ownership_verify (seq)", 2)
             ctype = await self.get_requested_content_type(info)
@@ -225,7 +223,7 @@ class BlueprintHandler(BlueprintHandlerBase):
 
         # Onership
         verified = await self.__verify_entity_ownerships(
-            ctxres.objects.objects, authres.id_user
+            ctxres.objects.objects, authres
         )
         if verified is False:
             self._log_error("Error during ownership_verify (ctx-auth)", 2)
@@ -290,9 +288,7 @@ class BlueprintHandler(BlueprintHandlerBase):
             )
 
         # Onership
-        verified = await self.__verify_entity_ownerships(
-            ctx.objects.objects, authres.id_user
-        )
+        verified = await self.__verify_entity_ownerships(ctx.objects.objects, authres)
         if verified is False:
             self._log_error("Error during ownership_verify (auth-proc)", 2)
             ctype = await self.get_requested_content_type(info)
@@ -375,19 +371,20 @@ class BlueprintHandler(BlueprintHandlerBase):
                     timing.processing.stop()
         return result, code
 
-    async def __verify_entity_ownerships(self, objects: dict, owner: int) -> bool:
+    async def __verify_entity_ownerships(self, objects: dict, user: QwebUser) -> bool:
+        is_admin = user.role == "admin"
         for name, obj in objects.items():
-            valid = await self.__verify_entity_ownership(obj, owner)
+            valid = await self.__verify_entity_ownership(obj, user.id_user, is_admin)
             if valid is False:
                 self._log_error(f"Ownership not verified: {name}")
                 return False
         return True
 
     async def __verify_entity_ownership(
-        self, entity: Optional[Any], owner: int
+        self, entity: Optional[Any], owner: int, is_admin: bool
     ) -> bool:
         authman = await self._get_authmanager()
-        return await authman.verify_entity_ownership(entity, owner)
+        return await authman.verify_entity_ownership(entity, owner, is_admin)
 
     async def __sleep(self, time_s: float):
         if time_s > 0:

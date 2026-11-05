@@ -8,8 +8,8 @@ agent and ssh access for the backend. The backend creates VMs from them
 | ISO | Status | Source |
 |---|---|---|
 | `debian12-daas.iso` | **Built by `make install`** (step 7) | Debian 12 netinst, downloaded automatically |
-| `win10-daas.iso` | Optional, needs a manual download | Windows 10 22H2 German x64 from Microsoft |
-| `win11-daas.iso` | Optional, needs a manual download | Windows 11 23H2 German x64 from Microsoft |
+| `win10-daas.iso` | **Built by `make install`** (step 7) | Windows 10 22H2 Enterprise Evaluation, German, downloaded automatically |
+| `win11-daas.iso` | **Built by `make install`** (step 7) | Windows 11 24H2 Enterprise Evaluation, English UI with German keyboard/formats, downloaded automatically |
 
 ## What a VM gets
 
@@ -37,12 +37,8 @@ proxmox-isogen    make -C iso install                     tools for the generato
 proxmox-isoupload copy iso/iso/<type>-daas.iso into the Proxmox storage daas-iso
 ```
 
-`ISOTYPES` defaults to `debian12`. To also build Windows ISOs, download
-them first (below), then:
-
-```bash
-make iso-install ISOTYPES="debian12 win10 win11"     # in installer/
-```
+`ISOTYPES` defaults to all three (`debian12 win10 win11`). Build only some
+with e.g. `make iso-install ISOTYPES=debian12`.
 
 ## Commands
 
@@ -60,17 +56,23 @@ Options: `USERNAME=root USERPASS=root` (the VM account), `ISOTYPE=...`.
 
 ### Windows ISOs
 
-Microsoft only offers Windows downloads through a browser page whose links
-expire after 24 hours, so the build cannot download them. Download
-**German, x64** yourself and save it in `installer/iso/iso/`:
+`scripts/generate-windows-iso.bash -v 10|11` (one script for both) downloads
+Microsoft's **Enterprise Evaluation** ISO from its stable official link, once
+(about 5.5 GB; an interrupted download continues on the next run, and the
+ISO is checked before it is used):
 
-| Type | Page | Save as |
+| Type | Edition | Language |
 |---|---|---|
-| win10 | <https://www.microsoft.com/de-de/software-download/windows10ISO> | `iso/Win10_22H2_German_x64v1.iso` |
-| win11 | <https://www.microsoft.com/de-de/software-download/windows11> | `iso/Win11_23H2_German_x64v2.iso` |
+| win10 | Windows 10 22H2 Enterprise Evaluation | German |
+| win11 | Windows 11 24H2 Enterprise Evaluation | English UI (Microsoft's link has no German one); German keyboard and formats |
 
-Without it `make build ISOTYPE=win10` stops with this explanation. The
-other Windows downloads (virtio, Python, ...) happen automatically into
+Evaluation means **90 days**, then Windows asks for activation: fine for
+tests and demos, for real use you need licences (then put a matching ISO
+and product key into the generator and `cfg/winNN/autounattend.xml`).
+The answer files contain no product key; Windows 11 skips the TPM, Secure
+Boot and RAM checks (`LabConfig`) so it installs in any VM.
+
+The other Windows downloads (virtio, Python, ...) happen automatically into
 `cfg/<type>/tools` and `cfg/<type>/env`, once; a failed download leaves no
 file behind and stops the build.
 
@@ -106,7 +108,8 @@ links was removed; use a licensed Office Deployment Tool setup in
 | Path | Content |
 |---|---|
 | `Makefile`, `check.bash` | The commands above |
-| `scripts/generate-<type>-iso.bash` | One generator per ISO type |
+| `scripts/generate-windows-iso.bash` | Windows 10 and 11 (`-v 10|11`) |
+| `scripts/generate-debian12-iso.bash`, `generate-devenv-iso.bash` | Debian ISO, dev cluster ISO |
 | `scripts/vm-run.bash`, `vm-connect.bash`, `cluster-run.bash` | Test VM / dev cluster in qemu |
 | `cfg/<type>/` | What goes into the ISO: unattended answers, post-install scripts, `ssh/sshd_config` |
 | `iso/` | Downloaded sources and built `*-daas.iso` (not committed) |

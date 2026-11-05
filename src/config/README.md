@@ -64,14 +64,13 @@ name, so manual edits to them are overwritten on the next run:
 
 ## Values to change for production
 
-`enable_testing` is `false`: the test routes (`/testing`, `/baseline0`..`6`,
+`enable_testing` and `debug` are `false`: the test routes (`/testing`, `/baseline0`..`6`,
 some without login) are not loaded. Set it to `true` only on a test system.
 
 
 | File | Key | Now | Why |
 |---|---|---|---|
 | `qweb.toml` | `allow_origin` | `"*"` | any web site may call the API from a browser |
-| `qweb.toml` | `debug` | `true` | extra internal debugging |
 | `db.toml` | `include_samples` | `true` | sample objects created on every start |
 
 Keys marked "Currently not read by the code" in the files (`token_length`,

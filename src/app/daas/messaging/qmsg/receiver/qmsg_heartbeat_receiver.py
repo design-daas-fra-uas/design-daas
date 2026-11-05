@@ -97,6 +97,10 @@ class HeartbeatReceiver(Loggable):
                 self._log_error(f"StreamLostError: {exe}")
             except pika.exceptions.ChannelWrongStateError as exe:
                 self._log_error(f"ChannelError: {exe}")
+            except pika.exceptions.AMQPError as exe:
+                # e.g. ConnectionWrongStateError: the broker (daas-0-rabbit)
+                # is stopped before the backend's messaging on shutdown
+                self._log_error(f"Error on disconnect: {exe}")
 
     def reset_heartbeat(self, ip_addr: str):
         """Resets heartbeat for a given host"""

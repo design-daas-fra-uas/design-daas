@@ -23,7 +23,7 @@ enable_args_echo = false
 recursion_limit = 10000
 
 [run]
-debug = true
+debug = false
 host = "127.0.0.1"
 port = 5000
 

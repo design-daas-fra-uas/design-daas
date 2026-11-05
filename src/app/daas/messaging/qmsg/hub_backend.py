@@ -80,6 +80,11 @@ class QHubBackend(Loggable):
         self.task_heartbeat_listener: Optional[asyncio.Task] = None
         self.task_heartbeat_cleanup: Optional[asyncio.Task] = None
         self.tasks_rpc: list[tuple] = []
+        # call_rpc: one sender (= one RabbitMQ connection) per worker thread,
+        # reused for every call of that thread
+        self._thread_senders = threading.local()
+        self._senders: list[RpcSender] = []
+        self._senders_lock = threading.Lock()
 
     def create_rpc_task(
         self, topic_name: str, msg: RpcRequest
@@ -88,6 +93,8 @@ class QHubBackend(Loggable):
         if self.heartbeat_receiver.is_online(topic_name):
             rpc_client = RpcSender(self.cfg_sender)
             thread = rpc_client.call_rpc_method(topic_name, msg)
+            # Forget finished calls (their connection is closed already)
+            self.tasks_rpc = [t for t in self.tasks_rpc if t[0].is_alive()]
             self.tasks_rpc.append((thread, rpc_client))
             return thread, rpc_client
         self._log_info(f"Host is not online: {topic_name}")
@@ -95,13 +102,16 @@ class QHubBackend(Loggable):
 
     def call_rpc(self, topic_name: str, msg: RpcRequest) -> Optional[RpcResponse]:
         """get RpcRequest for online client"""
-        tasktuple = self.create_rpc_task(topic_name, msg)
-        if tasktuple is not None:
-            thread, rpc = tasktuple
-            if thread is not None and rpc is not None:
-                thread.join()
-                return rpc.response
-        return None
+        if not self.heartbeat_receiver.is_online(topic_name):
+            self._log_info(f"Host is not online: {topic_name}")
+            return None
+        sender = getattr(self._thread_senders, "sender", None)
+        if sender is None:
+            sender = RpcSender(self.cfg_sender)
+            self._thread_senders.sender = sender
+            with self._senders_lock:
+                self._senders.append(sender)
+        return sender.call(topic_name, msg)
 
     def handle_heartbeat(self, msg: HeartbeatMessage):
         """called on client heartbeat"""
@@ -162,6 +172,10 @@ class QHubBackend(Loggable):
         """
         for _, rpc_client in self.tasks_rpc:
             rpc_client.waiting = False
+        with self._senders_lock:
+            for sender in self._senders:
+                sender.close()
+            self._senders.clear()
 
         await self.heartbeat_receiver.disconnect()
         if self.task_heartbeat_cleanup is not None:
