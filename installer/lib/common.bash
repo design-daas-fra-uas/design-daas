@@ -269,6 +269,26 @@ load_stack_env() {
     debug "FQDN=$FQDN DAAS=$DAAS_PUBLIC_URL FRONTEND=$FRONTEND_PUBLIC_URL AUTH=$AUTH_PUBLIC_URL"
 }
 
+# url_host URL: the host name of URL (https://a.b:8443/x -> a.b)
+url_host() {
+    local rest="${1#*://}"
+    rest="${rest%%/*}"
+    echo "${rest%%:*}"
+}
+
+# url_port URL: the port of URL, or the default of its scheme
+url_port() {
+    local rest="${1#*://}"
+    rest="${rest%%/*}"
+    if [[ "$rest" == *:* ]]; then
+        echo "${rest##*:}"
+    elif [[ "$1" == https://* ]]; then
+        echo 443
+    else
+        echo 80
+    fi
+}
+
 # warn_default_secret NAME: warn if a secret still has its example value
 warn_default_secret() {
     local name="$1"

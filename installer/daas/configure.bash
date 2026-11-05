@@ -171,12 +171,24 @@ fi
 step "nginx"
 # ============================================================
 
-# frontend/configure.bash serves frontN.cluster.local (N = trailing digit of
-# the hostname) on :8443 with the same certificate
-FRONT_ID=0
-[[ "$HOST_NAME" =~ ([123])$ ]] && FRONT_ID="${BASH_REMATCH[1]}"
+# One certificate for every name the browser uses: the DaaS backend and the
+# frontend (frontend/configure.bash serves it on :8443 with it). Without an
+# env file the frontend is frontN.cluster.local (N = trailing digit of the
+# host name).
+CERT_NAMES=()
+if [[ -n "$ENV_FILE" ]]; then
+    for url in "$DAAS_PUBLIC_URL" "$FRONTEND_PUBLIC_URL" "$AUTH_PUBLIC_URL"; do
+        name="$(url_host "$url")"
+        [[ "$name" == "$FQDN" || " ${CERT_NAMES[*]} " == *" $name "* ]] || CERT_NAMES+=("$name")
+    done
+else
+    FRONT_ID=0
+    [[ "$HOST_NAME" =~ ([123])$ ]] && FRONT_ID="${BASH_REMATCH[1]}"
+    CERT_NAMES+=("front${FRONT_ID}.cluster.local")
+fi
+info "Certificate: $FQDN ${CERT_NAMES[*]}"
 "$DAAS_INSTALLER_DIR/daas/mkcert.bash" -o "$HOST_NAME" -c "$FQDN" \
-    -a "front${FRONT_ID}.cluster.local"
+    $(printf -- '-a %s ' "${CERT_NAMES[@]}")
 
 run cp "$DAAS_INSTALLER_DIR/daas/nginx.conf" /etc/nginx/nginx.conf
 sed -e "s#pve1.cluster.local#$FQDN#g" "$DAAS_INSTALLER_DIR/daas/daas.conf" \

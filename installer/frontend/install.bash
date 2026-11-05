@@ -52,9 +52,12 @@ if [[ -n "$ENV_FILE" ]]; then
     CLI_FRONTEND_FOLDER="$FRONTEND_FOLDER"
     load_stack_env "$ENV_FILE"
     FRONTEND_FOLDER="$CLI_FRONTEND_FOLDER"
+    # Without the patch the build ignores the URLs and the frontend talks to
+    # http://<host>:5000 / :8080 (dev defaults), so the login fails
     if ! grep -q "REACT_APP_DAAS_API_URL" "$FRONTEND_FOLDER/Dockerfile"; then
-        warn "The frontend Dockerfile does not declare ARG REACT_APP_DAAS_API_URL;"
-        warn "the URLs below will be ignored by the build (see frontend-env-urls.patch)"
+        error "The frontend does not take the backend URLs as build args yet. Apply the patch:"
+        error "  git -C $FRONTEND_FOLDER apply $FRONTEND_DIR/frontend-env-urls.patch"
+        die "Frontend repository not patched"
     fi
     info "DaaS API:   $DAAS_PUBLIC_URL"
     info "Auth API:   $AUTH_PUBLIC_URL"

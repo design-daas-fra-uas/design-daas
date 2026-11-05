@@ -77,7 +77,7 @@ PURGE_OPT = $(if $(PURGE),-p)
         proxmox-isogen proxmox-isoupload require-pve \
         daas-all daas-install daas-configure daas-services daas-containers \
         daas-reinstall \
-        frontend-all frontend-install frontend-configure frontend-reinstall \
+        frontend-all frontend-install frontend-configure frontend-reinstall frontend-check \
         env require-env java-install java-reinstall
 
 default: usage
@@ -125,6 +125,7 @@ usage:
 	@echo ""
 	@echo "ONE COMPONENT  make <component>-<action>"
 	@echo "  service    java daas frontend           install start stop restart status logs delete reinstall"
+	@echo "             frontend-check: test the running frontend like a browser"
 	@echo "  container  guacd rabbit db extensions   install start stop restart status logs delete reinstall"
 	@echo "  image      x11vnc wine                  install status delete reinstall"
 	@echo "  host       nginx dnsmasq docker proxmox start stop restart status logs"
@@ -356,6 +357,10 @@ frontend-configure:
 		-f "$(FRONTEND_FOLDER)" \
 		-h "$(HOST_NAME)" \
 		$(ENV_OPT)
+
+# Checks the running frontend like a browser (changes nothing)
+frontend-check: require-env
+	./frontend/check.bash -e "$(ENV_FILE)"
 
 # PURGE=1 also removed the nginx site, so configure it again
 frontend-reinstall:
