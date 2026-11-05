@@ -20,7 +20,7 @@ Plus:
   Docker is only restarted when that file changes or docker is not
   running, because a restart stops every container (service containers,
   user instances, auth service, frontend).
-- **docker-compose v2.24.0** (`/usr/bin/docker-compose`, used by the auth service
+- **docker-compose v5.7.0** (`/usr/bin/docker-compose`, used by the auth service
   and the frontend), checked against its pinned sha256 before it
   is installed.
 - **root's SSH key** `/root/.ssh/id_rsa`, created once (or its mode fixed

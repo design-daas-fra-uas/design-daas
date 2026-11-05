@@ -14,10 +14,10 @@
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.bash"
 
 DOCKER_DATA_ROOT="/home/daas-docker"
-COMPOSE_VERSION="v2.24.0"
+COMPOSE_VERSION="v5.7.0"
 COMPOSE_URL="https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-linux-x86_64"
 # sha256 of that release binary (docker-compose-linux-x86_64.sha256 on GitHub)
-COMPOSE_SHA256="43fb39c0bc24ac796123935032eddcfb57a7acd9216badeb10714c986ea1e090"
+COMPOSE_SHA256="7758048ad38e580f22559603312874fec8bb638d021a9e64182385fc17cc12a2"
 COMPOSE_BIN="/usr/bin/docker-compose"
 SSH_KEY="/root/.ssh/id_rsa"
 
