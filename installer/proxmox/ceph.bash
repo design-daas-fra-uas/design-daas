@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Ceph setup on Proxmox. One action per call:
-#   ceph    install Ceph (quincy), init the network, create mon + mgr
+#   ceph    install Ceph (-v, default reef), init the network, create mon + mgr
 #   osd     create an OSD on a disk
 #   cephfs  create the MDS (+ standby) and the CephFS "daasfs"
 #   pool    create the RBD pool "daas-ceph" and add it as storage
@@ -13,12 +13,14 @@ FS_DAASNAME="daasfs"
 
 usage() {
     cat <<EOF >&2
-Usage: $0 -a <ceph|osd|cephfs|pool> [-n <ceph-cidr>] [-d <disk>]
+Usage: $0 -a <ceph|osd|cephfs|pool> [-n <ceph-cidr>] [-d <disk>] [-v <version>]
 
 Options:
     -a    Action
     -n    Ceph network CIDR (required for 'ceph')
     -d    Disk for the OSD (default: /dev/vdb)
+    -v    Ceph version for 'ceph': reef (default, the version of the Windows
+          client in the ISOs) or squid; quincy is end of life
 EOF
     exit 1
 }
@@ -26,11 +28,13 @@ EOF
 ACTION=""
 CEPH_NETWORK=""
 CEPH_DISK="/dev/vdb"
-while getopts ":a:n:d:" o; do
+CEPH_VERSION="reef"
+while getopts ":a:n:d:v:" o; do
     case "$o" in
         a) ACTION="$OPTARG" ;;
         d) CEPH_DISK="$OPTARG" ;;
         n) CEPH_NETWORK="$OPTARG" ;;
+        v) CEPH_VERSION="$OPTARG" ;;
         :) die "Option -$OPTARG requires an argument." ;;
         *) usage ;;
     esac
@@ -43,9 +47,9 @@ require_cmds pveceph
 
 action_ceph() {
     [[ -n "$CEPH_NETWORK" ]] || die "Action 'ceph' needs -n <ceph-cidr>"
-    step "Install Ceph (network $CEPH_NETWORK)"
+    step "Install Ceph $CEPH_VERSION (network $CEPH_NETWORK)"
     # pveceph asks for confirmation ("yJ" answers both English and German prompts)
-    echo "yJ" | run pveceph install -repository no-subscription -version quincy
+    echo "yJ" | run pveceph install --repository no-subscription --version "$CEPH_VERSION"
     run pveceph init --network "$CEPH_NETWORK"
     run pveceph mon create
     run pveceph mgr create

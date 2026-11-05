@@ -32,6 +32,8 @@ ISO_USER ?= root
 
 CEPH_DISK ?= /dev/vdb
 CEPH_NETWORK ?= 192.168.100.0/24
+# reef (matches the Windows Ceph client in the ISOs) or squid
+CEPH_VERSION ?= reef
 
 CLUSTER_NAME ?= clustertest
 CLUSTER_IP ?= 192.168.200.11
@@ -70,7 +72,7 @@ PURGE_OPT = $(if $(PURGE),-p)
         images images-delete containers-install images-install \
         proxmox-ensure iso-install iso-reinstall \
         $(foreach c,$(CONTAINERS) $(IMAGES),$(c)-install $(c)-reinstall) \
-        proxmox-install \
+        proxmox-install proxmox-check \
         proxmox-install-ceph proxmox-install-ceph-osd \
         proxmox-install-ceph-cephfs proxmox-install-ceph-pool \
         proxmox-cluster-create proxmox-cluster-join \
@@ -125,7 +127,7 @@ usage:
 	@echo ""
 	@echo "ONE COMPONENT  make <component>-<action>"
 	@echo "  service    java daas frontend           install start stop restart status logs delete reinstall"
-	@echo "             daas-check, frontend-check, java-check: test the running service"
+	@echo "             proxmox-check, daas-check, frontend-check, java-check: test the running parts"
 	@echo "             java-backup: save the Java users/permissions + signing keys"
 	@echo "  container  guacd rabbit db extensions   install start stop restart status logs delete reinstall"
 	@echo "  image      x11vnc wine                  install status delete reinstall"
@@ -154,6 +156,7 @@ usage:
 	@echo "  STANDALONE=$(STANDALONE)"
 	@echo "  CEPH_DISK=$(CEPH_DISK)"
 	@echo "  CEPH_NETWORK=$(CEPH_NETWORK)"
+	@echo "  CEPH_VERSION=$(CEPH_VERSION)"
 	@echo "  CLUSTER_NAME=$(CLUSTER_NAME)"
 	@echo "  CLUSTER_IP=$(CLUSTER_IP)"
 	@echo "  LINK_IP=$(LINK_IP)"
@@ -292,8 +295,12 @@ proxmox-ensure:
 proxmox-install:
 	./proxmox/install.bash -i "$(HOST_IP)" -h "$(HOST_NAME)" -d "$(HOST_DOMAIN)" -n "$(HOST_NUMBER)"
 
+# Checks the Proxmox host layer (changes nothing)
+proxmox-check:
+	./proxmox/check.bash $(ENV_OPT)
+
 proxmox-install-ceph:
-	./proxmox/ceph.bash -a ceph -n "$(CEPH_NETWORK)"
+	./proxmox/ceph.bash -a ceph -n "$(CEPH_NETWORK)" -v "$(CEPH_VERSION)"
 
 proxmox-install-ceph-osd:
 	./proxmox/ceph.bash -a osd -d "$(CEPH_DISK)"
