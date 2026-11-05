@@ -17,6 +17,8 @@ EXTRAPORTS ?= 0
 TIMEOUTS ?= 10000
 
 INCFOLDER ?= cfg/$(ISOTYPE)
+# win10 / win11 share one generator (-v 10|11), the others have their own
+GENERATOR = $(if $(filter win%,$(ISOTYPE)),./scripts/generate-windows-iso.bash -v $(patsubst win%,%,$(ISOTYPE)),./scripts/generate-$(ISOTYPE)-iso.bash)
 ISONAME := $(ISOTYPE)-daas
 # Generated ISOs land in iso/<type>-daas.iso, next to the downloaded sources
 ISOFILE := iso/$(ISONAME).iso
@@ -38,7 +40,7 @@ help:
 	@echo "  Options: ISOTYPE=$(ISOTYPE) USERNAME=$(USERNAME) USERPASS=... QCOWSIZE=$(QCOWSIZE)"
 	@echo "           VMSSHPORT=$(VMSSHPORT) EXTRAPORTS=$(EXTRAPORTS) TIMEOUTS=$(TIMEOUTS)"
 	@echo ""
-	@echo "  Windows: download the Windows ISO yourself first (see README.md)."
+	@echo "  Windows: downloads Microsoft's Enterprise Evaluation ISO itself (see README.md)."
 
 # ------------------------------------------------------------
 # Build
@@ -47,10 +49,10 @@ help:
 install:
 	./scripts/vm-run.bash -a install
 	./scripts/generate-debian12-iso.bash -a install
-	./scripts/generate-win10-iso.bash -a install
+	./scripts/generate-windows-iso.bash -v 10 -a install
 
 build:
-	./scripts/generate-$(ISOTYPE)-iso.bash -a generate -i $(INCFOLDER) \
+	$(GENERATOR) -a generate -i $(INCFOLDER) \
 		-p $(USERPASS) -n $(ISONAME) -u $(USERNAME)
 	@ls -la $(ISOFILE)
 
@@ -58,8 +60,8 @@ check:
 	./check.bash $(ISOFILE)
 
 clean: stop
-	./scripts/generate-win10-iso.bash -a clean
-	./scripts/generate-win11-iso.bash -a clean
+	./scripts/generate-windows-iso.bash -v 10 -a clean
+	./scripts/generate-windows-iso.bash -v 11 -a clean
 	./scripts/generate-debian12-iso.bash -a clean
 
 clean-all: clean
