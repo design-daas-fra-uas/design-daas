@@ -295,11 +295,11 @@ class InstanceObjectBase(Instance):
 
         if isinstance(self.app, DaasBaseObject):
             if self.app.is_machine():
-                if self.app.object_mode in ("run-app"):
+                if self.app.object_mode == "run-app":
                     return self.app.viewer_contype
                 return "sysvnc"
             else:
-                if self.app.object_mode in ("run-app"):
+                if self.app.object_mode == "run-app":
                     return self.app.viewer_contype
                 return "instvnc"
         return ""

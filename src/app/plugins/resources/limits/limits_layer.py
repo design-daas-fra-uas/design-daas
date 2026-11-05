@@ -7,7 +7,6 @@ from app.daas.common.enums import BackendName
 from app.daas.common.model import DaaSEntity
 from app.daas.db.database import Database
 from app.daas.resources.limits.ressource_limits import RessourceLimits
-from app.plugins.resources.limits.limits_tasks import LimitTask
 from app.qweb.service.service_context import LayerObject, QwebObjectLayer
 from app.qweb.common.qweb_tools import get_backend_component
 

@@ -310,7 +310,7 @@ class BlueprintHandler(BlueprintHandlerBase):
     ) -> QwebProcessorContexts:
         """Context task"""
         ctx = await self._get_contexts(info, req)
-        if DELAY_CTX > 0 and req.path not in ("baseline0"):
+        if DELAY_CTX > 0 and req.path != "baseline0":
             await self.__sleep(DELAY_CTX)
         if timing is not None:
             timing.context.stop()

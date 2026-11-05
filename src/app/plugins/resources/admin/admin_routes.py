@@ -6,7 +6,6 @@ from app.daas.common.enums import BackendName, LayerName
 from app.plugins.core.db.db_layer import DBObject
 from app.plugins.core.task.task_layer import ServiceObject
 from app.plugins.resources.admin.admin_tasks import AdminTask
-from app.plugins.resources.limits.limits_layer import LimitObject
 from app.qweb.processing.processor import ApiProcessorAction, ProcessorType
 from app.qweb.blueprints.blueprint_handler import BlueprintHandler
 from app.qweb.blueprints.blueprint_info import (

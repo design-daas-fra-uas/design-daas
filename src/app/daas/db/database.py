@@ -5,9 +5,7 @@ Provide state management via the ``Database`` class.
 from __future__ import annotations
 import logging
 import aiosqlite
-from app.daas.common.config import DatabaseConfig
 from app.daas.common.enums import ConfigFile, ConfigSections
-from app.daas.common.model import Application
 from app.daas.db.db_samples import SampleRegistry, SampleRegistryConfig
 from app.daas.objects.object_application import ApplicationObject
 from app.qweb.logging.logging import LogTarget
@@ -117,10 +115,6 @@ class Database(
             if isinstance(testapp, ApplicationObject):
                 if not await self.get_application(testapp.id):
                     await self.create_application(testapp)
-
-    async def _get_config_db(self) -> DatabaseConfig:
-        dictconf = await self._get_config(ConfigFile.DB.value)
-        return DatabaseConfig(**dictconf[ConfigSections.DB.value])
 
     async def _get_config_samples(self) -> SampleRegistryConfig:
         dictconf = await self._get_config(ConfigFile.DB.value)

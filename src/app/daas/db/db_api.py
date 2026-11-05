@@ -46,13 +46,6 @@ class DatabaseApiBase(Loggable):
                 return mapping
         return None
 
-    async def _get_table_mapping_domain(self, tab: Table) -> Optional[type[DaaSEntity]]:
-        mappings = TableEntityMapping()
-        mapping = mappings.get_domain(tab.name)
-        if mapping is not None and issubclass(mapping, DaaSEntity):
-            return mapping
-        return None
-
 
 class DatabaseApi(DatabaseApiBase):
     """Handles calls to the database"""

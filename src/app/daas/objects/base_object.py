@@ -269,7 +269,7 @@ class DaasBaseObject(DaasObject):
     def is_linux(self) -> bool:
         """Checks if current object is a linux object"""
         if self.is_machine():
-            if self.os_type in ("l26"):
+            if self.os_type == "l26":
                 return True
         if self.is_container():
             return True

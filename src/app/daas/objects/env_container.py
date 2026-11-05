@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Optional
 
 from app.daas.common.enums import BackendName
-from app.daas.common.model import Environment, File
+from app.daas.common.model import Environment
 from app.daas.container.docker.DockerRequest import DockerRequest
 from app.daas.objects.object_instance import InstanceObject
 from app.daas.objects.phase_container import ContainerPhase

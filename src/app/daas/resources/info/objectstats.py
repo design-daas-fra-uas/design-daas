@@ -497,6 +497,3 @@ class ObjectStats:
                 result.append(info)
 
         return result
-
-    def __log_info(self, msg: str):
-        self.logger.info("%s", msg)

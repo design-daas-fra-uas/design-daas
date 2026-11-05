@@ -386,11 +386,12 @@ class ApiProxmox(Loggable):
         self, vmnode: str, vmid: int
     ) -> tuple[aiohttp.ClientResponse, dict]:
         """
-        Deletes a vm via proxmox api
+        Deletes a vm via proxmox api and waits for the destroy task
+        (the returned data holds its exitstatus)
         """
         url = f"nodes/{vmnode}/qemu/{vmid}"
-        return await self.rest.session_request_async(
-            "delete", url, params={}, data={}, files={}
+        return await self.rest.session_request_sync(
+            "delete", vmnode, url, params={}, data={}, files={}
         )
 
     async def prox_vmconfig_get(

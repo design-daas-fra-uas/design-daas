@@ -1,4 +1,4 @@
-import time
+import asyncio
 import datetime
 import json as json_parser
 import aiohttp
@@ -154,7 +154,7 @@ class ProxmoxRestRequest(Loggable):
             result, data = await self.__read_task_async(vmnode, upid)
             if result is not None and len(data) > 0:
                 return result, data
-            time.sleep(intervall)
+            await asyncio.sleep(intervall)
 
     async def __read_task_async(
         self, vmnode: str, upid: str

@@ -1,6 +1,5 @@
 """DB Backend"""
 
-from typing import Optional
 from app.daas.adapter.adapter_http import HttpAdapterConfig
 from app.daas.auth.auth_daas_local import DaasLocalAuthenticator
 from app.daas.auth.auth_daas_remote import DaasRemoteAuthenticator

@@ -3,9 +3,7 @@
 import inspect
 
 from app.daas.common.enums import BackendName, LayerName
-from app.plugins.core.db.db_layer import DBObject
-from app.plugins.platform.vm.vm_tasks import VMTask
-from app.plugins.resources.limits.limits_layer import LimitObject, LimitObjectLayer
+from app.plugins.resources.limits.limits_layer import LimitObject
 from app.plugins.resources.limits.limits_tasks import LimitTask
 from app.qweb.blueprints.blueprint_info import (
     AuthenticationMode,

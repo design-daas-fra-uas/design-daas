@@ -1,4 +1,3 @@
-import os
 from app.daas.common.enums import ConfigFile, ConfigSections
 from app.daas.db.database import Database
 from app.qweb.service.service_plugin import LoadOrder, PluginBase

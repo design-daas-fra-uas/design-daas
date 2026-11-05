@@ -27,17 +27,17 @@ class QwebBackend:
     @abstractmethod
     def status(self) -> str:
         """Returns status message"""
-        NotImplementedError()
+        raise NotImplementedError("Not implemented")
 
     @abstractmethod
     async def connect(self) -> bool:
         """Connects database adapter"""
-        NotImplementedError()
+        raise NotImplementedError("Not implemented")
 
     @abstractmethod
     async def disconnect(self) -> bool:
         """Disconnects database adapter"""
-        NotImplementedError()
+        raise NotImplementedError("Not implemented")
 
 
 @dataclass

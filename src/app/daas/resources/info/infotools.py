@@ -296,10 +296,10 @@ class TaskCollection:
 
         cur = []
         for _, val in self.tasks_current.items():
-            cur.append(create_taskinfo_result(val).to_json())
+            cur.append(create_taskinfo_result(val).tojson())
         fin = []
         for _, val in self.tasks_finalized.items():
-            fin.append(create_taskinfo_result(val).to_json())
+            fin.append(create_taskinfo_result(val).tojson())
 
         return (
             f"TaskCollection(current={cur}, "

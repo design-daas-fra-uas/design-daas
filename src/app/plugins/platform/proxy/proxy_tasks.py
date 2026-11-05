@@ -3,7 +3,6 @@
 from dataclasses import asdict, dataclass
 from datetime import timedelta
 from enum import Enum
-from typing import Optional
 from app.daas.common.model import GuacamoleConnection
 from app.daas.vm.proxmox.ProxmoxApi import ApiProxmox
 from quart import render_template, websocket
@@ -291,7 +290,7 @@ class ProxmoxVncHandler(ResizeHandler, Loggable):
         """Resizehandler invoke instance cmd to resize internally as well"""
         res = f"{int(width)}x{int(height)}"
         self._log_info(f"ON_RESIZE: {res} -> '{self.instance.app.viewer_resize}'")
-        if self.instance.app.viewer_resize in ("browser"):
+        if self.instance.app.viewer_resize == "browser":
             await self.instance.inst_vminvoke_resolution("set", res)
         else:
             self._log_info(f"Handler ommitted for {self.adr} ({res})", -1)

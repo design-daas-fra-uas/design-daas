@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from app.daas.common.enums import BackendName
 from app.daas.common.model import DaasObject
-from app.daas.objects.base_machine import MachineBase
+from app.daas.objects.base_machine import MachineBase, choose_template_root
 from app.daas.vm.proxmox.ProxmoxApi import ApiProxmox
 from app.qweb.common.qweb_tools import get_backend_component, get_database
 
@@ -46,13 +46,13 @@ class MachinePhase(MachineBase):
         self.hw_disksize = int(args["disksize"])  # * 1024**3
         self.id_proxmox = await self._suggested_vmid_by_db()
         self._log_info(f"Suggested VMID: {self.id_proxmox}")
-        if (self.id_proxmox >= 100 <= 254) is False:
+        if not 100 <= self.id_proxmox <= 254:
             self._log_info(f"Suggested proxmox id is out of range: {self.id_proxmox}")
             return False
         self.vnc_port_system = 5900 + self.id_proxmox
         self.id_user = args["name"]
         self.os_type = args["os_type"]
-        self.os_installer = await self.choose_template_root(self.os_type)
+        self.os_installer = await choose_template_root(self.os_type)
         if self.os_installer == "":
             self._log_info("No os_installer")
             return False
@@ -68,7 +68,7 @@ class MachinePhase(MachineBase):
         self.id_docker = ""
         self.id_proxmox = await self._suggested_vmid_by_db()
         self._log_info(f"Suggested VMID: {self.id_proxmox}")
-        if (self.id_proxmox >= 100 <= 254) is False:
+        if not 100 <= self.id_proxmox <= 254:
             self._log_info(f"Suggested proxmox id is out of range: {self.id_proxmox}")
             return False
         self.vnc_port_system = 5900 + self.id_proxmox
@@ -153,7 +153,7 @@ class MachinePhase(MachineBase):
     async def _phase_clone_check_args(self, args: dict) -> bool:
         required = ["id", "newid", "name"]
         for k in required:
-            if k in args is False:
+            if k not in args:
                 self._log_error(f"Required argument missing: {k}", 1)
                 return False
         return await self._phase_new_check_id(args)
@@ -170,7 +170,7 @@ class MachinePhase(MachineBase):
             "os_type",
         ]
         for k in required:
-            if k in args is False:
+            if k not in args:
                 self._log_error(f"Required argument missing: {k}", 1)
                 return False
         return await self._phase_new_check_id(args)

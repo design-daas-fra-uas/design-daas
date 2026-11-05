@@ -9,6 +9,7 @@ from app.daas.common.ctx import (
     log_task_arguments,
 )
 from app.daas.common.enums import BackendName
+from app.daas.objects.base_machine import choose_template_root
 from app.daas.objects.base_object import DaasBaseObject
 from app.daas.objects.object_application import ApplicationObject
 from app.daas.objects.object_container import (
@@ -235,8 +236,8 @@ async def baseimage_create_from_app(args: TaskArgs) -> QwebResult:
 async def _create_empty_object(
     reqargs: dict, old: DaasBaseObject, userid: int
 ) -> Optional[MachineObject | ContainerObject]:
+    entity = None
     if old is not None:
-        entity = None
         if old.object_type == "vm":
             entity = await get_empty_machine_object(userid, **reqargs)
         elif old.object_type == "container":
@@ -270,15 +271,11 @@ async def _create_empty_object_by_app(
     reqargs: dict, app: ApplicationObject, userid: int
 ) -> Optional[MachineObject | ContainerObject]:
     entity = None
-    if app.os_type in ("win10", "win11"):
+    if app.os_type in ("win10", "win11", "l26vm"):
         entity = await get_empty_machine_object(userid, **reqargs)
         entity.os_type = app.os_type
-        entity.os_installer = await entity.choose_template_root(entity.os_type)
-    if app.os_type in ("l26vm"):
-        entity = await get_empty_machine_object(userid, **reqargs)
-        entity.os_type = app.os_type
-        entity.os_installer = await entity.choose_template_root(entity.os_type)
-    if app.os_type in ("l26"):
+        entity.os_installer = await choose_template_root(entity.os_type)
+    elif app.os_type == "l26":
         entity = await get_empty_container_object(userid, **reqargs)
         entity.os_type = app.os_type
     return entity

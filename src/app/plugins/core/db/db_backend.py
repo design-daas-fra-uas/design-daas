@@ -1,6 +1,5 @@
 """DB Backend"""
 
-from typing import Optional
 from app.daas.common.enums import BackendName
 from app.daas.db.db_manager import DatabaseManager
 from app.qweb.service.service_context import QwebBackend

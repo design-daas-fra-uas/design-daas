@@ -19,7 +19,7 @@ class DaasLocalAuthenticator(DaasAuthenticatorBase):
         """Verifies only user"""
         QwebUser()
         if self.config.enable_auth_user:
-            self._log_info(f"200 -> DaaS Local Auth for bearer {req.bearer} {info.url}")
+            self._log_info(f"200 -> DaaS Local Auth for {info.url}")
             result = await self.return_default_user()
         else:
             result = await self.return_default_user()
@@ -31,7 +31,7 @@ class DaasLocalAuthenticator(DaasAuthenticatorBase):
         """Verifies only endpoint"""
         QwebUser()
         if self.config.enable_auth_endpoint:
-            self._log_info(f"200 -> DaaS Local Auth for endpoint {req.bearer} ({info.url})")
+            self._log_info(f"200 -> DaaS Local Auth for endpoint {info.url}")
             result = await self.return_default_user()
         else:
             result = await self.return_default_user()

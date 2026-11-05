@@ -4,7 +4,6 @@ from typing import Optional, TypeVar, Type
 from sqlalchemy import TextClause, text
 from app.daas.common.enums import BackendName
 from app.daas.common.model import (
-    Application,
     DaaSEntity,
     DaasObject,
     Environment,

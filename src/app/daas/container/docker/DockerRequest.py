@@ -2,7 +2,7 @@
 Docker facade
 """
 
-import time
+import asyncio
 import os
 import json
 import ast
@@ -102,7 +102,7 @@ class DockerRequest(Loggable):
                 self._log_info(
                     f"Waiting {self.config.wait_services_ms}ms for started services"
                 )
-                time.sleep(self.config.wait_services_ms / 1000)
+                await asyncio.sleep(self.config.wait_services_ms / 1000)
             self.connected = True
         return self.connected
 
@@ -188,6 +188,8 @@ class DockerRequest(Loggable):
             result = 0, "", ""
         except docker.errors.ImageNotFound:
             result = 1, "", "Image not found"
+        except docker.errors.APIError as exe:
+            result = 1, "", str(exe)
         return result
 
     async def docker_service_start(self, cfg: ContainerConfigDocker) -> tuple:
@@ -296,7 +298,7 @@ class DockerRequest(Loggable):
                             container.stop()
                             self._log_info(f"Stopped {container.short_id}")
                         while await self.docker_container_get(name) is not None:
-                            time.sleep(0.1)
+                            await asyncio.sleep(0.1)
                         return 0, name, ""
                 except Exception as exe:
                     self._log_error(f"  1 -> Exception raised2: {exe}")

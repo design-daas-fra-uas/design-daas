@@ -12,7 +12,6 @@ import psutil
 from app.daas.common.enums import BackendName
 from app.daas.storage.cephstore import Cephstore
 from app.daas.storage.filestore import Filestore
-from app.daas.vm.proxmox.ProxmoxApi import ApiProxmox
 from app.plugins.platform.vm.vm_backend import VmBackend
 from app.plugins.storage.ceph.ceph_backend import CephBackend
 from app.plugins.storage.files.file_backend import FileBackend

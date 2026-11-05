@@ -2,7 +2,6 @@
 
 import os
 from quart import Response, send_from_directory
-from app.qweb.common.config import QuartProcessorConfig
 from app.qweb.processing.processor import (
     FileProcessorAction,
     ProcessorBase,

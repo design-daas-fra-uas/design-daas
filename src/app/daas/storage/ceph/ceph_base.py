@@ -1,7 +1,6 @@
 """ Baseclass for ceph filestore"""
 
 import os
-import logging
 import subprocess
 import shutil
 from typing import Optional

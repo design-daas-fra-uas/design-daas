@@ -152,7 +152,6 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
         if response is None or response.status != 200:
             if response is not None:
                 resp = await response.json()
-                self._log_error(f"Bearer: {bearer}")
                 self._log_error(f"Response: {resp}")
             self._log_error(f"Backend-Auth error on {url}")
             return {}

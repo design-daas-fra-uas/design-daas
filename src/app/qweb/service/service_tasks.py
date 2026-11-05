@@ -125,13 +125,6 @@ class QwebTaskManager(Loggable):
             result = True
         return result
 
-    async def _remove_stopped_task(self, name: str) -> bool:
-        result = False
-        if name in self.stopped_tasks:
-            self.stopped_tasks.pop(name)
-            result = True
-        return result
-
     async def _add_scheduled_task(self, task: ScheduledTask) -> bool:
         result = False
         if task is not None:

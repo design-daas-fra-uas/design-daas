@@ -1,10 +1,9 @@
 """Ceph plugin"""
 
 from app.daas.common.enums import ConfigFile, ConfigSections
-from app.daas.storage.ceph.ceph_config import CephstoreConfig, CephstoreFilesystemConfig
+from app.daas.storage.ceph.ceph_config import CephstoreConfig
 from app.plugins.storage.ceph.ceph_backend import CephBackend
 from app.qweb.service.service_plugin import LoadOrder, PluginBase
-from app.plugins.platform.vm.vm_routes import handler
 
 
 class CephPlugin(PluginBase):

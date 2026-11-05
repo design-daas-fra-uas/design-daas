@@ -7,7 +7,6 @@ from app.qweb.blueprints.blueprint_info import (
     AuthenticationMode,
     ConcurrencyMode,
     BlueprintInfo,
-    ConcurrencyMode,
 )
 from app.qweb.processing.processor import (
     FileProcessorAction,
