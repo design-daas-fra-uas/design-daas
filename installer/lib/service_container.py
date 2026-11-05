@@ -49,6 +49,9 @@ def main() -> int:
                 if not host.startswith("/"):
                     host = str(data_path / host)
                 args += ["-v", f"{host}:{cnt}:{mode}"]
+            else:
+                # The backend ignores it too (DockerRequest._read_service_config)
+                print(f"{cname}: ignoring unsupported option '{opt}'", file=sys.stderr)
         args.append(image)
         print("\n".join(args))
         return 0

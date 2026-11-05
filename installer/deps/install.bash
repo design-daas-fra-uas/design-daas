@@ -16,6 +16,8 @@ source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.bash"
 DOCKER_DATA_ROOT="/home/daas-docker"
 COMPOSE_VERSION="v2.24.0"
 COMPOSE_URL="https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-linux-x86_64"
+# sha256 of that release binary (docker-compose-linux-x86_64.sha256 on GitHub)
+COMPOSE_SHA256="43fb39c0bc24ac796123935032eddcfb57a7acd9216badeb10714c986ea1e090"
 COMPOSE_BIN="/usr/bin/docker-compose"
 SSH_KEY="/root/.ssh/id_rsa"
 
@@ -41,13 +43,12 @@ require_root
 step "Packages"
 # ============================================================
 
-run apt-get update
+run apt-get update || die "apt-get update failed: see above (an enabled Proxmox enterprise repository? make proxmox-check)"
 info "Base:   ${PKG_BASE[*]}"
 info "Python: ${PKG_PYTHON[*]}"
 info "Host:   ${PKG_HOST[*]}"
 info "ISO:    ${PKG_ISO[*]}"
 apt_install "${PKG_BASE[@]}" "${PKG_PYTHON[@]}" "${PKG_HOST[@]}" "${PKG_ISO[@]}"
-run pip install docker --break-system-packages
 
 # ============================================================
 step "docker (data root: $DOCKER_DATA_ROOT)"
@@ -59,7 +60,14 @@ write_file /etc/docker/daemon.json <<EOF
     "data-root": "$DOCKER_DATA_ROOT"
 }
 EOF
-enable_and_restart docker
+# Restarting docker stops every container (service containers, instances,
+# Java backend, frontend): only when its config changed or it is not running
+if (( WRITE_FILE_CHANGED )) || ! systemctl is-active --quiet docker; then
+    enable_and_restart docker
+else
+    run systemctl enable docker
+    info "docker running with this config, not restarted"
+fi
 
 # ============================================================
 step "docker-compose $COMPOSE_VERSION"
@@ -68,9 +76,13 @@ step "docker-compose $COMPOSE_VERSION"
 if [[ -x "$COMPOSE_BIN" ]] && "$COMPOSE_BIN" version 2>/dev/null | grep -q "${COMPOSE_VERSION}"; then
     info "docker-compose ${COMPOSE_VERSION} already installed"
 else
-    run curl -fSL "$COMPOSE_URL" -o "$COMPOSE_BIN"
-    chmod +x "$COMPOSE_BIN"
-    success "Installed $("$COMPOSE_BIN" version)"
+    tmp="$(mktemp)"
+    run curl -fSL "$COMPOSE_URL" -o "$tmp"
+    echo "$COMPOSE_SHA256  $tmp" | sha256sum -c --quiet - \
+        || { rm -f "$tmp"; die "docker-compose download does not match its checksum"; }
+    install -m 755 "$tmp" "$COMPOSE_BIN"
+    rm -f "$tmp"
+    success "Installed $("$COMPOSE_BIN" version) (checksum verified)"
 fi
 
 # ============================================================
