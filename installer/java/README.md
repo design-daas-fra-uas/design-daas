@@ -29,9 +29,10 @@ DaaS backend ──────── http 127.0.0.1:8080 ────┴─ daa
 | `MAIL_*` | Registration mails (optional) |
 
 `java-install` writes them to `java/.env` (mode 600) for docker-compose.
-Changing `ADMIN_PASSWORD` or the DB passwords later does **not** change
-the existing account/database: change them in the Java backend (or start
-from scratch with `PURGE=1`, which deletes all users).
+`ADMIN_PASSWORD` is only read when the admin is created (first start), and
+the Java backend has no password change of its own: after changing it in
+`daas.env`, run `make java-admin-password` (below). The DB passwords are
+only applied when the database is created.
 
 ## Commands
 
@@ -42,6 +43,7 @@ From `installer/`, as root:
 | `make java-install` | Builds the image from the current Java code (Maven inside docker), writes the unit, (re)starts and waits until it answers, then tests the admin login |
 | `make java-check` | Tests the running backend (changes nothing): service, containers (DB healthy), admin login directly **and** through nginx `/auth/`, the data volumes, and that user instances cannot reach it directly |
 | `make java-backup` | Saves the database and the signing keys to `java/backups/` (below) |
+| `make java-admin-password` | Sets the admin password to `ADMIN_PASSWORD` (BCrypt hash made in a throwaway container, never printed) and revokes all the admin's tokens; then `make daas-configure daas-restart` |
 | `make java-status` / `java-logs` / `java-restart` | Service control |
 | `make java-reinstall` | Delete + install from the current code; users and keys are kept |
 | `make java-delete [PURGE=1]` | Removes service, containers and image. `PURGE=1` also deletes the **database and keys**: all users and permissions are gone. Run `make java-backup` first |
@@ -93,5 +95,6 @@ systemctl start java-backend && make -C .. java-check
 | `delete.bash` | Removes service, containers, image (`-p`: also the volumes and `.env`) |
 | `check.bash` | The test behind `make java-check` |
 | `backup.bash` | The backup behind `make java-backup` |
+| `set-admin-password.bash` | The password change behind `make java-admin-password` |
 | `docker-compose.yml` | The two containers, network, volumes, environment |
 | `.env`, `backups/` | Generated, root-only, not committed |

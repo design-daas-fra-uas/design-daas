@@ -145,6 +145,20 @@ Groups: `make containers-install`, `make images-install`, `make images`
 `proxmox-install-ceph-cephfs`, `proxmox-install-ceph-pool`,
 `proxmox-cluster-create` / `proxmox-cluster-join` (both need `LINK_IP=...`).
 
+## Changing passwords
+
+The passwords live in `daas.env` (root only, not in git). The DaaS
+backend gets them through `src/config/local/` (also not in git), which
+`make daas-configure` writes. Never put a password into a tracked file:
+this repository is public.
+
+| Password | Change it in `daas.env`, then |
+|---|---|
+| `PVE_API_PASSWORD` (Proxmox account `daas@pve` of the backend) | `make daas-configure daas-restart` (configure sets it in Proxmox) |
+| `ADMIN_PASSWORD` (Java admin, also used by the backend) | `make java-admin-password daas-configure daas-restart` |
+
+Generate one with `head -c 48 /dev/urandom | base64 | tr -dc A-Za-z0-9 | head -c 32`.
+
 ## Configuration
 
 Values come from, in this order: the command line

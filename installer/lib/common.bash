@@ -177,6 +177,16 @@ write_file() {
     success "Wrote: $target"
 }
 
+# toml_string VALUE: VALUE as a quoted TOML string (any character but a
+# newline; backslashes and quotes escaped)
+toml_string() {
+    local value="$1"
+    [[ "$value" != *$'\n'* ]] || die "A TOML value must not contain a newline"
+    value="${value//\\/\\\\}"
+    value="${value//\"/\\\"}"
+    printf '"%s"' "$value"
+}
+
 # is_secret_key KEY: true for keys whose values must not be logged
 is_secret_key() {
     [[ "${1,,}" == *pass* || "${1,,}" == *secret* || "${1,,}" == *token* ]]
@@ -198,9 +208,7 @@ set_toml_value() {
     if [[ "$mode" == raw ]]; then
         new="${key} = ${value}"
     else
-        value="${value//\\/\\\\}"
-        value="${value//\"/\\\"}"
-        new="${key} = \"${value}\""
+        new="${key} = $(toml_string "$value")"
     fi
     shown="$new"
     if is_secret_key "$key"; then

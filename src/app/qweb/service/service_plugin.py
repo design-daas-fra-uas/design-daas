@@ -2,8 +2,6 @@
 
 from abc import abstractmethod
 from enum import Enum
-import os
-import tomllib
 from typing import Any, Optional
 from app.daas.common.enums import ConfigFile
 from app.qweb.auth.auth_qweb import QwebAuthenticatorBase
@@ -13,6 +11,7 @@ from app.qweb.logging.logging import LogTarget, Loggable
 from app.qweb.service.service_context import QwebBackend, QwebObjectLayer
 from app.qweb.service.service_runtime import get_qweb_runtime
 from app.qweb.service.service_tasks import QwebTaskManager
+from app.qweb.common.tomlfile import read_toml_with_local
 
 
 class LoadOrder(Enum):
@@ -132,11 +131,7 @@ class PluginBase(Loggable):
         config_path = qweb_conf.quart.config_folder
         if isinstance(file, ConfigFile):
             file = file.value
-        fullname = f"{config_path}/{file}"
-        if os.path.exists(fullname):
-            with open(file=fullname, mode="rb") as pointer:
-                return tomllib.load(pointer)
-        return {}
+        return read_toml_with_local(f"{config_path}/{file}")
 
     def register(self):
         """Registers itself at runtime"""

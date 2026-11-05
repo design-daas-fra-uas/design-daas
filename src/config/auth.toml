@@ -26,4 +26,4 @@ url = "http://127.0.0.1:8080"
 clientid = "test-client"
 scope = "admin"
 username = "admin@design.local"
-password = "Admin123!"
+password = ""  # set by the installer in config/local/auth.toml (not in git)

@@ -28,7 +28,7 @@ fail() { echo "  FAIL  $*"; FAILED=1; }
 
 HOST="$(url_host "$DAAS_PUBLIC_URL")"
 PORT="$(url_port "$DAAS_PUBLIC_URL")"
-SERVICES=(daas-0-guacd daas-0-db daas-0-rabbit daas-0-extensions)
+SERVICES=(daas-0-guacd daas-0-mariadb daas-0-rabbit daas-0-extensions)
 
 echo "Checking $DAAS_PUBLIC_URL"
 

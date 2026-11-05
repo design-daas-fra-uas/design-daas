@@ -27,7 +27,7 @@ service_containers = [
   # MariaDB (only used when db.toml db_type = "mariadb")
   [
     "daas-0-mariadb",
-    "daas-0-db",
+    "daas-0-mariadb",
     [
       "-p 127.0.0.1:3306:3306",
       "-v db/mariadb:/var/lib/mysql:rw",

@@ -87,7 +87,7 @@ unit_of() {
 # Service containers: container name and image as in container.toml
 container_of() {
     case "$1" in
-        db) echo daas-0-db ;;
+        db) echo daas-0-mariadb ;;
         *)  echo "daas-0-$1" ;;
     esac
 }

@@ -1,9 +1,7 @@
 """Service runtime"""
 
-import os
 import sys
 import asyncio
-import tomllib
 from dataclasses import asdict
 from typing import Any, Optional
 import nest_asyncio
@@ -28,6 +26,7 @@ from app.qweb.service.service_providers import (
     ObjectLayerContextProvider,
 )
 from app.qweb.service.service_tasks import QwebTaskManager
+from app.qweb.common.tomlfile import read_toml_with_local
 
 RUNTIME_VERSION = "1.0.0"
 
@@ -242,11 +241,7 @@ class QwebServiceRuntime(Loggable):
         """Reads toml file from config folder"""
         qweb_conf = self.get_config_qweb()
         config_path = qweb_conf.quart.config_folder
-        fullname = f"{config_path}/{file}"
-        if os.path.exists(fullname):
-            with open(file=fullname, mode="rb") as pointer:
-                return tomllib.load(pointer)
-        return {}
+        return read_toml_with_local(f"{config_path}/{file}")
 
     def __get_service_context(self) -> CoreContext:
         needed = []

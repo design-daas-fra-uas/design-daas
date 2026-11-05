@@ -2,7 +2,7 @@
 # and Database -> SampleRegistryConfig (app/daas/db/db_samples.py).
 
 [db]
-# "sqlite" (data_path/database) or "mariadb" (db_* settings, daas-0-db container)
+# "sqlite" (data_path/database) or "mariadb" (db_* settings, daas-0-mariadb container)
 db_type = "sqlite"
 database = "daas-web-db.sqlite"
 # Relative to qweb.toml [sys] data_path (src/data/db)

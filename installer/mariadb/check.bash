@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Smoke test of the mariadb image: starts a test container with its own
-# empty data folder on 127.0.0.1:13306 (does not touch daas-0-db), then
+# empty data folder on 127.0.0.1:13306 (does not touch daas-0-mariadb), then
 # checks the version and who may log in as root:
 #   - the host, through the published port (like the DaaS backend): yes
 #   - a container on the docker bridge (like a user instance): no

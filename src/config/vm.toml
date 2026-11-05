@@ -4,7 +4,7 @@
 [vm_rest]
 # WARNING: prototype credentials; use a dedicated Proxmox user for real setups
 apiuser = "daas@pve"
-apipass = "qweasdyxc"
+apipass = ""  # set by the installer in config/local/vm.toml (not in git)
 apiurl = "https://127.0.0.1:8006/api2/json"
 sessionurl = "access/ticket"
 # Seconds before the API ticket is renewed

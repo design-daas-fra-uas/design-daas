@@ -17,7 +17,7 @@ build:
 	docker build $(BUILDOPT) --build-arg ROOT_PASSWORD="$(ROOT_PASSWORD)" -t $(TAG) .
 
 # Starts a test container with its own empty data folder and port (does not
-# touch daas-0-db), checks it, removes it
+# touch daas-0-mariadb), checks it, removes it
 check:
 	./check.bash $(TAG)
 

@@ -1,6 +1,6 @@
 # MariaDB for the DaaS backend (see README.md), only used when
 # src/config/db.toml has db_type = "mariadb". The DaaS backend starts it as
-# daas-0-db on 127.0.0.1:3306, data in src/data/db/mariadb
+# daas-0-mariadb on 127.0.0.1:3306, data in src/data/db/mariadb
 # (src/config/container.toml).
 
 # 11.4: LTS, the same version as the Java backend's database. Never lower it

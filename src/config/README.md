@@ -28,6 +28,22 @@ backend), except `logging.toml log_dir` and the docker `-v` volumes in
 | `info.toml` | `InfoPlugin` | which VMs/images/containers count as DaaS |
 | `limits.toml` | `LimitPlugin` | system-wide and per-user resource limits |
 
+## Local overrides: `config/local/` (not in git)
+
+Every file is read together with `config/local/<same name>.toml` when that
+exists (`app/qweb/common/tomlfile.py`): its keys replace the ones here,
+tables are merged key by key. The folder is ignored by git and readable
+by root only. It holds the **secrets**, so the files here keep empty
+placeholders for them:
+
+| Override | Key | From `installer/daas.env` |
+|---|---|---|
+| `local/vm.toml` | `[vm_rest] apipass` (Proxmox API password of `daas@pve`) | `PVE_API_PASSWORD` |
+| `local/auth.toml` | `[auth.remote] password` (Java admin, remote auth only) | `ADMIN_PASSWORD` |
+
+`make daas-configure` writes them. Never put a password into a tracked
+file: this repository is public.
+
 ## Values set by the installer
 
 `installer/daas/configure.bash` (`make daas-configure`) sets these keys by
@@ -35,17 +51,26 @@ name, so manual edits to them are overwritten on the next run:
 
 | File | Key | Value |
 |---|---|---|
-| `qweb.toml` | `hostip` | `HOST_NAME.HOST_DOMAIN` |
-| `proxy.toml` | `viewer_host` | `HOST_NAME.HOST_DOMAIN` |
-| `vm.toml` | `node` | `HOST_NAME` |
+| `qweb.toml` | `host` | `127.0.0.1` (only nginx reaches the backend) |
+| `qweb.toml` | `hostproto`, `hostip`, `hostport` | scheme, host, port of `DAAS_PUBLIC_URL` |
+| `proxy.toml` | `viewer_protocol`, `viewer_host`, `viewer_port` | scheme, host, port of `DAAS_PUBLIC_URL` |
+| `vm.toml` | `node` | `HOST_NAME` (the Proxmox node name) |
 | `vm.toml` | `hostIp` | `192.168.123.HOST_NUMBER` |
 | `vm.toml` | `bridge_cidr_{daas,inst,ceph,cluster}` | `192.168.{123,223,100,200}.HOST_NUMBER/24` |
 | `vm.toml` | `bridge_gw_daas`, `bridge_adapter_daas` | `192.168.123.1` / `NET_DEVICE`, empty when `STANDALONE` |
 | `container.toml` | `host` | `192.168.123.HOST_NUMBER` |
+| `auth.toml` | `authenticator_type`, `enable_auth_endpoint`, `url`, `clientid`, `scope`, `username` | `DAAS_AUTH_MODE`, `DAAS_AUTH_CHECK_ENDPOINTS`, `http://127.0.0.1:JAVA_PORT`, `OAUTH_CLIENT_ID`, `admin`, `ADMIN_EMAIL` |
 
-## Secrets
+## Values to change for production
 
-These files are in git and hold prototype credentials: Proxmox
-`vm.toml apipass`, MariaDB `db.toml db_pass` (must match
-`installer/mariadb/Dockerfile`) and the remote auth account in
-`auth.toml [auth.remote]`. Change them for any real deployment.
+| File | Key | Now | Why |
+|---|---|---|---|
+| `qweb.toml` | `enable_testing` | `true` | loads the test routes (`/testing`, `/baseline0`..`6`), some without login |
+| `qweb.toml` | `allow_origin` | `"*"` | any web site may call the API from a browser |
+| `qweb.toml` | `debug` | `true` | extra internal debugging |
+| `db.toml` | `include_samples` | `true` | sample objects created on every start |
+| `db.toml` | `db_pass` | public example | MariaDB is unused (`db_type = "sqlite"`); move it to `local/` before using MariaDB |
+
+Keys marked "Currently not read by the code" in the files (`token_length`,
+`admin_credentials`, `proxyfile`, `instance_status_pidfile_name`,
+`all_sublogs`) have no effect.

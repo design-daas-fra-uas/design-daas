@@ -53,6 +53,9 @@ COMPONENTS := $(SERVICES) $(CONTAINERS) $(IMAGES) $(HOST) iso
 # Folder in installer/ with the Makefile of each image
 IMAGE_DIR_db := mariadb
 image_dir = $(or $(IMAGE_DIR_$(1)),$(1))
+# Container name of each service container (as in src/config/container.toml)
+CONTAINER_NAME_db := daas-0-mariadb
+container_name = $(or $(CONTAINER_NAME_$(1)),daas-0-$(1))
 ACTIONS := start stop restart status logs delete
 LIFECYCLE := $(foreach c,$(COMPONENTS),$(addprefix $(c)-,$(ACTIONS)))
 SERVICE_CMD = ./service.bash $(ENV_OPT)
@@ -80,7 +83,7 @@ PURGE_OPT = $(if $(PURGE),-p)
         daas-all daas-install daas-configure daas-services daas-containers daas-check \
         daas-reinstall \
         frontend-all frontend-install frontend-configure frontend-reinstall frontend-check \
-        env require-env java-install java-reinstall java-check java-backup
+        env require-env java-install java-reinstall java-check java-backup java-admin-password
 
 default: usage
 
@@ -253,7 +256,7 @@ reinstall: require-env
 # Build the image; a running container is restarted from the new image
 $(addsuffix -install,$(CONTAINERS)): %-install:
 	$(MAKE) -C $(call image_dir,$*) build
-	@if docker ps -q --filter "name=^daas-0-$*$$" | grep -q .; then \
+	@if docker ps -q --filter "name=^$(call container_name,$*)$$" | grep -q .; then \
 		$(SERVICE_CMD) restart $*; fi
 
 $(addsuffix -reinstall,$(CONTAINERS)): %-reinstall:
@@ -399,6 +402,11 @@ java-install: require-env
 # Checks the running Java backend (changes nothing)
 java-check: require-env
 	./java/check.bash -e "$(ENV_FILE)"
+
+# Sets the Java admin password to ADMIN_PASSWORD (after changing it in the
+# env file) and revokes the admin's tokens
+java-admin-password: require-env
+	./java/set-admin-password.bash -e "$(ENV_FILE)"
 
 # Saves the database (users, permissions) and signing keys to java/backups/
 java-backup:

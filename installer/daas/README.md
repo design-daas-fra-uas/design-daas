@@ -40,7 +40,9 @@ restart the backend (nginx is only reloaded).
 | `src/config/proxy.toml` | viewer address from `DAAS_PUBLIC_URL` |
 | `src/config/vm.toml` | node `HOST_NAME`, bridge addresses `192.168.{123,223,100,200}.HOST_NUMBER`, uplink `NET_DEVICE` (not with `STANDALONE`) |
 | `src/config/container.toml` | host address for the containers |
-| `src/config/auth.toml` | login through the Java backend (`DAAS_AUTH_MODE`, `ADMIN_*`, `OAUTH_CLIENT_ID`) |
+| `src/config/auth.toml` | login through the Java backend (`DAAS_AUTH_MODE`, `ADMIN_EMAIL`, `OAUTH_CLIENT_ID`) |
+| Proxmox user `daas@pve` | created with the Administrator role when missing; its password is set to `PVE_API_PASSWORD` when that does not log in |
+| `src/config/local/vm.toml`, `local/auth.toml` | **the secrets** (`PVE_API_PASSWORD`, `ADMIN_PASSWORD`), root-only and not in git; the backend merges them over the tracked files (see `src/config/README.md`) |
 | `/etc/nginx/ssl/` | local CA `daas-ca.crt` (once) + certificate for every public name (`DAAS_PUBLIC_URL`, `FRONTEND_PUBLIC_URL`, `AUTH_PUBLIC_URL`), see `mkcert.bash` |
 | `/etc/nginx/nginx.conf`, `sites-enabled/daas.conf` | from `nginx.conf` / `daas.conf` here; server name = host of `DAAS_PUBLIC_URL` |
 | `/etc/dnsmasq.conf` | DHCP on vmbr1 (`.50`–`.75`), gateway `192.168.223.HOST_NUMBER` |

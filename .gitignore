@@ -9,3 +9,6 @@ __pycache__/
 /installer/daas.env
 /installer/java/.env
 /installer/frontend/.env
+
+# Secrets written by the installer (installer/daas/configure.bash)
+/src/config/local/
