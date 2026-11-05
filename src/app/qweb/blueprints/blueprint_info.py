@@ -60,6 +60,9 @@ class BlueprintInfo:
     objects: list = field(default_factory=lambda: [])
     # Only users with the role "admin" (from the auth service) may call it
     admin_only: bool = False
+    # Changes or deletes the objects it loads: on system objects (owner 0,
+    # shared by all users, e.g. templates) only admins may call it
+    protect_system_objects: bool = False
 
     def __repr__(self):
         return (

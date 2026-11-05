@@ -125,6 +125,11 @@ class BlueprintHandler(BlueprintHandlerBase):
 
         # Check concurrency mode
         mode = info.conc_params
+        # Protected routes must not start processing before the role is checked
+        if (
+            info.admin_only or info.protect_system_objects
+        ) and mode == ConcurrencyMode.AUTH_AND_PROC:
+            mode = ConcurrencyMode.NONE
         if mode == ConcurrencyMode.NONE:
             result = await self.sequential_stages(req, info, timing)
         elif mode == ConcurrencyMode.CTX_AND_AUTH:
@@ -166,6 +171,11 @@ class BlueprintHandler(BlueprintHandlerBase):
             )
 
         # Onership
+        if await self.__system_object_denied(ctx.objects.objects, authres, info):
+            ctype = await self.get_requested_content_type(info)
+            return self._create_error_response(
+                "Only admins may change system objects", 403, content_type=ctype
+            )
         verified = await self.__verify_entity_ownerships(
             ctx.objects.objects, authres, info
         )
@@ -224,6 +234,11 @@ class BlueprintHandler(BlueprintHandlerBase):
             return self._create_error_response("ServiceContext unavailable", 500)
 
         # Onership
+        if await self.__system_object_denied(ctxres.objects.objects, authres, info):
+            ctype = await self.get_requested_content_type(info)
+            return self._create_error_response(
+                "Only admins may change system objects", 403, content_type=ctype
+            )
         verified = await self.__verify_entity_ownerships(
             ctxres.objects.objects, authres, info
         )
@@ -290,6 +305,11 @@ class BlueprintHandler(BlueprintHandlerBase):
             )
 
         # Onership
+        if await self.__system_object_denied(ctx.objects.objects, authres, info):
+            ctype = await self.get_requested_content_type(info)
+            return self._create_error_response(
+                "Only admins may change system objects", 403, content_type=ctype
+            )
         verified = await self.__verify_entity_ownerships(
             ctx.objects.objects, authres, info
         )
@@ -380,6 +400,21 @@ class BlueprintHandler(BlueprintHandlerBase):
                 if timing is not None:
                     timing.processing.stop()
         return result, code
+
+    async def __system_object_denied(
+        self, objects: dict, user: QwebUser, info: BlueprintInfo
+    ) -> bool:
+        if not info.protect_system_objects or user.role == "admin":
+            return False
+        for name, obj in objects.items():
+            if getattr(obj, "id_owner", None) == 0:
+                self._log_error(
+                    f"User {user.id_user} (role '{user.role}') denied changing "
+                    f"system object {name} via {info.url}",
+                    1,
+                )
+                return True
+        return False
 
     async def __verify_entity_ownerships(
         self, objects: dict, user: QwebUser, info: BlueprintInfo
