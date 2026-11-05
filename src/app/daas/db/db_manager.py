@@ -116,32 +116,3 @@ class DatabaseManager(Loggable):
             return True
         return False
 
-    # async def migrate_database(self):
-    #     """Migrates data from one db to another"""
-    #     from daas_web.common.request_context import get_context
-    #
-    #     ctx = get_context()
-    #     dbase = await ctx.get_database()
-    #     oldfiles = await dbase.get_all_files(0)
-    #     oldapps = await dbase.get_all_applications(0)
-    #     limits = await dbase.get_all_limits()
-    #     objs = await dbase.all_daas_objects()
-    #     envs = await dbase.all_environments()
-    #     insts = await dbase.all_instances()
-    #     cons = await dbase.all_connections()
-    #
-    #     if self.api is not None:
-    #         for limit in limits:
-    #             await self.api.db_session_upsert(limit)
-    #         for obj in objs:
-    #             await self.api.db_session_upsert(obj)
-    #         for file in oldfiles:
-    #             await self.api.db_session_upsert(file)
-    #         for app in oldapps:
-    #             await self.api.db_session_upsert(app)
-    #         for env in envs:
-    #             await self.api.db_session_upsert(env)
-    #         for con in cons:
-    #             await self.api.db_session_upsert(con)
-    #         for inst in insts:
-    #             await self.api.db_session_upsert(inst)

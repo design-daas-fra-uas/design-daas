@@ -1,24 +1,6 @@
 from enum import Enum
 
 
-class PluginName(Enum):
-    DB = "db"
-    PROXY = "proxy"
-    EXTENSIONS = "extensions"
-    MESSAGING = "messaging"
-    INFO = "info"
-    ADMIN = "admin"
-    AUTH = "auth"
-    NODE = "node"
-    FILE = "file"
-    CEPH = "ceph"
-    CONTAINER = "container"
-    VM = "vm"
-    PHASES = "phases"
-    INSTANCES = "instances"
-    TESTING = "testbackend"
-
-
 class BackendName(Enum):
     EXTENSIONS = "extensions"
     DB = "db"

@@ -45,13 +45,6 @@ class NodeController(Loggable):
         self.connected = False
         return True
 
-    def node_connection_test(self) -> int:
-        """Test to check if the service is available"""
-        cmd = "true"
-        code, std_out, std_err = self.adapter.ssh_call(cmd)
-        self._log_info(f"Connection test: {std_out}{std_err}", code)
-        return code
-
     async def node_vmconfigure_dhcp(self, vmid: int, adr: str) -> tuple:
         """Configures dhcp for the vmid (dnsmasq)"""
         result, out, err = await self.__delete_dhcphost(vmid)
@@ -60,10 +53,6 @@ class NodeController(Loggable):
         if result == 0:
             result, out, err = await self.__restart_dnsmasq()
         return result, out, err
-
-    async def node_vmdelete_dhcp(self, vmid: int) -> tuple:
-        """Configures dhcp for the vmid (dnsmasq)"""
-        return await self.__delete_dhcphost(vmid)
 
     async def node_vmconfigure_iptables(self, adr: str):
         """ "Configures iptables for the vmid"""

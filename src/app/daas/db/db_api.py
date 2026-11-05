@@ -76,15 +76,6 @@ class DatabaseApi(DatabaseApiBase):
         """Converts model object to orm object"""
         return create_orm(model)
 
-    async def db_session_flush(
-        self,
-    ) -> bool:
-        """Flush all changes to the db"""
-        if self.session is None:
-            return False
-        self.session.flush()
-        return True
-
     def db_session_create(
         self,
         dbname: str,
@@ -185,10 +176,6 @@ class DatabaseApi(DatabaseApiBase):
             return self.metadata.tables[name]
         return None
 
-    async def get_table_by_orm(self, orm: ORMEntity) -> Optional[Table]:
-        """Gets Table associated with specified orm type"""
-        return orm.get_table()
-
     async def get_table_by_domain(self, model: DaaSEntity) -> Optional[Table]:
         """Gets Table associated with specified model type"""
         orm = await self.model_to_orm(model)
@@ -197,11 +184,6 @@ class DatabaseApi(DatabaseApiBase):
         return None
 
     async def get_mapping_orm(self, name: str) -> Optional[ORMEntity]:
-        """Get mapping orm"""
-        tab: Optional[Table] = await self.get_table(name)
-        return await self._get_table_mapping_orm(tab)
-
-    async def get_mapping_domain(self, name: str) -> Optional[DaaSEntity]:
         """Get mapping orm"""
         tab: Optional[Table] = await self.get_table(name)
         return await self._get_table_mapping_orm(tab)

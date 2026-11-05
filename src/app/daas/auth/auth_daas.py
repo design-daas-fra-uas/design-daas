@@ -19,20 +19,6 @@ from app.qweb.logging.logging import LogTarget
 
 
 @dataclass
-class AuthenticatorConfig:
-    """Config for authenticator"""
-
-    url: str
-    clientid: str
-    scope: str
-    username: str
-    password: str
-    verify_endpoints: bool
-    remote_verification: bool
-    logrequests: bool
-
-
-@dataclass
 class AuthToken:
     """A token"""
 

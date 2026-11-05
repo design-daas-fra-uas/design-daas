@@ -102,11 +102,6 @@ class HeartbeatReceiver(Loggable):
                 # is stopped before the backend's messaging on shutdown
                 self._log_error(f"Error on disconnect: {exe}")
 
-    def reset_heartbeat(self, ip_addr: str):
-        """Resets heartbeat for a given host"""
-        if ip_addr in self.hosts:
-            del self.hosts[ip_addr]
-
     def on_heartbeat(
         self,
         channel: pika.channel.Channel,
@@ -183,11 +178,3 @@ class HeartbeatReceiver(Loggable):
                 return True
 
         return False
-
-    async def get_available_hosts(self) -> list:
-        """
-        Get a list of currently active hosts.
-
-        :return: A list of active host IDs.
-        """
-        return list(self.hosts.keys())
