@@ -65,6 +65,19 @@ else
     fail "backend listens on '${listen:-nothing}' (expected 127.0.0.1:5000 only; make daas-configure)"
 fi
 
+# The database the backend is configured for (db.toml + config/local)
+dbtype="$(cd "$DAAS_INSTALLER_DIR/../src" && python3 -I -c '
+import sys; sys.path.insert(0, ".")
+from app.qweb.common.tomlfile import read_toml_with_local
+db = read_toml_with_local("config/db.toml")["db"]; print(db["db_type"], db["db_name"])' 2>/dev/null)"
+read -r dbtype dbname <<<"$dbtype"
+if [[ "$dbtype" == mariadb ]]; then
+    n="$(docker exec daas-0-mariadb sh -c "MYSQL_PWD=\"\$MARIADB_ROOT_PASSWORD\" mariadb -uroot -N -e 'SELECT COUNT(*) FROM \`$dbname\`.daas_objects'" 2>/dev/null)"
+    if [[ "$n" =~ ^[0-9]+$ ]]; then ok "database: MariaDB $dbname ($n objects)"; else fail "database: MariaDB $dbname not readable (make db-logs)"; fi
+else
+    ok "database: $dbtype ($dbname)"
+fi
+
 for s in "${SERVICES[@]}"; do
     if [[ -n "$(docker ps -q --filter "name=^$s$")" ]]; then ok "service container $s"; else fail "service container $s not running"; fi
 done
