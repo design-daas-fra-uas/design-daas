@@ -100,6 +100,14 @@ image_of() {
     esac
 }
 
+# image_alias_of IMAGE: second tag of a desktop image (TAGS in its Makefile)
+image_alias_of() {
+    case "$1" in
+        x11vnc) echo daas.contx11 ;;
+        wine)   echo daas.contwine ;;
+    esac
+}
+
 # host_units HOST: the systemd units of a host component
 host_units() {
     if [[ "$1" == proxmox ]]; then
@@ -276,7 +284,8 @@ do_delete() {
                 run docker rm -f "$name"
             fi
             if image_present "$c"; then
-                run docker image rm -f "$image"
+                # Desktop images also carry the tag their sample object runs
+                run docker image rm -f "$image" $(image_alias_of "$c")
             else
                 info "No image $image"
             fi
