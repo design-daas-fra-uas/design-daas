@@ -5,12 +5,11 @@
 
 .PHONY: all build install check clean
 
-# apache/guacamole-client master right after the 1.5.3 release (2023-06-22):
-# the committed guacamole.js is built from it, and the backend's protocol
-# code links to it (src/app/daas/proxy/handshake.py, syntax.py)
-GUAC_REF ?= 940c7ad37aefc06cb42c764a1deb6abab86f8290
-# Guacamole.API_VERSION in the output (the source at GUAC_REF says 1.5.2)
-GUAC_API_VERSION ?= 1.5.3
+# apache/guacamole-client release 1.6.0 (the same version as guacd); the
+# viewer needs Guacamole.Client.State, which the 1.5.x releases lack
+GUAC_REF ?= 1.6.0
+# Guacamole.API_VERSION in the output
+GUAC_API_VERSION ?= 1.6.0
 
 URL := https://github.com/apache/guacamole-client/archive/$(GUAC_REF).tar.gz
 SRC := upstream/guacamole-client-$(GUAC_REF)/guacamole-common-js/src/main/webapp
