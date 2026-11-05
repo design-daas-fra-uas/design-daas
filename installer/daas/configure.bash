@@ -98,6 +98,9 @@ if [[ -n "$ENV_FILE" ]]; then
         || warn "DAAS_PUBLIC_URL has a path; the DaaS backend must be served at the root, ignoring it"
 fi
 info "Public URL:  $PUBLIC_PROTO://$PUBLIC_HOST:$PUBLIC_PORT"
+# Only nginx reaches the backend (127.0.0.1:5000); hostproto/hostip/hostport
+# below are the public address in links, not where it listens
+set_toml_value "$CFG_FOLDER/qweb.toml"      host                "127.0.0.1"
 set_toml_value "$CFG_FOLDER/qweb.toml"      hostproto           "$PUBLIC_PROTO"
 set_toml_value "$CFG_FOLDER/qweb.toml"      hostip              "$PUBLIC_HOST"
 set_toml_value "$CFG_FOLDER/qweb.toml"      hostport            "$PUBLIC_PORT" raw
@@ -191,12 +194,11 @@ info "Certificate: $FQDN ${CERT_NAMES[*]}"
     $(printf -- '-a %s ' "${CERT_NAMES[@]}")
 
 run cp "$DAAS_INSTALLER_DIR/daas/nginx.conf" /etc/nginx/nginx.conf
-sed -e "s#pve1.cluster.local#$FQDN#g" "$DAAS_INSTALLER_DIR/daas/daas.conf" \
+sed -e "s#pve1.cluster.local#$PUBLIC_HOST#g" "$DAAS_INSTALLER_DIR/daas/daas.conf" \
     | write_file "$NGINX_SITE"
 run ln -sfn "$NGINX_SITE" "$NGINX_ENABLED"
 
-run nginx -t
-enable_and_restart nginx
+reload_nginx
 
 # ============================================================
 step "dnsmasq (DHCP for instances on vmbr1)"
@@ -215,13 +217,20 @@ dhcp-option=vmbr1,6,8.8.8.8
 dhcp-leasefile=/var/lib/misc/dnsmasq.leases
 conf-dir=/etc/dnsmasq.d,.bak
 EOF
-write_file /etc/dnsmasq.d/pve-hosts.conf <<EOF
+# Fixed addresses per VM (dnsmasqhosts in src/config/node.toml): the backend
+# adds a line for every VM it starts, so only create the file, never
+# overwrite it (that would give running VMs new addresses)
+if [[ -f /etc/dnsmasq.d/pve-hosts.conf ]]; then
+    info "Keeping /etc/dnsmasq.d/pve-hosts.conf ($(grep -c '^dhcp-host' /etc/dnsmasq.d/pve-hosts.conf) hosts, managed by the backend)"
+else
+    write_file /etc/dnsmasq.d/pve-hosts.conf <<EOF
 dhcp-host=de:ad:be:ef:00:64,id:vm100,192.168.223.100,1m
 dhcp-host=de:ad:be:ef:00:65,id:vm100,192.168.223.101,1m
 dhcp-host=de:ad:be:ef:00:66,id:vm100,192.168.223.102,1m
 dhcp-host=de:ad:be:ef:00:67,id:vm100,192.168.223.103,1m
 dhcp-host=de:ad:be:ef:00:68,id:vm100,192.168.223.104,1m
 EOF
+fi
 # vmbr1 is created by the backend on its first start, so dnsmasq may not
 # come up before that
 run systemctl enable dnsmasq

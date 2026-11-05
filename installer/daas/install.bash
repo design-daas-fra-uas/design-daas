@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 #
 # Installs the Design DaaS backend on the host:
-#   - Python venv + TLS key for the backend (src/Makefile install)
+#   - Python venv + TLS key for the backend (src/Makefile install), only
+#     when there is no venv yet (daas-reinstall deletes it first)
 #   - the daas systemd unit (enabled, but NOT started: run daas/configure.bash
 #     and build the service images first, then `make daas-start`)
+#
+# Safe to run again: it only rewrites the unit (applied at the next restart).
 #
 # The host packages come from deps/install.bash (make deps).
 
@@ -42,7 +45,13 @@ info "Repository: $REPO_FOLDER"
 step "Backend Python environment"
 # ============================================================
 
-run make -C "$REPO_FOLDER/src" install
+# src/Makefile install deletes and rebuilds the venv; do not pull it away
+# under a running backend
+if [[ -x "$REPO_FOLDER/src/.venv/bin/python3" ]]; then
+    info "Keeping the existing venv (make daas-reinstall rebuilds it)"
+else
+    run make -C "$REPO_FOLDER/src" install
+fi
 
 # ============================================================
 step "systemd unit: $SERVICE_NAME.service"
@@ -51,14 +60,21 @@ step "systemd unit: $SERVICE_NAME.service"
 write_file "/etc/systemd/system/$SERVICE_NAME.service" <<EOF
 [Unit]
 Description=Design DaaS backend
-Wants=pve-cluster.service pvedaemon.service ssh.service pve-storage.target java-backend.service
-After=network.target pve-storage.target pve-cluster.service pvedaemon.service ssh.service nginx.service docker.service java-backend.service
-Requires=nginx.service pveproxy.service docker.service
+# Wants, not Requires: restarting nginx or pveproxy (configure, certificate,
+# Proxmox updates) must not restart the backend and its service containers.
+# Docker is required: the service containers stop with it anyway.
+Wants=nginx.service pveproxy.service pve-cluster.service pvedaemon.service pve-storage.target java-backend.service
+After=network-online.target nginx.service pveproxy.service pve-cluster.service pvedaemon.service pve-storage.target docker.service java-backend.service
+Requires=docker.service
 
 [Service]
 Type=simple
+WorkingDirectory=$REPO_FOLDER/src
 ExecStart=$REPO_FOLDER/installer/$SERVICE_NAME/start.bash
-ExecStop=$REPO_FOLDER/installer/$SERVICE_NAME/stop.bash
+# Stop: SIGTERM to the backend only (it then stops its service
+# containers), everything left after TimeoutStopSec is killed
+KillMode=mixed
+TimeoutStopSec=60
 Restart=on-failure
 RestartSec=5
 
@@ -67,7 +83,8 @@ WantedBy=multi-user.target
 EOF
 
 run systemctl daemon-reload
-run systemctl enable "$SERVICE_NAME.service"
+# reenable: also drops links of older units (WantedBy=getty.target)
+run systemctl reenable "$SERVICE_NAME.service"
 
 success "Backend installed. $SERVICE_NAME.service is enabled but not started."
 info "Next: make daas-configure, make images, then make daas-restart"

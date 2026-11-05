@@ -35,7 +35,7 @@ require_root
 step "systemd unit: $SERVICE_NAME.service"
 # ============================================================
 
-# ExecStop (daas/stop.bash) lets the backend stop its service containers
+# Stopping sends SIGTERM to the backend, which stops its service containers
 remove_unit "$SERVICE_NAME"
 
 # ============================================================

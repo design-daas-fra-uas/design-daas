@@ -75,7 +75,7 @@ PURGE_OPT = $(if $(PURGE),-p)
         proxmox-install-ceph-cephfs proxmox-install-ceph-pool \
         proxmox-cluster-create proxmox-cluster-join \
         proxmox-isogen proxmox-isoupload require-pve \
-        daas-all daas-install daas-configure daas-services daas-containers \
+        daas-all daas-install daas-configure daas-services daas-containers daas-check \
         daas-reinstall \
         frontend-all frontend-install frontend-configure frontend-reinstall frontend-check \
         env require-env java-install java-reinstall

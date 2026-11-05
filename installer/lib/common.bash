@@ -338,6 +338,19 @@ enable_and_restart() {
     done
 }
 
+# reload_nginx: check the config, then reload a running nginx (keeps open
+# connections, and services that depend on nginx keep running) or start it
+reload_nginx() {
+    run nginx -t
+    run systemctl enable nginx
+    if systemctl is-active --quiet nginx; then
+        run systemctl reload nginx
+    else
+        run systemctl start nginx
+    fi
+    check_active nginx
+}
+
 # wait_http URL [TRIES]: wait until URL gives any HTTP answer (5s per try,
 # default 60 tries). Returns 1 on timeout.
 wait_http() {

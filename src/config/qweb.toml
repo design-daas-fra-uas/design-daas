@@ -24,7 +24,7 @@ recursion_limit = 10000
 
 [run]
 debug = true
-host = "0.0.0.0"
+host = "127.0.0.1"
 port = 5000
 
 [quart]
