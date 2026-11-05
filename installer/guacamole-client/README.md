@@ -21,16 +21,16 @@ does not use this folder. Run it only to:
 
 ## Which version
 
-- Upstream `apache/guacamole-client`, commit
-  [`940c7ad`](https://github.com/apache/guacamole-client/commit/940c7ad37aefc06cb42c764a1deb6abab86f8290)
-  ("Merge 1.5.3 changes back to master", 2023-06-22), with
-  `Guacamole.API_VERSION` set to `1.5.3`.
-- The backend's protocol code (`src/app/daas/proxy/handshake.py`,
-  `syntax.py`) links to the same commit.
-- guacd is built from guacamole-server **1.5.4**; the 1.5.x client and
-  server speak the same protocol.
-- Why not simply the 1.5.4 release: it is older code than this master
-  commit and lacks `Guacamole.Client.State`, which the viewer uses.
+- Upstream `apache/guacamole-client` release **1.6.0**
+  (`GUAC_REF` in the Makefile), the same version as guacd.
+- The viewer (`src/app/webroot/static/viewer_guac.js`) uses
+  `Guacamole.Client.State`: it exists in 1.6.0 and on master since 2023,
+  but **not in the 1.5.x releases** (with those the viewer breaks).
+- guacd 1.6.0 still speaks protocol `VERSION_1_5_0`, so the backend's
+  protocol code (`src/app/daas/proxy/`) works unchanged.
+- Until 2026-11-05 this was master commit `940c7ad` (after 1.5.3);
+  `make install GUAC_REF=940c7ad37aefc06cb42c764a1deb6abab86f8290 GUAC_API_VERSION=1.5.3`
+  restores that file.
 
 The upstream build of this file is nothing more than all
 `guacamole-common-js/src/main/webapp/{common,modules}/*.js` files in one
@@ -47,10 +47,10 @@ In `installer/guacamole-client/` (no root needed, needs curl + internet):
 | `make install` | Builds and copies `guacamole.js` to `src/app/webroot/static/` |
 | `make clean` | Removes `upstream/` and the build |
 
-Update to another upstream version, e.g. the 1.6.0 release:
+Update to another upstream version:
 
 ```bash
-make install GUAC_REF=1.6.0 GUAC_API_VERSION=1.6.0
+make install GUAC_REF=<tag> GUAC_API_VERSION=<version>
 git diff --stat ../../src/app/webroot/static/guacamole.js
 make -C .. daas-restart        # then reload the viewer page and test a session
 ```
