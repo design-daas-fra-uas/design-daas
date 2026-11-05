@@ -47,20 +47,6 @@ shift $((OPTIND - 1))
     || die "Invalid IP part '$IP_PART' (expected 1-254)"
 require_root
 
-# The enterprise repositories need a paid subscription; without one
-# `apt-get update` fails (401) and stops `make deps`. pve-manager (and
-# pveceph) recreate the files, so their lines are commented out, not deleted.
-disable_enterprise_repos() {
-    local f
-    for f in /etc/apt/sources.list.d/pve-enterprise.list /etc/apt/sources.list.d/ceph.list; do
-        [[ -f "$f" ]] || continue
-        if grep -qE '^deb .*enterprise\.proxmox\.com' "$f"; then
-            sed -i -E 's|^(deb .*enterprise\.proxmox\.com)|# \1|' "$f"
-            success "Disabled the enterprise repository in $f (needs a subscription)"
-        fi
-    done
-}
-
 install_kernel() {
     step "Proxmox repository + PVE kernel"
     run apt-get update

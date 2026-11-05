@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 #
-# Sets the Java backend's admin password to ADMIN_PASSWORD from the env file
+# Sets the auth service's admin password to ADMIN_PASSWORD from the env file
 # and revokes all tokens the admin was issued (see README.md). Use it after
-# changing ADMIN_PASSWORD: the Java backend only reads that setting when it
+# changing ADMIN_PASSWORD: the auth service only reads that setting when it
 # creates the admin on its very first start, and it has no password-change
 # function of its own.
 #
-# The BCrypt hash (cost 12, like the Java backend's PasswordConfig) is made
+# The BCrypt hash (cost 12, like the auth service's PasswordConfig) is made
 # in a throwaway python container; the password only travels over stdin and
 # is never printed or logged.
 #
@@ -31,7 +31,7 @@ require_cmds docker
 load_stack_env "$ENV_FILE" >/dev/null
 warn_default_secret ADMIN_PASSWORD
 [[ "$ADMIN_EMAIL" =~ ^[A-Za-z0-9._@+-]+$ ]] || die "Unexpected characters in ADMIN_EMAIL"
-[[ -n "$(docker ps -q --filter name=^daas-java-db$)" ]] || die "daas-java-db is not running (make java-start)"
+[[ -n "$(docker ps -q --filter name=^daas-auth-db$)" ]] || die "daas-auth-db is not running (make auth-start)"
 
 step "BCrypt hash ($HASHER_IMAGE)"
 hash="$(printf '%s' "$ADMIN_PASSWORD" | docker run --rm -i "$HASHER_IMAGE" sh -c \
@@ -40,8 +40,8 @@ hash="$(printf '%s' "$ADMIN_PASSWORD" | docker run --rm -i "$HASHER_IMAGE" sh -c
 [[ "$hash" =~ ^\$2a\$12\$[./A-Za-z0-9]{53}$ ]] || die "Could not create the password hash"
 success "Hash created"
 
-step "Admin $ADMIN_EMAIL in the Java database"
-result="$(docker exec -i daas-java-db sh -c 'MYSQL_PWD="$MARIADB_ROOT_PASSWORD" exec mariadb -uroot -N "$MARIADB_DATABASE"' <<SQL
+step "Admin $ADMIN_EMAIL in the auth service database"
+result="$(docker exec -i daas-auth-db sh -c 'MYSQL_PWD="$MARIADB_ROOT_PASSWORD" exec mariadb -uroot -N "$MARIADB_DATABASE"' <<SQL
 SET @uid = (SELECT id FROM users WHERE email = '$ADMIN_EMAIL');
 UPDATE users SET password = '$hash', failed_login_attempts = 0, locked_until = NULL WHERE id = @uid;
 SELECT ROW_COUNT();
@@ -53,10 +53,10 @@ SQL
 )"
 unset hash
 read -r updated access refresh <<<"$(echo $result)"
-[[ "$updated" == 1 ]] || die "No admin $ADMIN_EMAIL in the Java database"
+[[ "$updated" == 1 ]] || die "No admin $ADMIN_EMAIL in the auth service database"
 success "Password set, $access access and $refresh refresh tokens revoked"
 
-code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -X POST "http://127.0.0.1:$JAVA_PORT/oauth2/user/token" \
+code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -X POST "http://127.0.0.1:$AUTH_PORT/oauth2/user/token" \
     --data-urlencode grant_type=password --data-urlencode "username=$ADMIN_EMAIL" \
     --data-urlencode "password@"<(printf '%s' "$ADMIN_PASSWORD") --data-urlencode scope=admin)"
 [[ "$code" == 200 ]] || die "Login with the new password failed (HTTP $code)"

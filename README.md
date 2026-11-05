@@ -60,7 +60,7 @@ git clone git@github.com:nuromedia/design-daas.git
 
 #### Install everything
 
-Clone the frontend and the Java backend repositories next to this one, then
+Clone the frontend and the auth service repositories next to this one, then
 as root:
 
 ```bash
@@ -73,7 +73,7 @@ make status
 ```
 
 `make install` runs every step in order: Proxmox, host dependencies, DaaS
-backend, Docker images, Java backend, frontend, ISOs. What each step does,
+backend, Docker images, auth service, frontend, ISOs. What each step does,
 what you get and all other `make` commands are described in
 [installer/README.md](installer/README.md).
 
@@ -88,7 +88,7 @@ Both are reachable by using any modern web browser.
 
 ```bash
 make -C installer status
-make -C installer restart   # java, daas, frontend
+make -C installer restart   # auth, daas, frontend
 make -C installer logs
 ```
 

@@ -6,7 +6,7 @@ SHELL := /bin/bash
 
 DESIGN_FOLDER := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/..)
 
-# Stack settings shared by DaaS, frontend and Java backend
+# Stack settings shared by DaaS, frontend and auth service
 # (copy daas.env.example to daas.env, or `make env`)
 ENV_FILE ?= $(DESIGN_FOLDER)/installer/daas.env
 # env_get KEY: value of KEY in ENV_FILE (empty if unset). Read with sed instead
@@ -45,7 +45,7 @@ LINK_IP ?=
 # /var/log/daas-installer.log) and DAAS_DEBUG=1; make passes both through.
 
 # Everything service.bash controls (see its header for what each one is)
-SERVICES := java daas frontend
+SERVICES := auth daas frontend
 CONTAINERS := guacd rabbit db extensions
 IMAGES := x11vnc wine
 HOST := nginx dnsmasq docker proxmox
@@ -83,7 +83,7 @@ PURGE_OPT = $(if $(PURGE),-p)
         daas-all daas-install daas-configure daas-services daas-containers daas-check \
         daas-reinstall \
         frontend-all frontend-install frontend-configure frontend-reinstall frontend-check \
-        env require-env java-install java-reinstall java-check java-backup java-admin-password
+        env require-env auth-install auth-reinstall auth-check auth-backup auth-admin-password
 
 default: usage
 
@@ -110,28 +110,28 @@ usage:
 	@echo "    daas-install            [3/7] DaaS backend: Python venv, daas.service"
 	@echo "    daas-configure                $(notdir $(ENV_FILE)) -> src/config/*.toml, nginx, TLS, dnsmasq"
 	@echo "    images                  [4/7] Docker images: containers-install + images-install"
-	@echo "    java-install            [5/7] Java backend (users, login) + its MariaDB"
+	@echo "    auth-install            [5/7] auth service (users, login) + its MariaDB"
 	@echo "    frontend-all            [6/7] Frontend: nginx site :8443 + build + frontend.service"
 	@echo "    daas-restart                  Start the DaaS backend (it starts the containers)"
 	@echo "    iso-install             [7/7] Build the install ISOs, upload them (skip: SKIP_ISOS=1)"
 	@echo ""
 	@echo "EVERYDAY"
-	@echo "  make start | stop | restart   java, daas, frontend (daas starts the containers)"
+	@echo "  make start | stop | restart   auth, daas, frontend (daas starts the containers)"
 	@echo "  make status               Everything, one line each"
-	@echo "  make logs                 Follow java, daas, frontend"
+	@echo "  make logs                 Follow auth, daas, frontend"
 	@echo "  make configure            Re-apply $(notdir $(ENV_FILE)) (no rebuilds)"
 	@echo "  make reinstall            After code changes: rebuild services and images"
 	@echo "  make delete               Remove services, containers and images"
 	@echo ""
 	@echo "  Options: PURGE=1          delete/reinstall also delete the data"
-	@echo "                            (java: DB + keys, daas: src/data + nginx site,"
+	@echo "                            (auth: DB + keys, daas: src/data + nginx site,"
 	@echo "                            frontend: nginx site, db: src/data/db/mariadb)"
 	@echo "           SKIP_ISOS=1      install without generating/uploading ISOs"
 	@echo ""
 	@echo "ONE COMPONENT  make <component>-<action>"
-	@echo "  service    java daas frontend           install start stop restart status logs delete reinstall"
-	@echo "             proxmox-check, daas-check, frontend-check, java-check: test the running parts"
-	@echo "             java-backup: save the Java users/permissions + signing keys"
+	@echo "  service    auth daas frontend           install start stop restart status logs delete reinstall"
+	@echo "             proxmox-check, daas-check, frontend-check, auth-check: test the running parts"
+	@echo "             auth-backup: save the auth service users/permissions + signing keys"
 	@echo "  container  guacd rabbit db extensions   install start stop restart status logs delete reinstall"
 	@echo "  image      x11vnc wine                  install status delete reinstall"
 	@echo "  host       nginx dnsmasq docker proxmox start stop restart status logs"
@@ -183,7 +183,7 @@ stage = @printf '\n\033[1m==== [%s/7] %s ====\033[0m\n\n' "$(1)" "$(2)"
 #   - deps before every other step: they only check for their tools
 #   - daas-configure writes nginx.conf + the certificate the frontend site uses
 #   - the images before daas.service: the backend starts the containers
-#   - Java before the DaaS backend: it checks logins against it
+#   - auth before the DaaS backend: it checks logins against it
 #   - the ISO upload needs the daas-iso storage, which the backend creates
 #     on its first start
 install: require-env
@@ -195,8 +195,8 @@ install: require-env
 	$(MAKE) daas-install daas-configure
 	$(call stage,4,Docker images)
 	$(MAKE) images
-	$(call stage,5,Java backend)
-	$(MAKE) java-install
+	$(call stage,5,auth service)
+	$(MAKE) auth-install
 	$(call stage,6,Frontend + start)
 	$(MAKE) frontend-all daas-restart
 	$(call stage,7,ISOs)
@@ -211,8 +211,8 @@ deps:
 	./deps/install.bash
 
 # Re-apply the env file without rebuilding (frontend URLs are baked into
-# its build and Java settings into its container: use frontend-install /
-# java-install for those)
+# its build and auth settings into its container: use frontend-install /
+# auth-install for those)
 configure: require-env daas-configure frontend-configure daas-restart
 
 # Service containers (started by the DaaS backend) + desktop images
@@ -233,7 +233,7 @@ images-delete:
 # Control
 # ============================================================
 
-# <svc>-<action>, e.g. java-restart, frontend-delete (see service.bash)
+# <svc>-<action>, e.g. auth-restart, frontend-delete (see service.bash)
 $(LIFECYCLE):
 	$(SERVICE_CMD) $(lastword $(subst -, ,$@)) $(if $(filter %-delete,$@),$(PURGE_OPT)) $(firstword $(subst -, ,$@))
 
@@ -245,7 +245,7 @@ $(ACTIONS):
 # desktop images (data is kept unless PURGE=1). The DaaS backend starts the
 # containers again when it restarts.
 reinstall: require-env
-	$(MAKE) java-reinstall
+	$(MAKE) auth-reinstall
 	$(MAKE) $(addsuffix -delete,$(CONTAINERS) $(IMAGES)) images
 	$(MAKE) daas-reinstall frontend-reinstall
 
@@ -254,10 +254,15 @@ reinstall: require-env
 # ============================================================
 
 # Build the image; a running container is restarted from the new image
+# A running container is restarted only when the build changed its image
+# (a restart of guacd or rabbit drops every open desktop session)
 $(addsuffix -install,$(CONTAINERS)): %-install:
 	$(MAKE) -C $(call image_dir,$*) build
-	@if docker ps -q --filter "name=^$(call container_name,$*)$$" | grep -q .; then \
-		$(SERVICE_CMD) restart $*; fi
+	@running="$$(docker inspect -f '{{.Image}}' $(call container_name,$*) 2>/dev/null)"; \
+	built="$$(docker image inspect -f '{{.Id}}' daas-0-$(call image_dir,$*))"; \
+	if [ -z "$$running" ]; then echo "$* is not running"; \
+	elif [ "$$running" = "$$built" ]; then echo "$* runs the current image, not restarted"; \
+	else $(SERVICE_CMD) restart $*; fi
 
 $(addsuffix -reinstall,$(CONTAINERS)): %-reinstall:
 	$(MAKE) $*-delete $*-install $*-start
@@ -382,7 +387,7 @@ frontend-reinstall:
 	$(MAKE) frontend-delete $(if $(PURGE),frontend-configure) frontend-install
 
 # ============================================================
-# Env file + Java backend
+# Env file + auth service
 # ============================================================
 
 env:
@@ -390,27 +395,27 @@ env:
 		echo "$(ENV_FILE) already exists"; \
 	else \
 		install -m 600 daas.env.example "$(ENV_FILE)"; \
-		echo "Created $(ENV_FILE): set HOST_*, ADMIN_* and JAVA_DB_* there"; \
+		echo "Created $(ENV_FILE): set HOST_*, ADMIN_* and AUTH_DB_* there"; \
 	fi
 
 require-env:
 	@[ -f "$(ENV_FILE)" ] || { echo "Missing $(ENV_FILE): run 'make env' and edit it"; exit 1; }
 
-java-install: require-env
-	./java/install.bash -e "$(ENV_FILE)"
+auth-install: require-env
+	./auth/install.bash -e "$(ENV_FILE)"
 
-# Checks the running Java backend (changes nothing)
-java-check: require-env
-	./java/check.bash -e "$(ENV_FILE)"
+# Checks the running auth service (changes nothing)
+auth-check: require-env
+	./auth/check.bash -e "$(ENV_FILE)"
 
-# Sets the Java admin password to ADMIN_PASSWORD (after changing it in the
+# Sets the auth service admin password to ADMIN_PASSWORD (after changing it in the
 # env file) and revokes the admin's tokens
-java-admin-password: require-env
-	./java/set-admin-password.bash -e "$(ENV_FILE)"
+auth-admin-password: require-env
+	./auth/set-admin-password.bash -e "$(ENV_FILE)"
 
-# Saves the database (users, permissions) and signing keys to java/backups/
-java-backup:
-	./java/backup.bash
+# Saves the database (users, permissions) and signing keys to auth/backups/
+auth-backup:
+	./auth/backup.bash
 
-java-reinstall: require-env
-	$(MAKE) java-delete java-install
+auth-reinstall: require-env
+	$(MAKE) auth-delete auth-install

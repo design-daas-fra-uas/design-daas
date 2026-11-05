@@ -2,7 +2,7 @@
 #
 # Configures nginx for the frontend (see README.md):
 #   - installs frontend.conf: :8443 -> the daas-frontend container
-#     (127.0.0.1:5001), /auth/ -> Java backend (127.0.0.1:JAVA_PORT)
+#     (127.0.0.1:5001), /auth/ -> auth service (127.0.0.1:AUTH_PORT)
 #   - its server name is the host of FRONTEND_PUBLIC_URL (installer/daas.env);
 #     without an env file frontN.cluster.local (N = trailing digit of -h)
 #   - adds that name to /etc/hosts when this host cannot resolve it
@@ -19,7 +19,7 @@ Usage: $0 -r <repo-folder> -h <hostname> [-e <env-file>] [-f <frontend-folder>]
 Options:
     -r    Design DaaS repository folder
     -h    Host name (without an env file its trailing digit 1-3 selects frontN)
-    -e    Stack env file (installer/daas.env): FRONTEND_PUBLIC_URL, JAVA_PORT
+    -e    Stack env file (installer/daas.env): FRONTEND_PUBLIC_URL, AUTH_PORT
     -f    Frontend repository folder (unused, accepted for symmetry)
 EOF
     exit 1
@@ -52,7 +52,7 @@ NGINX_ENABLED="/etc/nginx/sites-enabled/frontend.conf"
 require_file "$CONFIG_SOURCE"
 require_file /etc/nginx/ssl/selfsigned.crt
 
-JAVA_PORT=8080
+AUTH_PORT=8080
 if [[ -n "$ENV_FILE" ]]; then
     load_stack_env "$ENV_FILE"
     FRONT_DOMAIN="$(url_host "$FRONTEND_PUBLIC_URL")"
@@ -68,7 +68,7 @@ FRONT_IP="$(hostname -I | awk '{print $1}')"
 
 info "Repository: $REPO_FOLDER"
 info "Frontend:   https://$FRONT_DOMAIN:8443"
-info "Java:       /auth/ -> 127.0.0.1:$JAVA_PORT"
+info "Auth:       /auth/ -> 127.0.0.1:$AUTH_PORT"
 
 # ============================================================
 step "Name resolution ($FRONT_DOMAIN)"
@@ -92,7 +92,7 @@ step "nginx"
 # ============================================================
 
 sed -e "s#front1.cluster.local#${FRONT_DOMAIN}#g" \
-    -e "s#http://127.0.0.1:8080/#http://127.0.0.1:${JAVA_PORT}/#" \
+    -e "s#http://127.0.0.1:8080/#http://127.0.0.1:${AUTH_PORT}/#" \
     "$CONFIG_SOURCE" | write_file "$NGINX_CONFIG"
 run ln -sfn "$NGINX_CONFIG" "$NGINX_ENABLED"
 

@@ -5,7 +5,7 @@
 #   service.bash [-e <env-file>] <action> [-p] <component>...
 #
 # Components, by kind:
-#   service    java (java-backend.service: Java backend + its MariaDB)
+#   service    auth (daas-auth.service: auth service + its MariaDB)
 #              daas (daas.service), frontend (frontend.service)
 #   container  guacd, rabbit, db, extensions: images built from installer/
 #              (guacd, rabbit, mariadb, extensions); the DaaS backend starts
@@ -26,7 +26,7 @@
 #   status                   one line per component
 #   logs                     follow the logs (containers: one at a time)
 #   delete [-p]              remove it; -p also deletes its data
-#                            (java: DB + keys, daas: src/data + nginx site,
+#                            (auth: DB + keys, daas: src/data + nginx site,
 #                            frontend: nginx site, db: src/data/db/mariadb)
 #
 # Installing is done by the Makefile (<component>-install / -reinstall).
@@ -35,8 +35,8 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib/common.bash"
 
 REPO_FOLDER="$(cd "$DAAS_INSTALLER_DIR/.." && pwd)"
 
-# Start order: the DaaS backend logs in through the Java backend
-SERVICES=(java daas frontend)
+# Start order: the DaaS backend logs in through the auth service
+SERVICES=(auth daas frontend)
 CONTAINERS=(guacd rabbit db extensions)
 IMAGES=(x11vnc wine)
 HOST=(nginx dnsmasq docker proxmox)
@@ -53,7 +53,7 @@ Actions:    start stop restart status logs delete
 Components: ${SERVICES[*]} ${CONTAINERS[*]} ${IMAGES[*]} ${HOST[*]} iso
 Groups:     services containers images host all
 Options:
-    -e    Stack env file (installer/daas.env), for JAVA_PORT
+    -e    Stack env file (installer/daas.env), for AUTH_PORT
     -p    With delete: also delete the data
 EOF
     exit 1
@@ -79,7 +79,7 @@ kind_of() {
 # unit_of SERVICE: systemd unit name (without .service)
 unit_of() {
     case "$1" in
-        java) echo java-backend ;;
+        auth) echo daas-auth ;;
         *)    echo "$1" ;;
     esac
 }
@@ -138,9 +138,9 @@ do_start() {
             run systemctl "$action" "$unit"
             sleep 2
             check_active "$unit"
-            if [[ "$c" == java ]]; then
-                wait_http "http://127.0.0.1:${JAVA_PORT:-8080}/oauth2/user/token" \
-                    || die "Java backend did not answer after 5 min (make java-logs)"
+            if [[ "$c" == auth ]]; then
+                wait_http "http://127.0.0.1:${AUTH_PORT:-8080}/oauth2/user/token" \
+                    || die "auth service did not answer after 5 min (make auth-logs)"
             fi
             ;;
         container)

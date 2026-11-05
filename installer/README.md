@@ -12,7 +12,7 @@ After `make install` one host runs the whole stack:
 | Proxmox VE | Runs the VM instances (web UI for admins) | `https://<host>:8006` |
 | DaaS backend | Python API that creates and controls the instances (`daas.service`) | `https://<host>` (nginx :443) |
 | Frontend | React web app the users work in (`frontend.service`) | `https://<host>:8443` |
-| Java backend | Users, login (OAuth), permissions (`java-backend.service`) + its own MariaDB | `https://<host>:8443/auth` |
+| auth service | Users, login (OAuth), permissions (`daas-auth.service`) + its own MariaDB | `https://<host>:8443/auth` |
 | Service containers | `guacd`, `rabbit`, `db` (MariaDB), `extensions`; started and stopped by the DaaS backend | docker |
 | Desktop images | `x11vnc`, `wine`; the DaaS backend starts one container per instance | docker |
 | ISOs | Unattended install ISOs (win10, win11, debian12) in the `daas-iso` storage | Proxmox |
@@ -29,7 +29,7 @@ After `make install` one host runs the whole stack:
   ```
   /root/design-daas                        this repo
   /root/design-daas-application-frontend   FRONTEND_FOLDER
-  /root/design-daas-backend-java           JAVA_BACKEND_FOLDER
+  /root/design-daas-backend-java           AUTH_FOLDER
   ```
 - `make`: `apt install make` if it is missing. Everything else is installed
   by the installer itself (step 2, `make deps`).
@@ -47,8 +47,8 @@ This copies `daas.env.example` to `daas.env` (mode 600, not committed). Edit it:
 
 - **Host**: `HOST_NAME`, `HOST_DOMAIN`, `HOST_IP`, `HOST_NUMBER`, `NET_DEVICE`.
   Set `STANDALONE=yes` for a single host without an uplink bridge.
-- **Passwords**: change `ADMIN_PASSWORD`, `JAVA_DB_PASSWORD`,
-  `JAVA_DB_ROOT_PASSWORD` (every `change-me-*` value). `ADMIN_EMAIL` /
+- **Passwords**: change `ADMIN_PASSWORD`, `AUTH_DB_PASSWORD`,
+  `AUTH_DB_ROOT_PASSWORD` (every `change-me-*` value). `ADMIN_EMAIL` /
   `ADMIN_PASSWORD` is the first admin account you log in with.
 - Optional: other public URLs (DNS alias, reverse proxy), mail settings.
 
@@ -77,7 +77,7 @@ Each step prints a banner like `==== [4/7] Docker images ====`:
 | 2/7 | `deps` | **All host dependencies** in one place: docker, nginx, dnsmasq, Python build tools, ISO tools, git, jq, ...; docker data root `/home/daas-docker`; `docker-compose`; an SSH key for root (`/root/.ssh/id_rsa`). |
 | 3/7 | `daas-install` `daas-configure` | Python venv + `daas.service` (not started yet); writes `daas.env` into `src/config/*.toml`, the nginx site, the TLS certificate and dnsmasq (DHCP for the instances). |
 | 4/7 | `images` | Builds the service containers (`containers-install`) and the desktop images (`images-install`). |
-| 5/7 | `java-install` | Builds and starts the Java backend; creates the admin account on its first start and checks the login. |
+| 5/7 | `auth-install` | Builds and starts the auth service; creates the admin account on its first start and checks the login. |
 | 6/7 | `frontend-all` `daas-restart` | nginx site :8443, builds and starts the frontend, then starts the DaaS backend (which starts the containers and creates the Proxmox storages and bridges). |
 | 7/7 | `iso-install` | Builds the ISOs and uploads them to Proxmox. Takes long; skip it with `make install SKIP_ISOS=1` and run `make iso-install` later. |
 
@@ -111,15 +111,15 @@ sets them in `daas.env` and re-runs the steps that use them.
 | Command | What it does |
 |---|---|
 | `make status` | State of every component, one line each |
-| `make start` / `stop` / `restart` | The three services java, daas, frontend (daas starts/stops the containers) |
-| `make logs` | Follow the logs of java, daas and frontend |
+| `make start` / `stop` / `restart` | The three services auth, daas, frontend (daas starts/stops the containers) |
+| `make logs` | Follow the logs of auth, daas and frontend |
 | `make configure` | You changed `daas.env`: apply it without rebuilding |
 | `make reinstall` | You changed code: rebuild the services, containers and images (data is kept) |
 | `make delete` | Remove services, containers and images (data is kept) |
-| `make <command> PURGE=1` | `delete` / `reinstall` also delete the data (Java DB + keys, `src/data`, nginx sites, the DaaS MariaDB) |
+| `make <command> PURGE=1` | `delete` / `reinstall` also delete the data (auth DB + keys, `src/data`, nginx sites, the DaaS MariaDB) |
 
-Frontend URLs and Java settings are baked into their builds, so after
-changing those in `daas.env` run `make frontend-install` / `make java-install`
+Frontend URLs and auth service settings are baked into their builds, so after
+changing those in `daas.env` run `make frontend-install` / `make auth-install`
 instead of `make configure`.
 
 ### One component
@@ -129,7 +129,7 @@ instead of `make configure`.
 
 | Kind | Components | Actions |
 |---|---|---|
-| service | `java` `daas` `frontend` | install start stop restart status logs delete reinstall |
+| service | `auth` `daas` `frontend` | install start stop restart status logs delete reinstall |
 | container | `guacd` `rabbit` `db` `extensions` | install start stop restart status logs delete reinstall |
 | image | `x11vnc` `wine` | install status delete reinstall |
 | host | `nginx` `dnsmasq` `docker` `proxmox` | start stop restart status logs |
@@ -155,7 +155,7 @@ this repository is public.
 | Password | Change it in `daas.env`, then |
 |---|---|
 | `PVE_API_PASSWORD` (Proxmox account `daas@pve` of the backend) | `make daas-configure daas-restart` (configure sets it in Proxmox) |
-| `ADMIN_PASSWORD` (Java admin, also used by the backend) | `make java-admin-password daas-configure daas-restart` |
+| `ADMIN_PASSWORD` (admin of the auth service, also used by the backend) | `make auth-admin-password daas-configure daas-restart` |
 
 Generate one with `head -c 48 /dev/urandom | base64 | tr -dc A-Za-z0-9 | head -c 32`.
 
@@ -175,7 +175,7 @@ Values come from, in this order: the command line
 - **`Not running a PVE kernel yet`**: reboot after the first
   `make install` / `make proxmox-install`.
 - **`Missing .../daas.env`**: run `make env` and edit it.
-- **A service does not start**: `make <service>-logs`, e.g. `make java-logs`.
+- **A service does not start**: `make <service>-logs`, e.g. `make auth-logs`.
 - **dnsmasq is not running** right after `daas-configure`: expected, it needs
   the `vmbr1` bridge, which the DaaS backend creates on its first start.
 
@@ -191,7 +191,7 @@ Values come from, in this order: the command line
 | `proxmox/` | Proxmox install, Ceph, cluster, ISO upload |
 | `deps/` | Host dependencies (`make deps`) |
 | `daas/` | DaaS backend: install, configure, nginx site, certificate |
-| `java/`, `frontend/` | docker-compose setup of the Java backend and the frontend |
+| `auth/`, `frontend/` | docker-compose setup of the auth service and the frontend |
 | `guacd/`, `rabbit/`, `mariadb/`, `extensions/` | Service container images |
 | `x11vnc/`, `wine/` | Desktop images |
 | `iso/` | ISO generator (see `iso/README.md`) |

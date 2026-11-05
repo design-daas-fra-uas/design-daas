@@ -7,7 +7,7 @@ __pycache__/
 
 # Stack settings with secrets
 /installer/daas.env
-/installer/java/.env
+/installer/auth/.env
 /installer/frontend/.env
 
 # Secrets written by the installer (installer/daas/configure.bash)

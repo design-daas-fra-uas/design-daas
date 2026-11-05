@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 #
 # Switches this host to the names pve.cluster.local (DaaS backend, :443) and
-# front0.cluster.local (frontend + Java login, :8443):
+# front0.cluster.local (frontend + auth service, :8443):
 #   - sets the host name and public URLs in installer/daas.env
 #   - points both names at this host's IP in /etc/hosts
 #   - re-runs the installer steps that use them: certificate + nginx + toml
-#     (daas-configure), frontend nginx site, Java backend and frontend
+#     (daas-configure), frontend nginx site, auth service and frontend
 #     rebuilds (the URLs are baked in), backend restart
 #
 # Backups of daas.env and /etc/hosts are written next to them.
@@ -71,7 +71,7 @@ cd "$DAAS_INSTALLER_DIR"
 # daas-configure: toml values, certificate for both names, nginx site
 run make ENV_FILE="$ENV_FILE" daas-configure
 run make ENV_FILE="$ENV_FILE" frontend-configure
-run make ENV_FILE="$ENV_FILE" java-install
+run make ENV_FILE="$ENV_FILE" auth-install
 run make ENV_FILE="$ENV_FILE" frontend-install
 run make ENV_FILE="$ENV_FILE" daas-restart
 

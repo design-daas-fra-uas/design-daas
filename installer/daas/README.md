@@ -10,7 +10,7 @@ and serves the API and the desktop viewer.
 browser ─https :443─ nginx (daas.conf) ─https─ backend 127.0.0.1:5000 (daas.service)
                                                  ├─ Proxmox API 127.0.0.1:8006 (VMs, bridges, storages)
                                                  ├─ docker: service containers + container instances
-                                                 └─ Java backend 127.0.0.1:JAVA_PORT (login check)
+                                                 └─ auth service 127.0.0.1:AUTH_PORT (login check)
 VMs on vmbr1 ─ DHCP from dnsmasq (fixed address per VM, written by the backend)
 ```
 
@@ -40,7 +40,7 @@ restart the backend (nginx is only reloaded).
 | `src/config/proxy.toml` | viewer address from `DAAS_PUBLIC_URL` |
 | `src/config/vm.toml` | node `HOST_NAME`, bridge addresses `192.168.{123,223,100,200}.HOST_NUMBER`, uplink `NET_DEVICE` (not with `STANDALONE`) |
 | `src/config/container.toml` | host address for the containers |
-| `src/config/auth.toml` | login through the Java backend (`DAAS_AUTH_MODE`, `ADMIN_EMAIL`, `OAUTH_CLIENT_ID`) |
+| `src/config/auth.toml` | login through the auth service (`DAAS_AUTH_MODE`, `ADMIN_EMAIL`, `OAUTH_CLIENT_ID`) |
 | Proxmox user `daas@pve` | created with the Administrator role when missing; its password is set to `PVE_API_PASSWORD` when that does not log in |
 | `src/config/local/vm.toml`, `local/auth.toml` | **the secrets** (`PVE_API_PASSWORD`, `ADMIN_PASSWORD`), root-only and not in git; the backend merges them over the tracked files (see `src/config/README.md`) |
 | `/etc/nginx/ssl/` | local CA `daas-ca.crt` (once) + certificate for every public name (`DAAS_PUBLIC_URL`, `FRONTEND_PUBLIC_URL`, `AUTH_PUBLIC_URL`), see `mkcert.bash` |
@@ -60,7 +60,7 @@ can be repeated with other values.
   stops its service containers and exits, anything left after 60 s is
   killed.
 - `Restart=on-failure`. Depends on docker (`Requires`); nginx, Proxmox
-  and the Java backend are only ordered before it (`Wants`), so restarting
+  and the auth service are only ordered before it (`Wants`), so restarting
   them never restarts the backend.
 
 ## Files

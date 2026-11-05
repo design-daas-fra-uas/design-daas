@@ -2,7 +2,7 @@
 #
 # Checks the running frontend the way a browser reaches it (see README.md):
 # nginx on :8443 under the name from FRONTEND_PUBLIC_URL, its certificate,
-# the page and deep links, /auth/ reaching the Java backend, and the backend
+# the page and deep links, /auth/ reaching the auth service, and the backend
 # URLs baked into the build. Changes nothing.
 #
 # Usage: ./check.bash -e <env-file>     (run as root)
@@ -45,9 +45,9 @@ if [[ "$c" == 200 ]]; then ok "page with a valid certificate for $HOST"; else fa
 c="$(code "$BASE/login")"
 if [[ "$c" == 200 ]]; then ok "deep link /login"; else fail "deep link /login: HTTP $c"; fi
 
-# Any answer from Java (400/401/415...) proves the proxy; 502/504 do not
+# Any answer from the auth service (400/401/415...) proves the proxy; 502/504 do not
 c="$(code -X POST "$BASE/auth/oauth2/user/token")"
-if [[ "$c" =~ ^[1-4][0-9][0-9]$ ]]; then ok "/auth/ reaches the Java backend (HTTP $c)"; else fail "/auth/ -> HTTP $c (Java backend down? make java-status)"; fi
+if [[ "$c" =~ ^[1-4][0-9][0-9]$ ]]; then ok "/auth/ reaches the auth service (HTTP $c)"; else fail "/auth/ -> HTTP $c (auth service down? make auth-status)"; fi
 
 js="$("${CURL[@]}" "$BASE/" | grep -o 'static/js/main[^"]*\.js' | head -1)"
 bundle="$("${CURL[@]}" "$BASE/$js")"

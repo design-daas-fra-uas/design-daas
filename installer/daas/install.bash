@@ -63,8 +63,8 @@ Description=Design DaaS backend
 # Wants, not Requires: restarting nginx or pveproxy (configure, certificate,
 # Proxmox updates) must not restart the backend and its service containers.
 # Docker is required: the service containers stop with it anyway.
-Wants=nginx.service pveproxy.service pve-cluster.service pvedaemon.service pve-storage.target java-backend.service
-After=network-online.target nginx.service pveproxy.service pve-cluster.service pvedaemon.service pve-storage.target docker.service java-backend.service
+Wants=nginx.service pveproxy.service pve-cluster.service pvedaemon.service pve-storage.target daas-auth.service
+After=network-online.target nginx.service pveproxy.service pve-cluster.service pvedaemon.service pve-storage.target docker.service daas-auth.service
 Requires=docker.service
 
 [Service]

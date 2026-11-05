@@ -1,22 +1,22 @@
-# Java backend (users, OAuth tokens, permissions) + its MariaDB.
+# auth service (users, OAuth tokens, permissions) + its MariaDB.
 #
-# Values come from installer/java/.env, which java/install.bash generates
-# from installer/daas.env. Started by java-backend.service.
+# Values come from installer/auth/.env, which auth/install.bash generates
+# from installer/daas.env. Started by daas-auth.service.
 #
 #   docker-compose --env-file .env -f docker-compose.yml ps|logs -f
 
-name: daas-java
+name: daas-auth
 
 services:
   db:
     image: mariadb:11.4
-    container_name: daas-java-db
+    container_name: daas-auth-db
     restart: unless-stopped
     environment:
-      MARIADB_DATABASE: ${JAVA_DB_NAME}
-      MARIADB_USER: ${JAVA_DB_USER}
-      MARIADB_PASSWORD: ${JAVA_DB_PASSWORD}
-      MARIADB_ROOT_PASSWORD: ${JAVA_DB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${AUTH_DB_NAME}
+      MARIADB_USER: ${AUTH_DB_USER}
+      MARIADB_PASSWORD: ${AUTH_DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${AUTH_DB_ROOT_PASSWORD}
     volumes:
       - db-data:/var/lib/mysql
     healthcheck:
@@ -27,21 +27,21 @@ services:
 
   backend:
     build:
-      context: ${JAVA_BACKEND_FOLDER}
-    image: daas-java-backend
-    container_name: daas-java-backend
+      context: ${AUTH_FOLDER}
+    image: daas-auth
+    container_name: daas-auth
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     ports:
       # Only reachable from this host: nginx (/auth/) and the DaaS backend
-      - "127.0.0.1:${JAVA_PORT}:8080"
+      - "127.0.0.1:${AUTH_PORT}:8080"
     environment:
-      SPRING_PROFILES_ACTIVE: ${JAVA_PROFILE}
-      DB_URL: jdbc:mariadb://db:3306/${JAVA_DB_NAME}
-      DB_USERNAME: ${JAVA_DB_USER}
-      DB_PASSWORD: ${JAVA_DB_PASSWORD}
+      SPRING_PROFILES_ACTIVE: ${AUTH_PROFILE}
+      DB_URL: jdbc:mariadb://db:3306/${AUTH_DB_NAME}
+      DB_USERNAME: ${AUTH_DB_USER}
+      DB_PASSWORD: ${AUTH_DB_PASSWORD}
       ADMIN_EMAIL: ${ADMIN_EMAIL}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       OAUTH_KEYS_DIR: /app/keys

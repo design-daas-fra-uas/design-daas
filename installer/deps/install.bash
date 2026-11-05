@@ -4,7 +4,7 @@
 # the later steps only check for them (require_cmds) and never apt-get:
 #   - packages: docker, nginx, dnsmasq, Python build tools, ISO tools, ...
 #   - docker: data root in /home/daas-docker
-#   - docker-compose (pinned release binary, used by Java backend + frontend)
+#   - docker-compose (pinned release binary, used by auth service + frontend)
 #   - an SSH key for root (/root/.ssh/id_rsa): the desktop images, the
 #     extensions container and the ISOs authorize it
 #
@@ -43,6 +43,9 @@ require_root
 step "Packages"
 # ============================================================
 
+# Without a subscription the Proxmox enterprise repositories make apt-get
+# update fail (401)
+disable_enterprise_repos
 run apt-get update || die "apt-get update failed: see above (an enabled Proxmox enterprise repository? make proxmox-check)"
 info "Base:   ${PKG_BASE[*]}"
 info "Python: ${PKG_PYTHON[*]}"
@@ -61,7 +64,7 @@ write_file /etc/docker/daemon.json <<EOF
 }
 EOF
 # Restarting docker stops every container (service containers, instances,
-# Java backend, frontend): only when its config changed or it is not running
+# auth service, frontend): only when its config changed or it is not running
 if (( WRITE_FILE_CHANGED )) || ! systemctl is-active --quiet docker; then
     enable_and_restart docker
 else

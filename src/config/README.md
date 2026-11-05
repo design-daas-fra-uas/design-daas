@@ -39,7 +39,7 @@ placeholders for them:
 | Override | Key | From `installer/daas.env` |
 |---|---|---|
 | `local/vm.toml` | `[vm_rest] apipass` (Proxmox API password of `daas@pve`) | `PVE_API_PASSWORD` |
-| `local/auth.toml` | `[auth.remote] password` (Java admin, remote auth only) | `ADMIN_PASSWORD` |
+| `local/auth.toml` | `[auth.remote] password` (admin of the auth service, remote auth only) | `ADMIN_PASSWORD` |
 
 `make daas-configure` writes them. Never put a password into a tracked
 file: this repository is public.
@@ -59,7 +59,7 @@ name, so manual edits to them are overwritten on the next run:
 | `vm.toml` | `bridge_cidr_{daas,inst,ceph,cluster}` | `192.168.{123,223,100,200}.HOST_NUMBER/24` |
 | `vm.toml` | `bridge_gw_daas`, `bridge_adapter_daas` | `192.168.123.1` / `NET_DEVICE`, empty when `STANDALONE` |
 | `container.toml` | `host` | `192.168.123.HOST_NUMBER` |
-| `auth.toml` | `authenticator_type`, `enable_auth_endpoint`, `url`, `clientid`, `scope`, `username` | `DAAS_AUTH_MODE`, `DAAS_AUTH_CHECK_ENDPOINTS`, `http://127.0.0.1:JAVA_PORT`, `OAUTH_CLIENT_ID`, `admin`, `ADMIN_EMAIL` |
+| `auth.toml` | `authenticator_type`, `enable_auth_endpoint`, `url`, `clientid`, `scope`, `username` | `DAAS_AUTH_MODE`, `DAAS_AUTH_CHECK_ENDPOINTS`, `http://127.0.0.1:AUTH_PORT`, `OAUTH_CLIENT_ID`, `admin`, `ADMIN_EMAIL` |
 
 ## Values to change for production
 

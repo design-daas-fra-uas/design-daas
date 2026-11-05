@@ -263,12 +263,24 @@ load_stack_env() {
     load_env_file "$file"
     repo="$(cd "$DAAS_INSTALLER_DIR/.." && pwd)"
 
+    # Names from before the rename of "java" to "auth", still accepted
+    local pair old new
+    for pair in JAVA_BACKEND_FOLDER:AUTH_FOLDER JAVA_PORT:AUTH_PORT JAVA_PROFILE:AUTH_PROFILE \
+            JAVA_DB_NAME:AUTH_DB_NAME JAVA_DB_USER:AUTH_DB_USER \
+            JAVA_DB_PASSWORD:AUTH_DB_PASSWORD JAVA_DB_ROOT_PASSWORD:AUTH_DB_ROOT_PASSWORD; do
+        old="${pair%%:*}" new="${pair##*:}"
+        if [[ -n "${!old:-}" && -z "${!new:-}" ]]; then
+            export "$new=${!old}"
+            warn "$file: $old is now called $new, please rename it"
+        fi
+    done
+
     [[ -n "${HOST_NAME:-}" ]] || die "HOST_NAME is not set in $file"
     [[ -n "${HOST_DOMAIN:-}" ]] || die "HOST_DOMAIN is not set in $file"
     export FQDN="$HOST_NAME.$HOST_DOMAIN"
 
     export FRONTEND_FOLDER="${FRONTEND_FOLDER:-$(dirname "$repo")/design-daas-application-frontend}"
-    export JAVA_BACKEND_FOLDER="${JAVA_BACKEND_FOLDER:-$(dirname "$repo")/design-daas-backend-java}"
+    export AUTH_FOLDER="${AUTH_FOLDER:-$(dirname "$repo")/design-daas-backend-java}"
     export DAAS_PUBLIC_URL="${DAAS_PUBLIC_URL:-https://$FQDN}"
     export FRONTEND_PUBLIC_URL="${FRONTEND_PUBLIC_URL:-https://$FQDN:8443}"
     export AUTH_PUBLIC_URL="${AUTH_PUBLIC_URL:-$FRONTEND_PUBLIC_URL/auth}"
@@ -280,14 +292,14 @@ load_stack_env() {
     export DAAS_AUTH_MODE="${DAAS_AUTH_MODE:-remote}"
     export DAAS_AUTH_CHECK_ENDPOINTS="${DAAS_AUTH_CHECK_ENDPOINTS:-false}"
     export OAUTH_CLIENT_ID="${OAUTH_CLIENT_ID:-test-client}"
-    export JAVA_PORT="${JAVA_PORT:-8080}"
-    export JAVA_PROFILE="${JAVA_PROFILE:-prod}"
+    export AUTH_PORT="${AUTH_PORT:-8080}"
+    export AUTH_PROFILE="${AUTH_PROFILE:-prod}"
 
     [[ "$DAAS_AUTH_MODE" == remote || "$DAAS_AUTH_MODE" == local ]] \
         || die "DAAS_AUTH_MODE must be 'remote' or 'local' (got '$DAAS_AUTH_MODE')"
     [[ "$DAAS_AUTH_CHECK_ENDPOINTS" == true || "$DAAS_AUTH_CHECK_ENDPOINTS" == false ]] \
         || die "DAAS_AUTH_CHECK_ENDPOINTS must be 'true' or 'false'"
-    [[ "$JAVA_PORT" =~ ^[0-9]+$ ]] || die "JAVA_PORT must be a number (got '$JAVA_PORT')"
+    [[ "$AUTH_PORT" =~ ^[0-9]+$ ]] || die "AUTH_PORT must be a number (got '$AUTH_PORT')"
 
     debug "FQDN=$FQDN DAAS=$DAAS_PUBLIC_URL FRONTEND=$FRONTEND_PUBLIC_URL AUTH=$AUTH_PUBLIC_URL"
 }
@@ -359,6 +371,20 @@ enable_and_restart() {
         run systemctl enable "$unit"
         run systemctl restart "$unit"
         check_active "$unit"
+    done
+}
+
+# The enterprise repositories need a paid subscription; without one
+# `apt-get update` fails (401) and stops `make deps`. pve-manager (and
+# pveceph) recreate the files, so their lines are commented out, not deleted.
+disable_enterprise_repos() {
+    local f
+    for f in /etc/apt/sources.list.d/pve-enterprise.list /etc/apt/sources.list.d/ceph.list; do
+        [[ -f "$f" ]] || continue
+        if grep -qE '^deb .*enterprise\.proxmox\.com' "$f"; then
+            sed -i -E 's|^(deb .*enterprise\.proxmox\.com)|# \1|' "$f"
+            success "Disabled the enterprise repository in $f (needs a subscription)"
+        fi
     done
 }
 
