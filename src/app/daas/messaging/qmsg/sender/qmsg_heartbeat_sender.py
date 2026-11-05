@@ -54,7 +54,6 @@ class HeartbeatSender:
         self.ip_address = self.config.force_ip
         if self.ip_address == "":
             self.ip_address = self.tools.get_own_ip()
-        # self.ip_address = "192.168.223.11"
         self.logger = logging.getLogger(self.config.log_topic)
         self.connection: Optional[pika.BlockingConnection] = None
         self.channel: Optional[pika.channel.Channel] = None
@@ -151,9 +150,7 @@ class HeartbeatSender:
             self.__log_info("HeartbeatSender task stopped.")
 
     def __log_info(self, msg: str):
-        # self.logger.info(f"HRT: {msg}")
         pass
 
     def __log_error(self, msg: str):
-        # self.logger.error(f"HRT: {msg}")
         pass

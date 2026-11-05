@@ -60,34 +60,10 @@ class SampleRegistry:
     ):
         owner = self.config.default_owner
         return [
-            # InstanceObject(
-            #     id="randomkey",
-            #     id_owner=owner,
-            #     app=obj,
-            #     host="192.168.223.116",
-            #     container="daas.xxx",
-            #     created_at=datetime.now(),
-            #     connected_at=datetime.now(),
-            #     booted_at=datetime.now(),
-            #     id_con=con.id,
-            #     id_app=obj.id,
-            #     id_env=env.id,
-            #     env=env,
-            # )
         ]
 
     def create_demo_connection(self):
         return [
-            # GuacamoleConnection(
-            #     id="randomkey",
-            #     user="root",
-            #     password="root",
-            #     protocol="vnc",
-            #     hostname="192.168.223.116",
-            #     port=6016,
-            #     viewer_url="https://foo.bar.baz",
-            #     viewer_token="randomkey2",
-            # )
         ]
 
     def create_demo_environments(self):
@@ -97,17 +73,6 @@ class SampleRegistry:
         envapps = [{"args": "", "cmd": "/usr/bin/galculator", "name": "calc"}]
         envtarget = {"args": "", "cmd": "/usr/bin/galculator", "name": "testname"}
         return [
-            # Environment(
-            #     id="testenv",
-            #     id_object="vmDeb12",
-            #     name="envtest",
-            #     id_backend="foo",
-            #     env_tasks=envtasks,
-            #     env_apps=envapps,
-            #     env_target=envtarget,
-            #     state="environment-final",
-            #     created_at=datetime.now(),
-            # )
         ]
 
     def create_demo_objects(self) -> list:

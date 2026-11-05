@@ -24,23 +24,6 @@ class TaskType(Enum):
     PREPARED = 2
 
 
-class PreparedTaskType(Enum):
-    """Specifies a prepared task type"""
-
-    UNKNOWN = 0
-    WAIT_FOR_BOOT = 1
-    REBOOT = 2
-    WAIT_FOR_POSTBOOT = 3
-    CONFIGURE_CONNECT = 4
-    RUN_ENVTARGET = 5
-    FINALIZE_OBJECT = 6
-    FINALIZE_ENV = 7
-    FINALIZE_ALL = 8
-    DBPING_INSTANCE = 9
-    FETCH_OBJINFO = 10
-    TESTING_WAIT = 11
-
-
 class TaskState(Enum):
     """Specifies a tasks state"""
 
@@ -279,17 +262,6 @@ class TaskCollection:
     tasks_finalized: dict[str, ScheduledTask] = field(default_factory=dict)
     watchdog_task: Optional[asyncio.Task] = None
     watchdog_enabled: bool = False
-
-    def get_task(self, taskid: str) -> Optional[ScheduledTask]:
-        """Returns list of current tasks"""
-        result = None
-
-        if taskid in self.tasks_current:
-            result = self.tasks_current[taskid]
-        elif taskid in self.tasks_finalized:
-            result = self.tasks_finalized[taskid]
-
-        return result
 
     def tostring(self):
         """Converts object to string representation"""

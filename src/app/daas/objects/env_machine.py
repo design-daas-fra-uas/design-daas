@@ -159,8 +159,6 @@ class MachineEnvironmentBase(MachinePhase):
             self.object_mode = object_mode
         if object_mode == "run-debug":
             await self.set_extended_mode("done")
-        # else:
-        #     await self.set_extended_mode("env started")
 
         self._log_info(f"Started environment {self.id_docker}")
         return True

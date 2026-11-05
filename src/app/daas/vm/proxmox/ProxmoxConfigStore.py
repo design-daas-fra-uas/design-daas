@@ -15,20 +15,6 @@ class ProxmoxConfigStoreConfig:
     bridge_name_daas: str
     prefixmac: str
 
-
-def create_vmconf_template(vmid: int, name: str, keyboard: str) -> dict:
-    """
-    Provides a generic configuration preset to initialize object templates
-    """
-    return {
-        "name": name,
-        "boot": "order=virtio0;",
-        "ide2": "file=none",
-        "sata2": "file=none",
-        "delete": "net0,net1",
-        "args": f"-k {keyboard} -vnc 0.0.0.0:{vmid},password=on",
-    }
-
 class ProxmoxConfigStore(Loggable):
     """
     Provides configuration presets for proxmox vms

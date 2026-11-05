@@ -84,8 +84,6 @@ class PostbootTask(Loggable):
         if inst.booted_at == inst.created_at:
             inst.booted_at = datetime.now()
             if isinstance(inst.app, MachineObject | ContainerObject):
-                #     if inst.app.object_mode == "debug":
-                #         inst.app.object_mode_extended = "done"
                 await inst.app.update()
         return await inst.update()
 
@@ -138,6 +136,8 @@ class PostbootTask(Loggable):
 
     async def _add_printer(self, instance: InstanceObject):
         self._log_info(f"Adding printer for {instance.host}")
+        # Disabled: the printer is not installed inside the desktop (see
+        # src/app/REVIEW.md, "Printing inside desktops"). To enable, use:
         # extensions = await get_backend_component(
         #     BackendName.EXTENSIONS, ProxyExtensions
         # )

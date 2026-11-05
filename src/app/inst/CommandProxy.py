@@ -8,7 +8,6 @@ from adapter.tools.ProxyTools import split_command_from_args
 
 
 DEBUG_MODE = False
-# DEBUG_MODE = True
 
 
 def __initialize_component(mode: bool):

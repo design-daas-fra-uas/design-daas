@@ -96,11 +96,6 @@ class MachineConfigBase(MachineEnvironmentBase):
         if env is not None and env.env_tasks != []:
             tasks = env.env_tasks
         if instance is not None:
-            # for installer in installers:
-            #     ret = await instance.inst_vminvoke_ssh(installer, "")
-            #     if ret is not None and ret.response_code == 200:
-            #         msg = f"Installer executed! CMD: '{installer}' {ret.sys_log}"
-            #         self._log_info(msg, ret.sys_exitcode)
 
             for task in tasks:
                 ttype = task["type"]

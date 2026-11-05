@@ -178,9 +178,6 @@ async def baseimage_clone_from_app(args: TaskArgs) -> QwebResult:
         if entity is None:
             entity = await _create_empty_object(reqargs, obj, userid)
             if entity is not None:
-                # if await has_numbers(newid):
-                #     reqargs["newid"] = "foo"
-                #     newid = reqargs["newid"]
                 reqargs["id"] = newid
                 entity.id = newid
                 cloned = await entity.baseimage_clone(obj.id, reqargs)
@@ -196,10 +193,6 @@ async def baseimage_clone_from_app(args: TaskArgs) -> QwebResult:
             return QwebResult(400, {}, 3, "Clone object failed")
         return QwebResult(400, {}, 4, "Object exists")
     return QwebResult(400, {}, 5, "No app")
-
-
-async def has_numbers(inputstring: str):
-    return any(char.isdigit() for char in inputstring)
 
 
 async def baseimage_create_from_app(args: TaskArgs) -> QwebResult:

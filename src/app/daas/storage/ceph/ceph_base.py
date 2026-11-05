@@ -4,14 +4,13 @@ import os
 import subprocess
 import shutil
 from typing import Optional
-from app.daas.storage.ceph.ceph_config import CephstoreConfig, CephStoreFilesystemFolder
+from app.daas.storage.ceph.ceph_config import CephstoreConfig
 from app.qweb.logging.logging import LogTarget, Loggable
 
 
 # Globals
 CMD_LINUX_CEPH = "/usr/bin/ceph"
 CMD_LINUX_MOUNT = "/usr/bin/mount"
-CMD_LINUX_UMOUNT = "/usr/bin/umount"
 
 
 class CephstoreBase(Loggable):
@@ -20,12 +19,6 @@ class CephstoreBase(Loggable):
     def __init__(self, config: CephstoreConfig):
         Loggable.__init__(self, LogTarget.FILES_LOCAL)
         self.config = config
-
-    async def stop_filesystems(self):
-        """Stops ceph-based local filesystems"""
-        if self.config.enabled is True:
-            await self.umount_ceph_folder()
-            return
 
     async def generate_ceph_conf_linux(self) -> str:
         """Returns configured ceph keyring folder (absolute)"""
@@ -41,30 +34,6 @@ class CephstoreBase(Loggable):
             "keyring = /etc/pve/priv/$cluster.$name.keyring",
             "keyring = /etc/ceph/$cluster.$name.keyring",
         )
-        with open(cfgfile, "w", encoding="utf-8") as file:
-            file.write(file_contents)
-        return folder
-
-    async def generate_ceph_conf_windows(self, userid: int) -> str:
-        """Returns configured ceph keyring folder (absolute)"""
-        fsname = self.config.daasfs.name
-        keydir = self.config.daasfs.folder_keyrings
-        folder = os.path.abspath(f"{keydir}/{fsname}")
-        cfgfile = f"{keydir}/{fsname}/ceph_windows_{userid}.conf"
-        assert await self.__ensure_required_folder(folder)
-        file_contents = f"""
-[global]
-    log to stderr = true
-    run dir = C:/ProgramData/ceph/out
-    crash dir = C:/ProgramData/ceph/out
-[client]
-    keyring = C:/ProgramData/ceph/keyring
-    admin socket = C:/ProgramData/ceph/out/$name.$pid.asok
-    client_mount_uid = client.{userid}
-    client_mount_gid = client.{userid}
-[global]
-    mon host = 192.168.100.11
-        """
         with open(cfgfile, "w", encoding="utf-8") as file:
             file.write(file_contents)
         return folder
@@ -112,17 +81,6 @@ class CephstoreBase(Loggable):
         assert await self.__ensure_required_folder(folder)
         return folder
 
-    async def _get_local_user_folder(self, userid: int) -> str:
-        userdir = (
-            f"{self.config.daasfs.folder_mount}/"
-            f"{self.config.daasfs.name}/"
-            f"{self.config.daasfs.folder_user}/"
-            f"{userid}"
-        )
-        if await self.__ensure_required_folder(userdir):
-            return userdir
-        return ""
-
     async def mount_ceph_folder(self) -> bool:
         src = await self.__get_source_token("admin", self.config.daasfs.name)
         dst = f"{self.config.daasfs.folder_mount}/{self.config.daasfs.name}"
@@ -140,17 +98,6 @@ class CephstoreBase(Loggable):
             return True
         return False
 
-    async def umount_ceph_folder(self) -> bool:
-        folder = f"{self.config.daasfs.folder_mount}/{self.config.daasfs.name}"
-        if os.path.exists(folder) is True:
-            umount_cmd = [CMD_LINUX_UMOUNT, "-f", folder]
-            code, _, _ = await self.__run_cmd(umount_cmd)
-            if code != 0:
-                self._log_error(f"Exception on umount: {umount_cmd}")
-                return False
-        self._log_info(f"Unmounted cephfs: {folder}")
-        return True
-
     async def __get_source_token(
         self,
         clientname: str,
@@ -167,18 +114,6 @@ class CephstoreBase(Loggable):
             os.makedirs(folder)
         assert os.path.exists(folder)
         return True
-
-    async def __get_folder_mapping(
-        self, target: str
-    ) -> Optional[CephStoreFilesystemFolder]:
-        mapping = None
-        if target == self.config.daasfs.mappings_public.name:
-            mapping = self.config.daasfs.mappings_public
-        if target == self.config.daasfs.mappings_shared.name:
-            mapping = self.config.daasfs.mappings_shared
-        if target == self.config.daasfs.mappings_user.name:
-            mapping = self.config.daasfs.mappings_user
-        return mapping
 
     async def __run_cmd(self, args: list) -> tuple:
         try:

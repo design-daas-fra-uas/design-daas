@@ -241,7 +241,6 @@ class ProxyExtensions(Loggable):
             serviceip = await self._get_service_ip(self.config.update_service_ip)
         url = f"http://{serviceip}:{port}/printers/{printername}"
         args = (
-            # f'printui.dll,PrintUIEntry /dl /n "{self.config.displayname}" ; '
             "printui.dll,PrintUIEntry "
             f'/if /b "{self.config.displayname}" /r "{url}" /m "Generic / Text Only" /z'
         )

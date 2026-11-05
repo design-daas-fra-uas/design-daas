@@ -123,9 +123,6 @@ class ContainerConfigBase(ContainerEnvironmentBase):
         if env is not None and env.env_tasks != []:
             tasks = env.env_tasks
         if instance is not None:
-            # for installer in installers:
-            #     await instance.inst_vminvoke_app(installer, "")
-            #     msg = f"Installer executed! CMD: '{installer}'"
             for task in tasks:
                 ttype = task["type"]
                 cmd = task["cmd"]

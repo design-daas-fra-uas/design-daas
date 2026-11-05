@@ -118,8 +118,6 @@ class ORMEntity(Base, Loggable):
 class ORMObject(ORMEntity):
     __tablename__ = "daas_objects"
 
-    # def __init__(self, **kwargs):
-    #     super().__init__(**kwargs)
 
     instances: Mapped[List["ORMInstance"]] = relationship(
         back_populates="app", cascade="all, delete-orphan"
@@ -221,7 +219,6 @@ class ORMInstance(ORMEntity):
     env: Mapped[Optional[ORMEnvironment]] = relationship(
         back_populates="inst",
         single_parent=True,
-        # cascade="all, delete-orphan",
     )
     con: Mapped[Optional[ORMGuacamoleConnection]] = relationship(
         back_populates="obj",
@@ -330,23 +327,6 @@ def check_data(orm: ORMEntity, data: dict) -> dict:
                 else:
                     data[attr] = newval
     return data
-
-
-def check_model_childs(model: dict) -> dict:
-
-    for k, v in model.items():
-        if isinstance(v, ORMEntity):
-            print(f"Found child model {model}")
-            sub = create_model(v)
-            model[k] = sub
-        if isinstance(v, List):
-            newv = []
-            for el in v:
-                if isinstance(el, ORMEntity):
-                    sub = create_orm(el)
-                    newv.append(sub)
-            model[k] = newv
-    return model
 
 
 def create_orm(model: DaaSEntity) -> Optional[ORMEntity]:

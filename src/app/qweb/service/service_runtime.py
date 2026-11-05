@@ -10,7 +10,7 @@ from quart_cors import cors
 from app.qweb.logging.logging import Loggable, QwebLogManager, LogTarget, LoggerConfig
 from app.qweb.auth.auth_dummy import QwebDummyAuthenticator
 from app.qweb.blueprints.blueprint_info import BlueprintInfo
-from app.qweb.common.config import ConfigReader, QwebAuthenticatorConfig, QwebConfig
+from app.qweb.common.config import ConfigReader, QwebConfig
 from app.qweb.service.service_context import (
     BackendContext,
     ObjectContext,
@@ -123,10 +123,6 @@ class QwebServiceRuntime(Loggable):
         """Returns qweb config"""
         return self.cfg_qweb
 
-    def get_config_auth(self) -> QwebAuthenticatorConfig:
-        """Returns auth config"""
-        return self.cfg_auth
-
     def get_config(self, filename: str) -> dict:
         """Reads config from config folder"""
         return self._read_toml_file(filename)
@@ -172,16 +168,6 @@ class QwebServiceRuntime(Loggable):
                 break
         return result
 
-    def add_backends(self, backends: list[QwebBackend]) -> bool:
-        """Adds new backends"""
-        result = True
-        for backend in backends:
-            ret = self.backends.add(backend.name, backend)
-            if not ret:
-                result = False
-                break
-        return result
-
     def add_backend(self, backend: QwebBackend) -> bool:
         """Adds new backend"""
         result = True
@@ -190,16 +176,6 @@ class QwebServiceRuntime(Loggable):
             result = False
         else:
             backend.registered = True
-        return result
-
-    def remove_backends(self, names: list[str]) -> bool:
-        """Adds new backend"""
-        result = True
-        for name in names:
-            ret = self.backends.remove(name)
-            if not ret:
-                result = False
-                break
         return result
 
     async def start(self) -> bool:
@@ -278,12 +254,9 @@ class QwebServiceRuntime(Loggable):
         handler_default.set_configs(
             self.cfg_qweb.proc, self.cfg_qweb.quart, self.cfg_qweb.handler
         )
-        # handler_testing.set_config(self.config.handler)
 
         # Blueprints
         self.app.register_blueprint(handler_default.blueprints)
-        # if self.config.handler.enable_testing:
-        #     self.app.register_blueprint(handler_testing.blueprints)
 
         return self.app
 

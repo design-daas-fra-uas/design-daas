@@ -110,8 +110,6 @@ class ContainerObject(ContainerConfigBase):
                 await asyncio.sleep(3)
             if await self.execute_task(inst, env.env_target, args):
                 await self.set_extended_mode("done")
-            # else:
-            # self._log_error("Execute task failed")
             return await self._return_connected_instance(connect)
         return None
 

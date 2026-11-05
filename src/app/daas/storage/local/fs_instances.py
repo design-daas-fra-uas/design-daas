@@ -55,83 +55,6 @@ class FilestoreInstances(FilestorePermissions):
             remote_name=file.name,
         )
 
-    async def upload_inst_file_upload(
-        self, adr: str, filename: str, os_username: str, windows: bool
-    ):
-        """Uploads file to upload folder"""
-        folder = await self.get_inst_folder_upload(adr, os_username, windows, True)
-        return self.__upload_inst_file(adr, filename, folder, windows)
-
-    async def upload_inst_file_tmp(
-        self,
-        adr: str,
-        filename: str,
-        os_username: str,
-        windows: bool,
-    ) -> bool:
-        """Uploads file to tmp folder"""
-        folder = await self.get_inst_folder_tmp(adr, os_username, windows, True)
-        return await self.__upload_inst_file(adr, filename, folder, windows)
-
-    # pylint: disable=too-many-arguments
-    async def execute_inst_file_tmp(
-        self,
-        adr: str,
-        name: str,
-        os_username: str,
-        os_password: str,
-        windows: bool,
-    ) -> int:
-        """Executes file from tmp folder"""
-        folder = await self.get_inst_folder_tmp(adr, os_username, windows, True)
-        filename = f"{folder}/{name}"
-        if windows:
-            filename = f"C:\\Users\\{os_username}\\{folder}\\{name}"
-
-        return await self.__execute_inst_file(
-            adr, filename, os_username, os_password, windows
-        )
-
-    async def get_inst_folder_daas(
-        self, adr: str, os_username: str, windows: bool, relative: bool
-    ) -> str:
-        """Returns configured daas folder"""
-        folder = await self.__get_inst_folder_daas(os_username, windows, relative)
-        assert await self.__ensure_inst_folder(adr, windows, folder)
-        return folder
-
-    async def get_inst_folder_env(
-        self, adr: str, os_username: str, windows: bool, relative: bool
-    ) -> str:
-        """Returns configured env folder"""
-        folder = await self.__get_inst_folder_env(os_username, windows, relative)
-        assert await self.__ensure_inst_folder(adr, windows, folder)
-        return folder
-
-    async def get_inst_folder_status(
-        self, adr: str, os_username: str, windows: bool, relative: bool
-    ) -> str:
-        """Returns configured status folder"""
-        folder = await self.__get_inst_folder_status(os_username, windows, relative)
-        assert await self.__ensure_inst_folder(adr, windows, folder)
-        return folder
-
-    async def get_inst_folder_tmp(
-        self, adr: str, os_username: str, windows: bool, relative: bool
-    ) -> str:
-        """Returns configured tmp folder"""
-        folder = await self.__get_inst_folder_tmp(os_username, windows, relative)
-        assert await self.__ensure_inst_folder(adr, windows, folder)
-        return folder
-
-    async def get_inst_folder_upload(
-        self, adr: str, os_username: str, windows: bool, relative: bool
-    ) -> str:
-        """Returns configured upload folder"""
-        folder = await self.__get_inst_folder_upload(os_username, windows, relative)
-        assert await self.__ensure_inst_folder(adr, windows, folder)
-        return folder
-
     async def get_inst_file_status(
         self, os_username: str, windows: bool, relative: bool
     ) -> str:
@@ -140,24 +63,6 @@ class FilestoreInstances(FilestorePermissions):
         """
         name = self.config.instance_status_outfile_name
         folder = await self.__get_inst_folder_status(os_username, windows, relative)
-        return await self.__get_inst_file(name, folder, windows)
-
-    async def get_inst_file_tmp(
-        self, name: str, os_username: str, windows: bool, relative: bool
-    ) -> str:
-        """
-        Returns absolute filename within instance
-        """
-        folder = await self.__get_inst_folder_tmp(os_username, windows, relative)
-        return await self.__get_inst_file(name, folder, windows)
-
-    async def get_inst_file_upload(
-        self, name: str, os_username: str, windows: bool, relative: bool
-    ) -> str:
-        """
-        Returns absolute filename within instance
-        """
-        folder = await self.__get_inst_folder_upload(os_username, windows, relative)
         return await self.__get_inst_file(name, folder, windows)
 
     async def __get_inst_folder_daas(
@@ -171,15 +76,6 @@ class FilestoreInstances(FilestorePermissions):
             return f"/{os_username}/daas"
         return f"/home/{os_username}/daas"
 
-    async def __get_inst_folder_env(
-        self, os_username: str, windows: bool, relative: bool
-    ) -> str:
-        daas_folder = await self.__get_inst_folder_daas(os_username, windows, relative)
-        folder = f"{daas_folder}/{self.config.folder_inst_env}"
-        if windows:
-            folder = f"{daas_folder}\\{self.config.folder_inst_env}"
-        return folder
-
     async def __get_inst_folder_status(
         self, os_username: str, windows: bool, relative: bool
     ) -> str:
@@ -188,78 +84,6 @@ class FilestoreInstances(FilestorePermissions):
         if windows:
             folder = f"{daas_folder}\\{self.config.folder_inst_status}"
         return folder
-
-    async def __get_inst_folder_tmp(
-        self, os_username: str, windows: bool, relative: bool
-    ) -> str:
-        daas_folder = await self.__get_inst_folder_daas(os_username, windows, relative)
-        if windows:
-            suffix = self.config.folder_tmp.replace("/", "\\")
-            return f"{daas_folder}\\{suffix}"
-        return f"{daas_folder}/{self.config.folder_tmp}"
-
-    async def __get_inst_folder_upload(
-        self, os_username: str, windows: bool, relative: bool
-    ) -> str:
-        daas_folder = await self.__get_inst_folder_daas(os_username, windows, relative)
-        if windows:
-            suffix = self.config.folder_upload.replace("/", "\\")
-            return f"{daas_folder}\\{suffix}"
-        return f"{daas_folder}/{self.config.folder_upload}"
-
-    async def __ensure_inst_folder(self, adr: str, windows: bool, folder: str) -> bool:
-        """Creates a remote folder"""
-        from app.daas.db.database import Database
-
-        dbase = await get_database(Database)
-
-        result = False
-        instance = await dbase.get_instance_by_adr(adr)
-        if instance is not None:
-            cmd = CMD_LINUX_MKDIR
-            args = f"-p {folder}"
-            if windows:
-                cmd = CMD_WIN_CMD
-                args = f'{CMD_WIN_MKDIR} "{folder}"'
-            ret = await instance.inst_vminvoke_ssh(cmd, args)
-            if ret is not None and ret.response_code == 200:
-                result = True
-        return result
-
-    async def __execute_inst_file(
-        self,
-        adr: str,
-        filename: str,
-        os_username: str,
-        os_password: str,
-        windows: bool,
-    ) -> int:
-        """
-        Executes file within instance
-        """
-        from app.daas.db.database import Database
-
-        dbase = await get_database(Database)
-        ret = None
-        instance = await dbase.get_instance_by_adr(adr)
-        prefix = ""
-        if instance is not None:
-            if windows:
-                prefix = await self.__get_windows_prefix_pstools(
-                    os_username, os_password
-                )
-                ret = await instance.inst_vminvoke_app(f"{prefix} {filename}", "")
-            else:
-                ret = await instance.inst_vminvoke_ssh(
-                    CMD_LINUX_CHMOD, f"a+x {filename}"
-                )
-                if ret is not None and ret.response_code == 200:
-                    ret = await instance.inst_vminvoke_app(
-                        CMD_LINUX_XTERM, f"-e {filename}"
-                    )
-        if ret is not None and ret.response_code == 200:
-            return 0
-        return -1
 
     async def __get_inst_file(
         self,
@@ -321,14 +145,3 @@ class FilestoreInstances(FilestorePermissions):
             if ret is not None and ret.response_code == 200:
                 result = True
         return result
-
-    async def __get_windows_prefix_pstools(
-        self,
-        os_username: str,
-        os_password: str,
-    ):
-        prefix_cmd = f"C:/Users/{os_username}/daas/env/pstools/psexec.exe"
-        prefix_accept = "-nobanner -accepteula"
-        prefix_session = "-i 1"
-        prefix_creds = f"-u {os_username} -p {os_password}"
-        return f"{prefix_cmd} {prefix_accept} {prefix_session} {prefix_creds}"

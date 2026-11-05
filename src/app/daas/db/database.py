@@ -63,9 +63,6 @@ class Database(
         logger = logging.getLogger(LogTarget.DB.value)
         registry = SampleRegistry(cfg=cfg)
 
-        # if cfg.persist_session:
-        #     session["userid"] = registry.config.default_owner
-        #     session["user"] = registry.config.default_owner_name
 
         limitlist = registry.create_demo_limits()
         for testlimit in limitlist:
@@ -120,30 +117,7 @@ class Database(
         dictconf = await self._get_config(ConfigFile.DB.value)
         return SampleRegistryConfig(**dictconf[ConfigSections.SAMPLES.value])
 
-    # async def connect_legacy(self, connstring: str):
-    #     # pylint:disable=unnecessary-dunder-call
-    #     if not os.path.exists(connstring):
-    #         async with aiosqlite.connect(connstring, check_same_thread=False) as conn:
-    #             self.conn = conn
-    #             self.conn.row_factory = sqlite3.Row
-    #             self.auth = AuthDatabase(self)
-    #             await self.initialize_schema()
-    #             self.__log_info(f"DB created        : {connstring}")
-    #     if os.path.exists(connstring):
-    #         self.conn = aiosqlite.connect(connstring, check_same_thread=False)
-    #         await self.conn.__aenter__()
-    #         self.conn.row_factory = sqlite3.Row
-    #         self.connected = True
-    #         self.__log_info(f"DB connected      : {connstring}")
 
-    # async def disconnect_legacy(self) -> None:
-    #     """
-    #     Closes active database connections.
-    #     """
-    #     await self.conn.commit()
-    #     await self.conn.close()
-    #
-    #     self.__log_info("Closed active db connection")
 
     # async def initialize_schema(self) -> None:
     #     """Initialize database schema, must be applied when the app starts."""
@@ -354,39 +328,6 @@ class AuthDatabase:
     def __init__(self) -> None:
         self.creds = {}
 
-    async def save_password_hash(self, *, username: str, pwhash: str) -> None:
-        """
-        Save or update the password hash in the database.
-        """
-
-        values = {"id": -1, "password_hash": pwhash}
-        if username == "admin":
-            values["id"] = f"{DEFAULT_ADMIN_ID}"
-        self.creds[username] = values
-
-    async def get_password_hash(self, username: str) -> tuple[int, str]:
-        """Retrieve a password hash for the given user."""
-        if username in self.creds:
-            return (
-                self.creds[username]["id"],
-                self.creds[username]["password_hash"],
-            )
-        return -1, ""
-
-    # async def get_user_by_name(self, *, username: str) -> int:
-    #     """Retrieves a user if available."""
-    #     cursor = await self.conn.execute(
-    #         "SELECT id, username FROM auth_password WHERE username = :username",
-    #         {"username": username},
-    #     )
-    #     async with cursor:
-    #         row = await cursor.fetchone()
-    #         if not row:
-    #             return -1
-    #         (id_owner, _) = row
-    #         result = id_owner
-    #         cursor.connection.commit()
-    #         return result
 
     # async def save_access_token(self, token: AccessToken, *, secret_token: str) -> None:
     #     """Save a new AccessToken."""

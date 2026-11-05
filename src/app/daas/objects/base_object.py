@@ -156,8 +156,6 @@ class DaasBaseObject(DaasObject):
         await self.run_system_task_postboot(inst)
         self.object_mode = object_mode
         self.object_mode_extended = "booting"
-        # TODO: Insert postboot actions ->
-        # await self.post_boot_actions(instance, wait_for_boot, False, False, True, True)
         return await dbase.update_daas_object(self)
 
     async def run_system_task_postboot(
@@ -284,22 +282,6 @@ class DaasBaseObject(DaasObject):
         """Checks if current object is a windows object"""
         if self.is_machine():
             if self.os_type in "win10, win11":
-                return True
-        return False
-
-    def is_linux(self) -> bool:
-        """Checks if current object is a linux object"""
-        if self.is_machine():
-            if self.os_type == "l26":
-                return True
-        if self.is_container():
-            return True
-        return False
-
-    def is_wine(self) -> bool:
-        """Checks if current object is a wine object"""
-        if self.is_container():
-            if self.os_wine:
                 return True
         return False
 

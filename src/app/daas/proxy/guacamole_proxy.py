@@ -58,15 +58,6 @@ class ResizeHandler(Protocol):
         """
 
 
-class ReconnectHandler(Protocol):
-    """A ReconnectHandler may be invoked when the client loses connection"""
-
-    async def on_reconnect(self, *, id_instance: str, token: str) -> None:
-        """
-        Renables token
-        """
-
-
 class WebsocketStats:
     """Counts socket stats"""
 
@@ -119,7 +110,6 @@ class WebsocketStats:
 
     def add_opcode_guacd_to_client(self, opcode: str, args):
         """Appends opcode from guacd to client"""
-        # print(f"G2C: {opcode} {len(args)}")
         size_bytes = 0
         for arg in args:
             size_bytes += len(arg)
@@ -142,7 +132,6 @@ class WebsocketStats:
 
     def add_opcode_client_to_guacd(self, opcode: str, args):
         """Appends opcode from client to guacd"""
-        # print(f"C2G: {opcode} {len(args)}")
         size_bytes = 0
         for arg in args:
             size_bytes += len(arg)
@@ -236,7 +225,6 @@ async def new_guacd_connection() -> GuacamoleSocketStream:
     connstring = reg.config.guacd
     host, port = connstring.split(":")  # no IPv6 support, lol
     guacd_reader, guacd_writer = await asyncio.open_connection(host, port)
-    # print(f"NEW GUACD Socket: {connstring}")
     return GuacamoleSocketStream(reader=guacd_reader, writer=guacd_writer)
 
 
@@ -246,7 +234,6 @@ async def proxy_guacamole_ws(
     connection: GuacamoleConnection,
     *,
     resize_handler: Optional[ResizeHandler],
-    # reconnect_handler: Optional[ReconnectHandler],
 ):
     """Create a Guacamole tunnel from the client WebSocket to guacd."""
     from app.daas.proxy.proxy_registry import ProxyRegistry
@@ -255,10 +242,8 @@ async def proxy_guacamole_ws(
     reg = await get_backend_component(BackendName.PROXY, ProxyRegistry)
 
     client_conf = ClientConfiguration.from_params(client_ws.args)
-    # __log_info(f" PROXY:   0 -> Connecting instance {client_conf} with client conf")
     client_socket = GuacamoleSocketWs(client_ws)
     guacd_socket: GuacamoleSocketStream = await new_guacd_connection()
-    # __log_info(f" PROXY:   0 -> Create guacd-socket: {guacd_socket}")
 
     connid = await perform_guacd_handshake(
         instance=instance,
@@ -288,7 +273,6 @@ async def proxy_guacamole_ws(
 
     # handshake with the client
     await client_socket.send(OPCODE_INTERNAL, connid)
-    # __log_info(f" PROXY:   0 -> Create client-socket: {client_socket}")
 
     async def forward_client_to_guacd() -> None:
         """Handle messages from the client."""
@@ -329,9 +313,6 @@ async def proxy_guacamole_ws(
                 task_guacd.cancel("client has disconnected")
                 task_client.cancel("client has disconnected")
                 reg.disconnect_connection(connid)
-                # if connid in socket_tuples:
-                #     __log_info(f"Removing {connid}")
-                #     socket_tuples.pop(connid)
                 raise asyncio.CancelledError()  # must re-raise
 
     async def forward_guacd_to_client():
@@ -364,17 +345,6 @@ async def proxy_guacamole_ws(
                 task_guacd.cancel("server has disconnected")
                 task_client.cancel("server has disconnected")
                 reg.disconnect_connection(connid)
-                # if connid in socket_tuples:
-                #     __log_info(f"Removing {connid}")
-                #     socket_tuples.pop(connid)
-                #     reg.disconnect_connection(connid)
-                # path_arr = (await client_socket.get_path()).split("/")
-                # if reconnect_handler is not None and len(path_arr) == 4:
-                #     await reconnect_handler.on_reconnect(
-                #         id_instance=path_arr[2], token=path_arr[3]
-                #     )
-                # return
-                # __log_info(f" PROXY: Exception on receive : {exc}")
                 raise asyncio.CancelledError()  # must re-raise
 
             # forward messages to client
@@ -387,7 +357,6 @@ async def proxy_guacamole_ws(
 
         task_client = asyncio.create_task(forward_client_to_guacd())
         task_guacd = asyncio.create_task(forward_guacd_to_client())
-        # __log_queuesinfo(f" PROXY:  0 -> Create Tasks: {task_client} {task_guacd}")
         _log_info(f"Length sockelist: {len(socket_tuples)}")
         _log_info(f" PROXY:   0 -> Completed Guacamole connection connid={connid}")
         newinstance = await dbase.get_instance_by_id(instance.id)
@@ -488,10 +457,7 @@ def _handle_size_message(*, resize_handler: ResizeHandler) -> Middleware:
 
 def _forward_message(*, socket: GuacamoleSocket) -> MessageHandler:
     async def inner_forward_message(opcode: str, args: tuple[str, ...]) -> None:
-        # try:
         return await socket.send(opcode, *args)
-        # except Exception:
-        #     pass
 
     return inner_forward_message
 

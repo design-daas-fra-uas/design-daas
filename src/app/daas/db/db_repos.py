@@ -152,10 +152,6 @@ class FileRepository(RepositoryBase):
         """Insert file"""
         return await self._upsert(model)
 
-    async def update_file(self, model: File) -> bool:
-        """Update file"""
-        return await self._upsert(model)
-
     async def delete_file(self, id_pk: str) -> bool:
         """Remove file"""
         filter = await self._get_filter_id(id_pk)
@@ -267,10 +263,6 @@ class ConnectionRepository(RepositoryBase):
         """Insert connection"""
         return await self._upsert(model)
 
-    async def update_guacamole_connection(self, model: GuacamoleConnection) -> bool:
-        """Update connection"""
-        return await self._upsert(model)
-
     async def delete_connection(self, instance: InstanceObject) -> bool:
         """Remove connection"""
         id_con = ""
@@ -298,11 +290,6 @@ class ConnectionRepository(RepositoryBase):
         filter = await self._get_filter_column(Colnames.ViewerToken, token)
         selected = await self._select_one(Tablenames.Con, filter)
         return await self._to_model(selected, GuacamoleConnection)
-
-    async def all_connections(self) -> list[GuacamoleConnection]:
-        """Fetch all available connections"""
-        selected = await self._select_all(Tablenames.Con)
-        return await self._to_model_list(selected, GuacamoleConnection)
 
     async def update_connection_protocol(
         self, connection: GuacamoleConnection
@@ -360,24 +347,6 @@ class EnvironmentRepository(RepositoryBase):
         api = await self._get_api()
         orm = await api.db_session_select_one(Tablenames.Env, filter)
         return await self._to_model(orm, Environment)
-
-    async def get_environment_by_backend_id(self, obj_id: str) -> Optional[Environment]:
-        """Fetch environment state from its backend id"""
-        filter = await self._get_filter_column(Colnames.BackendId, obj_id)
-        api = await self._get_api()
-        orm = await api.db_session_select_one(Tablenames.Env, filter)
-        return await self._to_model(orm, Environment)
-
-    async def all_environments(self) -> list[Environment]:
-        """Fetch all available envs"""
-        selected = await self._select_all(Tablenames.Env)
-        return await self._to_model_list(selected, Environment)
-
-    async def all_object_environments(self, id_env: str) -> list[Environment]:
-        """Fetch all available envs"""
-        flt = await self._get_filter_id(id_env)
-        selected = await self._select(Tablenames.Env, flt)
-        return await self._to_model_list(selected, Environment)
 
     async def delete_environment(self, env: Environment) -> bool:
         """Remove environment"""
@@ -521,9 +490,7 @@ class InstanceRepository(RepositoryBase):
         filter = await self._get_filter_id(id_pk)
         api = await self._get_api()
         orm = await api.db_session_select_one(Tablenames.Inst, filter)
-        # print(f"INSTBYID_BEFORE: {id_pk} {filter}")
         inst = await self._to_model(orm, InstanceObject)
-        # print(f"INSTBYID_AFTER: {inst} {type(inst.app)}")
         return inst
 
     async def get_instance_by_objid(self, id_pk: str) -> Optional[InstanceObject]:
@@ -532,7 +499,6 @@ class InstanceRepository(RepositoryBase):
         api = await self._get_api()
         orm = await api.db_session_select_one(Tablenames.Inst, filter)
         if orm is not None:
-            # print(f"ORM: {orm} {type(orm.app)} {id_pk} {filter}")
             return await self._to_model(orm, InstanceObject)
         return None
 
@@ -564,15 +530,6 @@ class InstanceRepository(RepositoryBase):
         flt = await self._get_filter_str(flt_host)
         ormlist = await api.db_session_select_one(Tablenames.Inst, flt)
         return await self._to_model(ormlist, InstanceObject)
-
-    async def get_instances_available(self, id_owner: int = 0) -> list[InstanceObject]:
-        """Fetch all available instances"""
-        api = await self._get_api()
-        filter_obj = await self._get_filter_statement(Colnames.Owner, id_owner)
-        filter_name = await self._get_filter_statement(Colnames.Owner, 0)
-        filter = await self._get_filter_str(f"{filter_name} OR {filter_obj}")
-        ormlist = await api.db_session_select(Tablenames.Inst, filter)
-        return await self._to_model_list(ormlist, InstanceObject)
 
     async def delete_instance(self, instance: InstanceObject) -> bool:
         """Remove instance"""

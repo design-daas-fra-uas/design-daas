@@ -28,30 +28,6 @@ class FilestorePermissions(FilestoreBase):
         self._log_info(f"Endpoint Success  : {success}")
         return success
 
-    async def get_permission_group(self, name: str) -> dict:
-        """
-        Retrieves the permission group specified by name
-        """
-        if name in self.permission_groups:
-            return self.permission_groups[name]
-        return {}
-
-    async def get_permission_by_id(self, id: int) -> str:
-        """
-        Retrieves the permission specified by id
-        """
-        if id in self.permissions_by_id:
-            return self.permissions_by_id[id]
-        return ""
-
-    async def get_permission_by_name(self, name: str) -> int:
-        """
-        Retrieves the permission specified by name
-        """
-        if name in self.permissions_by_name:
-            return self.permissions_by_name[name]
-        return -1
-
     async def read_endpoint_info(self, folder: str) -> bool:
         """Reads endpoint info"""
         for file in os.listdir(folder):

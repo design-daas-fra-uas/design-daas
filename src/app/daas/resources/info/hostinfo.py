@@ -105,7 +105,6 @@ class Hostinfo:
 
         filestore = await self._get_backend_ceph()
         fs_config = filestore.config
-        # mnt = fs_config.daasfs.folder_mount
         mnt = fs_config.daasfs["folder_mount"]
         folder_pub = f"{mnt}/daasfs/"
         return await self.__get_diskinfo(folder_pub)

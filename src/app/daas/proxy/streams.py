@@ -3,7 +3,6 @@
 import asyncio
 import abc
 
-# import time
 
 from quart import Websocket
 
@@ -47,10 +46,7 @@ class GuacamoleSocketWs(GuacamoleSocket):
                 return message
 
             # may throw exception if connection is severed
-            # t = time.time()
-            # print(f"IN: {t}")
             raw: bytes | str = await self.__ws.receive()
-            # print(f"GSWS: RECEIVE: {raw}")
 
             # The client should always send strings,
             # but handle bytes just in case.
@@ -83,7 +79,6 @@ class GuacamoleSocketStream(GuacamoleSocket):
         running = 2
         while running > 0:
             if message := self.__parser.next_message():
-                # print(f"Received message: {message}")
                 return message
 
             # read any immediately available chunk of UP TO 1024 bytes

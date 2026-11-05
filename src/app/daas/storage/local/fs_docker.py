@@ -13,18 +13,6 @@ class FilestoreDocker(FilestoreUploads):
     def __init__(self, config: FilestoreConfig):
         super().__init__(config)
 
-    async def get_root_dockerfile(self, imagename: str) -> str:
-        """
-        Returns path of specified root image
-        """
-        dockerfile = ""
-        if imagename == self.config.default_wine_image_name:
-            dockerfile = f"{self.config.default_wine_image_folder}/Dockerfile"
-        if imagename == self.config.default_x11vnc_image_name:
-            dockerfile = f"{self.config.default_x11vnc_image_folder}/Dockerfile"
-        assert os.path.exists(dockerfile)
-        return dockerfile
-
     async def create_docker_envfile(
         self,
         objid: str,
@@ -54,43 +42,6 @@ class FilestoreDocker(FilestoreUploads):
                 file.write("\n# RUN INSTALLERS\n")
                 for installer in installers:
                     file.write(f"RUN {installer}\n")
-
-        result = dstfile
-        assert os.path.exists(result)
-        return result
-
-    async def update_docker_envfile(
-        self,
-        objid: str,
-        userid: int,
-        imgname: str,
-        envname: str,
-        files: list[File] = [],
-        installers: list[str] = [],
-    ) -> str:
-        """Copies specified Dockerfile into new environmental dockerfile"""
-        assert self.dbase is not None
-        result = ""
-        obj = await self.dbase.get_daas_object(objid)
-        if obj is None:
-            return ""
-        dstfolder = await self.get_user_folder_docker(userid, imgname)
-        dstfile = f"{dstfolder}/Dockerfile.{envname}"
-        with open(dstfile, "r", encoding="UTF-8") as dockerfile:
-            lines = dockerfile.readlines()
-
-        for fileobj in files:
-            newline = f"COPY {fileobj.name} {fileobj.remotepath}/{fileobj.name}\n"
-            if newline not in lines:
-                lines.append(newline)
-
-        for installer in installers:
-            newline = f"RUN {installer}\n"
-            if newline not in lines:
-                lines.append(newline)
-
-        with open(dstfile, "w", encoding="UTF-8") as dockerfile:
-            lines = dockerfile.writelines(lines)
 
         result = dstfile
         assert os.path.exists(result)
@@ -141,8 +92,6 @@ class FilestoreDocker(FilestoreUploads):
         found_from_line = False
         subdir_lower = subdir.lower()
         newname = f"daas.{subdir_lower}"
-        # if subdir != "":
-        #     newname = f"daas-{userid}-{name}-{subdir}"
         for line in lines:
             if line.strip().startswith("FROM"):
                 new_dockerfile_content.append(f"FROM {newname}\n")
@@ -184,18 +133,11 @@ class FilestoreDocker(FilestoreUploads):
         """
         Copies specified root image
         """
-        # dockerfolder = ""
-        # if imagename == self.config.default_wine_image_name:
-        #     dockerfolder = f"{self.config.default_wine_image_folder}"
-        # if imagename == self.config.default_x11vnc_image_name:
-        #     dockerfolder = f"{self.config.default_x11vnc_image_folder}"
         dstfolder = await self.get_user_folder_docker(userid, subdir)
 
         # Copy as template
         with open(f"{dstfolder}/Dockerfile", "w", encoding="UTF-8") as file:
             file.write(f"FROM {imagename}\n")
-        # copy folder
-        # shutil.copytree(dockerfolder, dstfolder, dirs_exist_ok=True)
 
         assert os.path.exists(dstfolder)
         result = f"{dstfolder}/Dockerfile"
@@ -224,36 +166,3 @@ class FilestoreDocker(FilestoreUploads):
         result = f"{dstfolder}/Dockerfile"
         assert os.path.exists(result)
         return result
-
-    async def copy_user_dockerfile_env(
-        self, dockerfile: str, userid: int, name: str, subdir: str
-    ) -> str:
-        """
-        Copies specified dockerfile
-        """
-        dockerfolder = ""
-        if os.path.exists(dockerfile) is False:
-            return ""
-
-        dockerfolder = os.path.dirname(dockerfile)
-        dstfolder = await self.get_user_folder_docker(userid, subdir)
-        dstfile = f"{dstfolder}/Dockerfile"
-        if name != "":
-            dstfile = f"{dstfolder}/Dockerfile.{name}"
-        if dockerfolder == dstfolder:
-            shutil.copy(dockerfile, dstfile)
-        else:
-            shutil.copytree(dockerfolder, dstfolder, dirs_exist_ok=True)
-
-        assert os.path.exists(dstfile)
-        return dstfile
-
-    async def delete_user_folder_docker(self, userid: int, subdir: str) -> bool:
-        """
-        Deletes specified image
-        """
-        folder = await self.get_user_folder_docker(userid, subdir)
-        shutil.rmtree(folder)
-
-        assert os.path.exists(folder) is False
-        return True

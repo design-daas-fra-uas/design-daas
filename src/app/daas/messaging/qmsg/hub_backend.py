@@ -181,12 +181,6 @@ class QHubBackend(Loggable):
         if self.task_heartbeat_cleanup is not None:
             self._log_info("Stopping Cleanup task.")
             self.task_heartbeat_cleanup.cancel()
-            # asyncio.gather(self.task_heartbeat_cleanup, return_exceptions=True)
-            # await self.task_heartbeat_cleanup
-            # self.__log_info("Stopped Cleanup task.")
         if self.task_heartbeat_listener is not None:
             self._log_info("Stopping Listener task.")
             self.task_heartbeat_listener.cancel()
-            # asyncio.gather(self.task_heartbeat_listener, return_exceptions=True)
-            # await self.task_heartbeat_listener
-            # self.__log_info("Stopped Listener task.")

@@ -18,8 +18,6 @@ async def run_client_hub():
         rabbitmq_host=rabbit_ip,
         reconnect_time_client=5,
         reconnect_time_server=5,
-        # force_name="lalala",
-        # force_ip="192.168.223.11",
         log_topic="QHubInstance",
     )
     clienthub = QHubInstance(cfg_hub, setup_logging=True)

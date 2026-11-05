@@ -7,7 +7,6 @@ from app.daas.vm.proxmox.ProxmoxRestRequest import ProxmoxRestRequest, ProxmoxRe
 from app.daas.vm.proxmox.ProxmoxConfigStore import (
     ProxmoxConfigStore,
     ProxmoxConfigStoreConfig,
-    create_vmconf_template,
 )
 from app.qweb.logging.logging import LogTarget, Loggable
 
@@ -77,12 +76,6 @@ class ApiProxmox(Loggable):
             result = False
         else:
             self._log_info("Connection test successful: 'proxmox'")
-        # res_node = self.node_connection_test()
-        # if res_node != 0:
-        #     logger.error("Connection test failed: 'node'")
-        #     result = False
-        # else:
-        #     logger.info("Connection test successful: 'node'")
         return result
 
     async def configure_services(self):
@@ -477,15 +470,6 @@ class ApiProxmox(Loggable):
         Posts new vm config to proxmox api
         """
         cfg = self.config_store.create_vmconf_baseimage(vmid, name, keyboard_layout)
-        return await self.prox_vmconfig_set(vmnode, vmid, cfg)
-
-    async def prox_vmconfig_set_template(
-        self, vmnode: str, vmid: int, name: str, keyboard_layout: str
-    ) -> tuple[aiohttp.ClientResponse, dict]:
-        """
-        Posts new vm config to proxmox api
-        """
-        cfg = create_vmconf_template(vmid, name, keyboard_layout)
         return await self.prox_vmconfig_set(vmnode, vmid, cfg)
 
     async def prox_vmclone(

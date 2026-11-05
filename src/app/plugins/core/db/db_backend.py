@@ -12,11 +12,9 @@ class DatabaseBackend(QwebBackend):
 
     cfg: DatabaseConfig
     component: DatabaseManager
-    # repos: Optional[Database] = None
 
     def __init__(self, cfg: DatabaseConfig):
         self.cfg = cfg
-        # self.repos = None
         self.component = DatabaseManager(cfg)
         QwebBackend.__init__(self, name=BackendName.DB.value, component=self.component)
 

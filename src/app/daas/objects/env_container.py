@@ -168,7 +168,6 @@ class ContainerEnvironmentBase(ContainerPhase):
             instance_env = await dbase.get_instance_by_envid(env.id)
             if instance_env is not None:
                 if keep_connections is True:
-                    # await asyncio.sleep(1)
                     oldtag = await self.get_container_tag()
                     await api.docker_container_stop(oldtag, True)
             code, container_id, _ = await api.docker_container_start(
@@ -204,13 +203,11 @@ class ContainerEnvironmentBase(ContainerPhase):
             instance = await self.insert_pending_instance(userid, env)
             await self.run_system_task_postboot(instance)
         else:
-            # await asyncio.sleep(1)
             if instance_env is not None:
                 api = await get_backend_component(BackendName.CONTAINER, DockerRequest)
                 environment_tag = await self.get_environment_tag(env.name)
                 instance_env.host = await api.docker_get_container_ip(environment_tag)
                 await instance_env.update()
-                # await asyncio.sleep(1)
         if object_mode != "":
             self.object_mode = object_mode
         await self.set_extended_mode("done")

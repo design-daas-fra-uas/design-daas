@@ -48,25 +48,4 @@ async def invoke_upload(
     ctx: QwebProcessorContexts, proc_request: ProcessorRequest, info: BlueprintInfo
 ) -> Response | dict | str:
     """Configure dhcp"""
-    #     # Upload2host
-    #     code = 0
-    #     str_out = ""
-    #     str_err = ""
-    #     # Upload dockerfile
-    #     store = await ctx.get_filestore()
-    #     name = args["file"].filename
-    #     userid = await get_userid(ctx)
-    #
-    #     stored = await store.upload_user_file_upload(args["file"], name, userid)
-    #     if stored:
-    #         str_out = await store.get_user_file_upload(name, userid)
-    #
-    #     return respond_json(
-    #         request,
-    #         str(args),
-    #         200 if code == 0 else 405,
-    #         sys_exitcode=code,
-    #         sys_log=f"{str_out}{str_err}",
-    #     )
-    # return {"Error": "Unknown error"}
     raise NotImplementedError("invoke_upload is not implemented")

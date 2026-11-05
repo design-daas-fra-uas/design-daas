@@ -60,7 +60,6 @@ class WindowsAdapter(AdapterBase):
         """
         Spawns an app within Windows
         """
-        # clean_session(self.cfg.codepage)
         terms = generate_searchterms(prog, self.cfg.mapping_uwp)
         pid = try_find_pid(terms, self.cfg.timeout_pidsearch)
         if pid != -1:
@@ -116,7 +115,6 @@ class WindowsAdapter(AdapterBase):
         Gets current screen resolution by using native os facilities
         """
         result = get_current_resolution(args)
-        # clean_session("UTF-8")
         return result
 
     def resolution_list(self, args: list) -> tuple[int, str, str]:
@@ -124,8 +122,6 @@ class WindowsAdapter(AdapterBase):
         Enumerates available screen resolutions by using native os facilities
         """
         reslist = get_resolution_list()
-        # time.sleep(0.2)
-        # clean_session("UTF-8")
         return 0, f"{reslist}", ""
 
     def resolution_set(self, args: list) -> tuple[int, str, str]:
@@ -137,7 +133,6 @@ class WindowsAdapter(AdapterBase):
         if width == 0 or height == 0:
             width, height = self.get_default_resolution()
         set_current_resolution(width, height)
-        # clean_session("UTF-8")
         return 0, f"{width}x{height}", ""
 
     def tasklist_get(self, args: list) -> tuple[int, str, str]:
