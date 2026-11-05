@@ -58,6 +58,8 @@ class BlueprintInfo:
     request_args_file: list = field(default_factory=lambda: [])
     backends: list = field(default_factory=lambda: [])
     objects: list = field(default_factory=lambda: [])
+    # Only users with the role "admin" (from the auth service) may call it
+    admin_only: bool = False
 
     def __repr__(self):
         return (

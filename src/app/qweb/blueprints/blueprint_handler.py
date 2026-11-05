@@ -166,7 +166,9 @@ class BlueprintHandler(BlueprintHandlerBase):
             )
 
         # Onership
-        verified = await self.__verify_entity_ownerships(ctx.objects.objects, authres)
+        verified = await self.__verify_entity_ownerships(
+            ctx.objects.objects, authres, info
+        )
         if verified is False:
             self._log_error("Error during ownership_verify (seq)", 2)
             ctype = await self.get_requested_content_type(info)
@@ -223,7 +225,7 @@ class BlueprintHandler(BlueprintHandlerBase):
 
         # Onership
         verified = await self.__verify_entity_ownerships(
-            ctxres.objects.objects, authres
+            ctxres.objects.objects, authres, info
         )
         if verified is False:
             self._log_error("Error during ownership_verify (ctx-auth)", 2)
@@ -288,7 +290,9 @@ class BlueprintHandler(BlueprintHandlerBase):
             )
 
         # Onership
-        verified = await self.__verify_entity_ownerships(ctx.objects.objects, authres)
+        verified = await self.__verify_entity_ownerships(
+            ctx.objects.objects, authres, info
+        )
         if verified is False:
             self._log_error("Error during ownership_verify (auth-proc)", 2)
             ctype = await self.get_requested_content_type(info)
@@ -332,6 +336,12 @@ class BlueprintHandler(BlueprintHandlerBase):
         else:
             user = await authman.authenticate(req, info)
             result = user
+            if info.admin_only and user.authenticated and user.role != "admin":
+                self._log_error(
+                    f"User {user.id_user} (role '{user.role}') denied admin route {info.url}",
+                    1,
+                )
+                result = QwebUser()
 
         # Finalize
         if timing is not None:
@@ -371,7 +381,13 @@ class BlueprintHandler(BlueprintHandlerBase):
                     timing.processing.stop()
         return result, code
 
-    async def __verify_entity_ownerships(self, objects: dict, user: QwebUser) -> bool:
+    async def __verify_entity_ownerships(
+        self, objects: dict, user: QwebUser, info: BlueprintInfo
+    ) -> bool:
+        # Admin routes act on other users' entries by design, and only an
+        # admin gets this far (see task_authentication)
+        if info.admin_only:
+            return True
         is_admin = user.role == "admin"
         for name, obj in objects.items():
             valid = await self.__verify_entity_ownership(obj, user.id_user, is_admin)
