@@ -10,6 +10,8 @@
 
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.bash"
 set +e
+# A check that finds nothing is not an installer error: no error trap here
+trap - ERR
 
 ENV_FILE=""
 while getopts ":e:" o; do

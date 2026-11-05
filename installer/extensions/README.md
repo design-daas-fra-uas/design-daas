@@ -35,8 +35,11 @@ Ubuntu 22.04 with:
 
 - Container **`daas-0-extensions`** from image **`daas-0-extensions`**.
 - The **DaaS backend starts it** on its own start and stops it on its stop
-  (`[service_containers]` in `src/config/container.toml`), with ports
-  631 and 8010 published on `127.0.0.1`.
+  (`[service_containers]` in `src/config/container.toml`). No host ports:
+  the backend and the instances reach CUPS (631) and the printer
+  websocket (8010) on the container's own IP (looked up at runtime,
+  `service_ip` in `src/config/extensions.toml`), so a CUPS on the host
+  (e.g. from a desktop install) never clashes with it.
 - Settings in `src/config/extensions.toml`: printer name prefix
   (`printer` + user id), ports, display name of the printer in the
   instances (`design-printer`).

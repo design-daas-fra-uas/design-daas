@@ -70,7 +70,7 @@ PURGE_OPT = $(if $(PURGE),-p)
 # Targets
 # ============================================================
 
-.PHONY: default usage help all install configure deps \
+.PHONY: default usage help all install configure deps reset \
         $(ACTIONS) reinstall $(LIFECYCLE) \
         images images-delete containers-install images-install \
         proxmox-ensure iso-install iso-reinstall \
@@ -122,6 +122,7 @@ usage:
 	@echo "  make configure            Re-apply $(notdir $(ENV_FILE)) (no rebuilds)"
 	@echo "  make reinstall            After code changes: rebuild services and images"
 	@echo "  make delete               Remove services, containers and images"
+	@echo "  make reset CONFIRM=yes    Fresh start: delete ALL data + builds (then make install)"
 	@echo ""
 	@echo "  Options: PURGE=1          delete/reinstall also delete the data"
 	@echo "                            (auth: DB + keys, daas: src/data + nginx site,"
@@ -209,6 +210,30 @@ all: install
 
 deps:
 	./deps/install.bash
+
+# Fresh start: deletes ALL data of the DaaS stack and everything the
+# installer built, then `make install` sets it up again. Kept: daas.env (all
+# settings and passwords), src/config (incl. config/local), the ISOs and the
+# Proxmox VMs. Asks for CONFIRM=yes because it cannot be undone.
+reset:
+	@[ "$(CONFIRM)" = yes ] || { \
+		echo "make reset deletes ALL data of the DaaS stack, for good:"; \
+		echo "  - the DaaS database (src/data/db/mariadb) and src/data"; \
+		echo "  - the auth service's users, permissions and token keys"; \
+		echo "  - all instance containers and user images (daas.*)"; \
+		echo "  - the service containers and all images the installer built"; \
+		echo "Kept: installer/daas.env, src/config, the ISOs, the Proxmox VMs."; \
+		echo "Run: sudo make reset CONFIRM=yes"; exit 1; }
+	$(SERVICE_CMD) delete -p all
+	@ids="$$(docker ps -aq --filter name=^daas)"; \
+	if [ -n "$$ids" ]; then echo "Removing instance containers: $$(docker ps -a --filter name=^daas --format '{{.Names}}' | tr '\n' ' ')"; docker rm -f $$ids >/dev/null; fi
+	@imgs="$$(docker images --format '{{.Repository}}:{{.Tag}}' | grep -E '^daas[.-]' || true)"; \
+	if [ -n "$$imgs" ]; then echo "Removing images: $$(echo $$imgs)"; docker image rm -f $$imgs >/dev/null; fi
+	docker image prune -f
+	@echo ""
+	@echo "Reset done. Proxmox VMs are not touched:"
+	@qm list 2>/dev/null | awk 'NR>1{print "  VM "$$1" "$$2" ("$$3")"}'
+	@echo "Next: sudo make install SKIP_ISOS=1"
 
 # Re-apply the env file without rebuilding (frontend URLs are baked into
 # its build and auth settings into its container: use frontend-install /

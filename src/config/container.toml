@@ -45,14 +45,13 @@ service_containers = [
     2,
     2147483648,  # 2 GiB
   ],
-  # Extensions: CUPS (631), printer websocket (8010)
+  # Extensions: CUPS (631) and printer websocket (8010), reached on the
+  # container's own IP (extensions.toml service_ip); no host ports, so they
+  # never clash with a CUPS on the host
   [
     "daas-0-extensions",
     "daas-0-extensions",
-    [
-      "-p 127.0.0.1:631:631",
-      "-p 127.0.0.1:8010:8010",
-    ],
+    [],
     2,
     2147483648,  # 2 GiB
   ],
