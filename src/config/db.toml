@@ -2,8 +2,10 @@
 # and Database -> SampleRegistryConfig (app/daas/db/db_samples.py).
 
 [db]
-# "sqlite" (data_path/database) or "mariadb" (db_* settings, daas-0-mariadb container)
-db_type = "sqlite"
+# "mariadb" (db_* settings below, the daas-0-mariadb container) or "sqlite"
+# (file data_path/sqlite/<db_name>.sqlite3)
+db_type = "mariadb"
+# Currently not read by the code (the sqlite file is named after db_name)
 database = "daas-web-db.sqlite"
 # Relative to qweb.toml [sys] data_path (src/data/db)
 data_path = "db"
@@ -11,10 +13,11 @@ enable_echo = false
 # Currently not read by the code
 admin_credentials = "admin:admin"
 include_samples = true
-# MariaDB connection; db_pass must match installer/mariadb/Dockerfile
+# MariaDB connection (root may only log in from this host, see
+# installer/mariadb); the password comes from DAAS_DB_PASSWORD
 db_name = "mergedb"
 db_user = "root"
-db_pass = "my-secret-pw"
+db_pass = ""  # set by the installer in config/local/db.toml (not in git)
 db_host = "127.0.0.1"
 db_port = 3306
 

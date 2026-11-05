@@ -1,6 +1,7 @@
 """Database manager"""
 
 import os
+import time
 from typing import Optional
 from sqlalchemy.schema import MetaData
 from sqlalchemy import Engine, create_engine
@@ -8,6 +9,11 @@ from app.daas.common.config import DatabaseConfig
 from app.daas.db.db_api import DatabaseApi
 from app.daas.db.db_model import ORMEntity
 from app.qweb.logging.logging import LogTarget, Loggable
+
+
+# Connection attempts to MariaDB at startup (MARIADB_CONNECT_TRIES x WAIT_S)
+MARIADB_CONNECT_TRIES = 30
+MARIADB_CONNECT_WAIT_S = 2
 
 
 class DatabaseManager(Loggable):
@@ -40,15 +46,25 @@ class DatabaseManager(Loggable):
         )
         constring = self.__create_connection_string_mariadb(False)
         engine = create_engine(constring, echo=self.cfg.enable_echo)
-        try:
-            self.api = self._create_api(engine, ORMEntity.metadata)
-            self.api.connect()
-            self.api.db_session_create(self.cfg.db_name)
-            self.api.disconnect()
-            constring = self.__create_connection_string_mariadb()
-            return create_engine(constring, echo=self.cfg.enable_echo)
-        except Exception as exe:
-            raise Exception(f"Error on db connect: {exe}")
+        # The backend starts the MariaDB container itself just before this
+        # (ContainerPlugin), so give the server time to accept connections
+        for attempt in range(1, MARIADB_CONNECT_TRIES + 1):
+            try:
+                self.api = self._create_api(engine, ORMEntity.metadata)
+                self.api.connect()
+                self.api.db_session_create(self.cfg.db_name)
+                self.api.disconnect()
+                constring = self.__create_connection_string_mariadb()
+                return create_engine(constring, echo=self.cfg.enable_echo)
+            except Exception as exe:
+                if attempt == MARIADB_CONNECT_TRIES:
+                    raise Exception(f"Error on db connect: {exe}")
+                self._log_info(
+                    f"MariaDB not ready ({attempt}/{MARIADB_CONNECT_TRIES}), "
+                    f"retrying in {MARIADB_CONNECT_WAIT_S}s"
+                )
+                time.sleep(MARIADB_CONNECT_WAIT_S)
+        return None
 
     def __create_engine_sqlite(self):
         try:
