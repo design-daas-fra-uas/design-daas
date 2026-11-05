@@ -6,7 +6,7 @@
 # Image name in src/config/container.toml
 TAG := daas-0-guacd
 # Must match the guacamole-server-<version>.tar.gz in this folder
-GUACD_VERSION := 1.5.4
+GUACD_VERSION := 1.6.0
 BUILDOPT ?=
 
 all: build

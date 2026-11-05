@@ -18,15 +18,15 @@ browser (guacamole.js) ⇄ websocket ⇄ DaaS backend ⇄ guacd :4822 ⇄ VNC/RD
 
 ## What is in the image
 
-guacamole-server **1.5.4**, built from source on Debian bookworm:
+guacamole-server **1.6.0**, built from source on Debian trixie:
 
-- The source `guacamole-server-1.5.4.tar.gz` is shipped in this folder
+- The source `guacamole-server-1.6.0.tar.gz` is shipped in this folder
   (the Apache mirror URLs are not stable).
-- Built with VNC (libVNCServer), RDP (FreeRDP 2), SSH (libssh2), sound
+- Built with VNC (libVNCServer), RDP (FreeRDP 3), SSH (libssh2), sound
   (pulse, vorbis) and webp images. Telnet and Kubernetes are not built.
 - **ghostscript**: guacd converts print jobs from RDP sessions to PDF with it.
-- bookworm, not trixie: guacd 1.5.4 needs FreeRDP 2, and trixie only has
-  FreeRDP 3.
+- trixie with FreeRDP 3: newer than guacd 1.6.0 expects, so deprecation
+  warnings are not treated as errors in the build (the calls still work).
 
 ## How it is used
 
@@ -76,15 +76,14 @@ From `installer/guacd/` (working on the image itself), as root:
    and test a VNC and an RDP session in the browser.
 
 Keep the client in mind: the browser side
-([guacamole-client](../guacamole-client/README.md)) must speak the same
-protocol version. guacd 1.6 builds with FreeRDP 2 or 3, so from 1.6 on the
-base image can move to trixie.
+([guacamole-client](../guacamole-client/README.md)) has the same version
+(1.6.0); update both together.
 
 ## Files
 
 | File | Content |
 |---|---|
 | `Dockerfile` | Build of guacd + ghostscript |
-| `guacamole-server-1.5.4.tar.gz` | guacd source |
+| `guacamole-server-1.6.0.tar.gz` | guacd source (sha256 checked against Apache's `.sha256` file when it was added) |
 | `check.bash` | Smoke test behind `make check` |
 | `Makefile` | build, check, clean |
