@@ -3,13 +3,13 @@
 # instances. The DaaS backend starts it as daas-0-guacd on 127.0.0.1:4822
 # (src/config/container.toml).
 
-# bookworm: guacd 1.5.4 needs FreeRDP 2, trixie only has FreeRDP 3
-FROM debian:bookworm
+# trixie: guacd 1.6 builds with FreeRDP 3 (1.5.x needed FreeRDP 2 / bookworm)
+FROM debian:trixie
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Build tools and the libraries of every guacd feature DaaS uses:
-# VNC (libvncserver), RDP (freerdp2), SSH (libssh2), images (cairo, jpeg,
+# VNC (libvncserver), RDP (freerdp3), SSH (libssh2), images (cairo, jpeg,
 # png, webp), text (pango), sound (pulse, vorbis); ghostscript converts RDP
 # print jobs to PDF
 RUN apt-get update -y && apt-get upgrade -y \
@@ -17,19 +17,21 @@ RUN apt-get update -y && apt-get upgrade -y \
     build-essential \
     libcairo2-dev libjpeg62-turbo-dev libpng-dev libwebp-dev \
     libossp-uuid-dev libpango1.0-dev libssl-dev \
-    libvncserver-dev freerdp2-dev libssh2-1-dev \
+    libvncserver-dev freerdp3-dev libssh2-1-dev \
     libpulse-dev libvorbis-dev \
     ghostscript \
     && rm -rf /var/lib/apt/lists/*
 
 # guacamole-server source, shipped in this folder (the Apache mirror URL
 # is not stable); built and installed to /usr/local, source removed
-ARG GUACD_VERSION=1.5.4
+ARG GUACD_VERSION=1.6.0
 WORKDIR /usr/local/src
 COPY guacamole-server-${GUACD_VERSION}.tar.gz .
 RUN tar -xzf guacamole-server-${GUACD_VERSION}.tar.gz \
     && cd guacamole-server-${GUACD_VERSION} \
-    && ./configure \
+    # FreeRDP in trixie is newer than guacd 1.6.0 and marks some calls it
+    # uses as deprecated (they still work): keep those warnings, not errors
+    && CFLAGS="-O2 -Wno-error=deprecated-declarations" ./configure \
     && make \
     && make install \
     && ldconfig \
