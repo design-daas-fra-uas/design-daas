@@ -18,9 +18,9 @@ ENV_OPT = $(if $(wildcard $(ENV_FILE)),-e "$(ENV_FILE)")
 FRONTEND_FOLDER ?= $(or $(call env_get,FRONTEND_FOLDER),$(abspath $(DESIGN_FOLDER)/../design-daas-application-frontend))
 
 ISODIR := iso/iso
-# ISOs built by iso-install. Windows needs a manually downloaded Windows ISO
-# (iso/README.md): ISOTYPES="debian12 win10 win11"
-ISOTYPES ?= debian12
+# ISOs built and uploaded by iso-install (step 7 of make install). The
+# Windows ones download Microsoft's Enterprise Evaluation ISOs (iso/README.md)
+ISOTYPES ?= debian12 win10 win11
 
 # Host configuration: command line > environment > ENV_FILE > default
 HOST_NUMBER ?= $(or $(call env_get,HOST_NUMBER),11)
