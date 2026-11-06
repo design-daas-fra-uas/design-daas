@@ -52,7 +52,8 @@ Shortcuts on the desktop: `Alt+Ctrl+` `s` terminal, `b` Firefox, `e` gedit,
 1. `make images` in `installer/` (step 4 of `make install`) builds this
    image with two tags:
    - `wine`: the root image the backend derives user images from
-     (`default_wine_image_name` in `src/config/files.toml`)
+     (the frontend sends it as `rootimage`; `DEFAULT_CNT_IMAGE` in
+     `src/app/plugins/platform/phases/phases_tasks.py`)
    - `daas.contwine`: what the sample container object `contwine` runs
      (`src/app/daas/db/db_samples.py`)
 2. A user environment gets a Dockerfile `FROM wine` / `FROM daas.contwine`

@@ -3,8 +3,8 @@
 
 .PHONY: all prepare build run check shell stop clean
 
-# wine: the root image name (default_wine_image_name in src/config/files.toml,
-# DEFAULT_CNT_IMAGE of new containers); daas.contwine: the image the sample
+# wine: the root image name (sent by the frontend as rootimage, and
+# DEFAULT_CNT_IMAGE of new containers in src/app/plugins/platform/phases/phases_tasks.py); daas.contwine: the image the sample
 # container object contwine runs (src/app/daas/db/db_samples.py)
 TAGS := wine daas.contwine
 IMAGE := $(firstword $(TAGS))
