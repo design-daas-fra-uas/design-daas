@@ -213,6 +213,11 @@ class DaasBaseObject(DaasObject):
     async def _delete_image(self) -> bool:
         api = await get_backend_component(BackendName.CONTAINER, DockerRequest)
         tag = await self.get_container_tag()
+        # A container can run without an instance row (e.g. after a backend
+        # restart), so baseimage_delete did not stop it; it is named after the
+        # tag. Without this the forced image delete only removes the tag and
+        # the container keeps running. Containers run with remove=True.
+        await api.docker_container_stop(tag, True)
         code, _, msg = await api.docker_image_delete(tag)
         if code == 0:
             return True
