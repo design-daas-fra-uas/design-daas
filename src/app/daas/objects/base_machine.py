@@ -44,7 +44,8 @@ class MachineBase(DaasBaseObject):
         keep_connections: bool = False,
     ) -> Optional[InstanceObject]:
         """Start the application."""
-        assert await self.verify_demand(userid)
+        if not await self.verify_demand(userid):
+            return None
         api = await get_backend_component(BackendName.VM, ApiProxmox)
         if await self.start_prepare(keep_connections):
             response, _ = await api.prox_vmstart(api.config_prox.node, self.id_proxmox)

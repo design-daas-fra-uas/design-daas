@@ -34,6 +34,10 @@ EXCLUDED_PROPERTIES = [
 ]
 
 
+# Answer when verify_demand refuses a new object or instance
+LIMIT_REACHED = "Resource limit reached"
+
+
 @dataclass
 class DaasBaseObject(DaasObject):
     """Acts as a baseclass for the For MachineApp and ContainerApp"""
@@ -64,8 +68,13 @@ class DaasBaseObject(DaasObject):
         return QwebResult(200, await self.status())
 
     async def verify_demand(self, userid: int) -> bool:
+        """True when the user's limits allow starting this object"""
         from app.daas.resources.limits.ressource_limits import RessourceLimits
 
+        # A running object is already part of the user's usage: restarting it
+        # or switching it to an environment needs nothing on top
+        if await self._get_db_instance() is not None:
+            return True
         limits = await get_backend_component(BackendName.LIMITS, RessourceLimits)
         demand_vm = 0
         demand_cnt = 0
@@ -82,7 +91,10 @@ class DaasBaseObject(DaasObject):
             self.hw_memory,
             self.hw_disksize,
         )
-        return await limits.verify_demand(userid, info)
+        if await limits.verify_demand(userid, info):
+            return True
+        self._log_info(f"Resource limit reached for user {userid}: {self.id}")
+        return False
 
     async def status(self) -> dict:
         """Returns status information"""

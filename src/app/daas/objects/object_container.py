@@ -7,6 +7,7 @@ from app.daas.common.model import Environment, File
 from app.daas.db.db_mappings import ORMMappingType, ORMModelDomain
 from app.daas.objects.config_factory import get_empty_object_dict
 from app.daas.objects.config_container import ContainerConfigBase
+from app.daas.objects.base_object import LIMIT_REACHED
 from app.daas.objects.object_instance import InstanceObject
 from app.qweb.common.qweb_tools import get_database
 from app.qweb.logging.logging import LogTarget, Loggable
@@ -30,13 +31,15 @@ class ContainerObject(ContainerConfigBase):
         )
 
     async def baseimage_create(self, args: dict) -> QwebResult:
-        assert await self.verify_demand(args["id_owner"])
+        if not await self.verify_demand(args["id_owner"]):
+            return QwebResult(400, {}, 1, LIMIT_REACHED)
         code, str_out, str_err = await self.create(args)
         status = 200 if code == 0 else 400
         return QwebResult(status, {}, code, f"{str_out}{str_err}")
 
     async def baseimage_clone(self, oldid: str, args: dict) -> QwebResult:
-        assert await self.verify_demand(args["id_owner"])
+        if not await self.verify_demand(args["id_owner"]):
+            return QwebResult(400, {}, 1, LIMIT_REACHED)
         code, str_out, str_err = await self.clone(oldid, args)
         status = 200 if code == 0 else 400
         return QwebResult(status, {}, code, f"{str_out}{str_err}")
@@ -84,7 +87,8 @@ class ContainerObject(ContainerConfigBase):
         """Starts environment instance"""
         if args is None:
             args = {}
-        assert await self.verify_demand(userid)
+        if not await self.verify_demand(userid):
+            return None
         inst = await self.env_start(env, userid, connect, object_mode, args, True)
         if inst is not None:
             return await self._return_connected_instance(connect)
@@ -101,7 +105,8 @@ class ContainerObject(ContainerConfigBase):
         """Runs environment instance"""
         if args is None:
             args = {}
-        assert await self.verify_demand(userid)
+        if not await self.verify_demand(userid):
+            return None
         inst = await self.env_start(env, userid, connect, object_mode, args, True)
         if inst is not None:
             if object_mode != "":

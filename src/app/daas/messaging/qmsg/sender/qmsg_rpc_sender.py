@@ -84,7 +84,8 @@ class RpcSender:
         if self.connection is not None and self.connection.is_open:
             try:
                 self.connection.close()
-            except pika.exceptions.AMQPError as exe:
+            # pika raises AssertionError when its transport is already broken
+            except (pika.exceptions.AMQPError, AssertionError) as exe:
                 self.__log_error(f"Error on close: {exe}")
         self.connection = None
         self.channel = None
@@ -118,25 +119,14 @@ class RpcSender:
         """
         Send an RPC request to the specified queue and wait for the answer.
         Reuses this sender's connection (one sender per thread: pika
-        connections are not thread-safe); a broken connection is replaced on
-        the next call.
+        connections are not thread-safe).
         """
-        if self.connection is None or not self.connection.is_open:
-            self.connect()
-
         self.corr_id = str(uuid.uuid4())
         self.response = None
         try:
             self.waiting = True
-            self.channel.basic_publish(
-                exchange="",
-                routing_key=queue_name,
-                properties=pika.BasicProperties(
-                    reply_to=self.callback_queue,
-                    correlation_id=self.corr_id,
-                ),
-                body=json.dumps(asdict(msg)),
-            )
+            if not self.__publish(queue_name, msg):
+                return None
             self.__log_info(f"Sending message to {queue_name}: {msg}")
             counter = self.config.wait_time_total_ms
             while counter > 0:
@@ -158,6 +148,33 @@ class RpcSender:
         finally:
             self.waiting = False
         return None
+
+    def __publish(self, queue_name: str, msg: RpcRequest) -> bool:
+        """
+        Publishes msg, reconnecting once when the connection is broken: an
+        idle connection processes no heartbeats, so the broker drops it after
+        a while. Only publishing is retried, never waiting for the answer, so
+        a command never runs twice.
+        """
+        for attempt in (1, 2):
+            if self.connection is None or not self.connection.is_open:
+                self.connect()
+            try:
+                self.channel.basic_publish(
+                    exchange="",
+                    routing_key=queue_name,
+                    properties=pika.BasicProperties(
+                        reply_to=self.callback_queue,
+                        correlation_id=self.corr_id,
+                    ),
+                    body=json.dumps(asdict(msg)),
+                )
+                return True
+            except pika.exceptions.AMQPConnectionError as exe:
+                self.__log_error(f"Connection lost on send (attempt {attempt}): {exe}")
+                self.close()
+        self.__log_error(f"Failed to send RPC call to {queue_name}: {msg}")
+        return False
 
     def __log_info(self, msg: str, code: int = 0):
         msg = f"  QMSG: {code:3} -> {msg}"
