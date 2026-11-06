@@ -4,8 +4,6 @@ dependencies = [
   "quart",
   "quart-cors",
   "nest_asyncio",
-  "pandas",
-  "matplotlib",
   "sqlalchemy",
   "pymysql",
   "docker",
