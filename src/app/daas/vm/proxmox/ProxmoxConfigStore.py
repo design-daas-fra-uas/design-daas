@@ -12,7 +12,7 @@ class ProxmoxConfigStoreConfig:
     storage_iso: str
     storage_img: str
     storage_ceph: str
-    bridge_name_daas: str
+    bridge_name_inst: str
     prefixmac: str
 
 class ProxmoxConfigStore(Loggable):
@@ -94,7 +94,7 @@ class ProxmoxConfigStore(Loggable):
             # Proxmox knows "l26" only; "l26vm" is the DaaS name for a debian vm
             "ostype": "l26" if ostype == "l26vm" else ostype,
             "machine": "pc-q35-8.0",
-            "net0": f"virtio={mac},bridge={self.cfg.bridge_name_daas}",
+            "net0": f"virtio={mac},bridge={self.cfg.bridge_name_inst}",
             **select_for_os(windows=disk_windows, debian=disk_debian),
             "args": f"-k {keyboard_layout} -vnc 0.0.0.0:{vmid},password=on",
         }
@@ -110,6 +110,6 @@ class ProxmoxConfigStore(Loggable):
             "ide2": "file=none",
             "sata2": "file=none",
             "delete": "net0",
-            "net1": f"virtio={mac},bridge={self.cfg.bridge_name_daas}",
+            "net1": f"virtio={mac},bridge={self.cfg.bridge_name_inst}",
             "args": f"-k {keyboard} -vnc 0.0.0.0:{vmid},password=on",
         }

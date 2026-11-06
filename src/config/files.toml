@@ -10,14 +10,5 @@ folder_docker = "data/docker"
 folder_endpoint_info = "data/endpoint_info"
 
 # Folder names inside an instance
-folder_inst_env = "env"
 folder_inst_status = "status"
 instance_status_outfile_name = "cmdout.txt"
-# Currently not read by the code
-instance_status_pidfile_name = "pid.txt"
-
-# Base Dockerfiles for container environments (installer/<image>/Dockerfile)
-default_wine_image_name = "wine"
-default_wine_image_folder = "../installer/wine"
-default_x11vnc_image_name = "x11vnc"
-default_x11vnc_image_folder = "../installer/x11vnc"

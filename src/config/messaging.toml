@@ -12,8 +12,6 @@ sshopt_strictcheck = "no"
 sshopt_nohostauth = "yes"
 # Instance network, same as vm.toml prefixip
 prefixip = "192.168.223"
-# Currently not read by the code
-proxyfile = "daas/env/CommandProxy.py"
 logcmd = true
 logresult = false
 enable_message_queue = true
@@ -33,7 +31,8 @@ reconnect_time_server = 1
 # Poll interval and total wait for RPC replies
 wait_time_ms = 1000
 wait_time_total_ms = 300000  # 5 min
-log_heartbeats = true
+# One line per instance per second when true
+log_heartbeats = false
 log_topic = "qmsg"
 
 [inst_ssh]

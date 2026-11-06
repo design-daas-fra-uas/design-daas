@@ -164,7 +164,7 @@ class DatabaseApi(DatabaseApiBase):
         mapping: Optional[Type[object]] = await self.get_mapping_orm(tablename.value)
         if mapping is None:
             return []
-        self._log_info(f"SQL (Select) {tablename}")
+        self._log_debug(f"SQL (Select) {tablename}")
         qresult = await self.db_session_query(mapping, filter)
         if qresult is None:
             return []

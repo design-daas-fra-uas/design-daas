@@ -297,7 +297,7 @@ async def proxy_guacamole_ws(
                 this_tuple = socket_tuples[connid]
                 diff = abs(datetime.now() - this_tuple.last_seen_guacd)
                 if diff > timedelta(seconds=TIMEOUT_DELAY):
-                    _log_info(f"GUAC DIFF EXCEEDED: {diff}")
+                    _log_debug(f"GUAC DIFF EXCEEDED: {diff}")
                     # raise asyncio.CancelledError()  # must re-raise
                 opcode, *args = await client_socket.receive()
                 await handle_message(opcode, tuple(args))
@@ -328,7 +328,7 @@ async def proxy_guacamole_ws(
                 this_tuple = socket_tuples[connid]
                 diff = abs(datetime.now() - this_tuple.last_seen_guacd)
                 if diff > timedelta(seconds=TIMEOUT_DELAY):
-                    _log_info(f"GUAC DIFF EXCEEDED: {diff}")
+                    _log_debug(f"GUAC DIFF EXCEEDED: {diff}")
                     # raise asyncio.CancelledError()  # must re-raise
                 opcode, *args = await guacd_socket.receive()
                 if COLLECT_STATS is True:
@@ -464,6 +464,10 @@ def _forward_message(*, socket: GuacamoleSocket) -> MessageHandler:
 
 def _log_info(msg: str) -> None:
     logger._log_info(msg)
+
+
+def _log_debug(msg: str) -> None:
+    logger._log_debug(msg)
 
 
 def _log_error(msg: str) -> None:

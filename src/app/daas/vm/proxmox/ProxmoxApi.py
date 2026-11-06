@@ -30,13 +30,10 @@ class ProxmoxApiConfig:
     bridge_adapter_daas: str
     bridge_name_inst: str
     bridge_cidr_inst: str
-    bridge_adapter_inst: str
     bridge_name_ceph: str
     bridge_cidr_ceph: str
-    bridge_adapter_ceph: str
     bridge_name_cluster: str
     bridge_cidr_cluster: str
-    bridge_adapter_cluster: str
     prefixmac: str
 
 
@@ -59,7 +56,7 @@ class ApiProxmox(Loggable):
             storage_iso=self.config_prox.storage_iso,
             storage_img=self.config_prox.storage_img,
             storage_ceph=self.config_prox.storage_ceph,
-            bridge_name_daas=self.config_prox.bridge_name_inst,
+            bridge_name_inst=self.config_prox.bridge_name_inst,
             prefixmac=self.config_prox.prefixmac,
         )
         self.config_store = ProxmoxConfigStore(cfg_store)

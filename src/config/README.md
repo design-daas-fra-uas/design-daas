@@ -73,6 +73,5 @@ some without login) are not loaded. Set it to `true` only on a test system.
 | `qweb.toml` | `allow_origin` | `"*"` | any web site may call the API from a browser |
 | `db.toml` | `include_samples` | `true` | sample objects created on every start |
 
-Keys marked "Currently not read by the code" in the files (`token_length`,
-`admin_credentials`, `database`, `proxyfile`, `instance_status_pidfile_name`,
-`all_sublogs`) have no effect.
+Keys that no code read were removed on 2026-11-06. Before adding a key here,
+add the field to its dataclass and read it somewhere.

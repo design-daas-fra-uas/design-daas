@@ -2,7 +2,6 @@
 Windowsbase
 """
 
-import time
 from dataclasses import dataclass
 from adapter.AdapterBase import AdapterBase, AdapterBaseConfig
 
@@ -11,7 +10,6 @@ from .tools.WindowsTools import (
     try_find_pid,
     process_popen,
     process_run,
-    clean_session,
     get_resolution_list,
     get_resolution_by_dimension,
     get_process_list,

@@ -3,6 +3,8 @@
 
 [log]
 enabled = true
+# Minimum level for every log file and the console, debug.log included:
+# set "DEBUG" to see the debug messages
 log_level = "INFO"
 # Relative to qweb.toml [sys] data_path (src/data/logs)
 log_dir = "logs"
@@ -14,10 +16,6 @@ log_encode = "utf-8"
 console_target = "console"
 debug_target = "debug"
 error_target = "error"
-
-# Currently not read by the code
-all_sublogs = false
-no_sublogs = false
 
 # Web request / viewer sub-logs
 log_web_enabled = true
@@ -47,6 +45,7 @@ log_proxy = true
 log_websocket = true
 log_inst = true
 log_tasks = true
+log_container = true
 log_limits = true
 log_backend = true
 log_frontend = true

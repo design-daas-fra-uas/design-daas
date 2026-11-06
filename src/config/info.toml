@@ -3,13 +3,6 @@
 
 [sys]
 # Names that count as "DaaS" in the /monitoring and /admin listings
-known_daas_containers = [
-  "daas-0-guacd",
-  "daas-0-mariadb",
-  "daas-0-rabbit",
-  "daas-0-extensions",
-  "daas-frontend",
-]
 known_daas_images = [
   "x11vnc",
   "wine",

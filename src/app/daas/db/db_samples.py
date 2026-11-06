@@ -23,16 +23,8 @@ class SampleRegistryConfig:
     """Config for SampleRegistry"""
 
     shared_owner: int
-    shared_owner_name: str
-    test_owner: int
-    test_owner_name: str
     default_owner: int
-    default_owner_name: str
     default_resolution: str
-    persist_files: bool
-    persist_apps: bool
-    persist_objects: bool
-    persist_session: bool
 
 
 class SampleRegistry:

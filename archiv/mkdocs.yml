@@ -40,7 +40,7 @@ nav:
 watch:
   - docs
   - mkdocs.yml
-  - src/scripts/gen_apidocs.py # for auto-generating API docs
+  - docs/scripts/gen_apidocs.py # for auto-generating API docs
   - src # since API docs are derived from source code
 plugins:
   - with-pdf
@@ -48,7 +48,7 @@ plugins:
   - search
   - gen-files:
       scripts:
-        - src/scripts/gen_apidocs.py
+        - docs/scripts/gen_apidocs.py
   - literate-nav:
       nav_file: SUMMARY.md
   - mkdocstrings:

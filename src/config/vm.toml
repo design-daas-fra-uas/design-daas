@@ -34,7 +34,8 @@ storage_ceph = "daas-ceph"
 
 # Bridges created by the backend on startup if missing.
 # The cidr/gw/adapter values of vmbr0 and the cidr of the others are set by
-# installer/daas/configure.bash. An empty adapter means no physical port.
+# installer/daas/configure.bash. An empty adapter means no physical port;
+# only vmbr0 can have one, the others are internal.
 # DaaS network (vmbr0)
 bridge_name_daas = "vmbr0"
 bridge_cidr_daas = "192.168.123.11/24"
@@ -43,12 +44,9 @@ bridge_adapter_daas = ""
 # Instance network (vmbr1)
 bridge_name_inst = "vmbr1"
 bridge_cidr_inst = "192.168.223.11/24"
-bridge_adapter_inst = ""
 # Ceph network (vmbr8)
 bridge_name_ceph = "vmbr8"
 bridge_cidr_ceph = "192.168.100.11/24"
-bridge_adapter_ceph = ""
 # Cluster network (vmbr9)
 bridge_name_cluster = "vmbr9"
 bridge_cidr_cluster = "192.168.200.11/24"
-bridge_adapter_cluster = ""

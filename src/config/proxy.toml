@@ -9,7 +9,7 @@ viewer_protocol = "https"
 # Set by installer/daas/configure.bash
 viewer_host = "pve.cluster.local"
 viewer_port = 443
-# Currently not read by the code
+# Length of the random connection tokens (secrets.token_urlsafe)
 token_length = 32
 # Client timings (ms)
 fetch_ms = 3000

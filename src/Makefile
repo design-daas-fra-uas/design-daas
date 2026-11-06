@@ -8,19 +8,13 @@
 	tests-all tests-curl tests-curl-clean \
 	tests-firefox tests-firefox-clean \
 	tests-all-clean\
-	local-start local-stop \
-	docker-build docker-rebuild \
-	docker-start docker-stop \
-	docker-connect docker-clean
+	local-start local-stop
 default: local-start
 # Shell setup
 SHELL:=/bin/bash
 # Vars
 IMGNAME?=skeleton
-CONTNAME?=$(IMGNAME)
 VENV_INST="quart quart-cors requests aiohttp websockets flake8 pylint pika netifaces psutil sqlalchemy pymysql pylint-per-file-ignores black types-requests types-click types-aiofiles pandas matplotlib nest_asyncio aiosqlite docker"
-LPORT?=4444
-RPORT?=4444
 DIR_RESULTS="data/results"
 TEST_NAME?="out"
 TEST_ITER?=10
@@ -36,10 +30,10 @@ usage:
 	@echo "   TARGETS: "
 	@echo "     usage: Help message"
 	@echo ""
-	@echo "     build: Build container"
-	@echo "     start: Start container"
-	@echo "     stop : Stop container"
-	@echo "     clean: Clean conatiner and images"
+	@echo "     install: Create the venv and the TLS key"
+	@echo "     start  : Start the backend in the foreground"
+	@echo "     stop   : Stop the backend"
+	@echo "     clean  : Delete test results and plots"
 	@echo ""
 # ------------------------------------------------------------------------------
 # --- Host targets
@@ -126,36 +120,10 @@ plots-clean:
 		$(DIR_RESULTS)/methods \
 		$(DIR_RESULTS)/combined
 # ------------------------------------------------------------------------------
-# --- Docker targets
-# ------------------------------------------------------------------------------
-docker-rebuild: docker-stop
-	@echo "--- DOCKER REBUILD ---------------"
-	@docker build -t $(IMGNAME) --no-cache .
-docker-build: docker-stop
-	@echo "--- DOCKER BUILD -----------------"
-	@docker build -t $(IMGNAME) .
-docker-start: docker-build
-	@echo "--- DOCKER START -----------------"
-	@docker run \
-		-p $(LPORT):$(RPORT) \
-		-v `pwd`/app:/opt/qweb/app \
-		-v `pwd`/data/webroot:/opt/qweb/data/webroot \
-		-v `pwd`/data/keys:/opt/qweb/data/keys \
-		-d --rm --name $(CONTNAME) $(IMGNAME)
-	@docker logs -f $(CONTNAME) &
-docker-stop:
-	@echo "--- DOCKER STOP ------------------"
-	@-docker kill $(CONTNAME)
-docker-connect:
-	@docker exec -it $(CONTNAME) bash
-docker-clean: docker-stop
-	@-docker rm $(CONTNAME)
-	@-docker image rm $(IMGNAME)
-# ------------------------------------------------------------------------------
 # --- Common targets
 # ------------------------------------------------------------------------------
 start: | stop default
 	
-stop: docker-stop local-stop
+stop: local-stop
 
-clean: docker-clean tests-all-clean plots-clean
+clean: tests-all-clean plots-clean
