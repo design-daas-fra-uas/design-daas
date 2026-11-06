@@ -51,7 +51,7 @@ see the related module for details.
 The routes are defined in the loaded plugin components as well.
 This contains all of the UI code and the REST API –
 maybe this will be spread across multiple modules in the future.
-Jinja templates are defined in `src/app/webroot/templates`.
+Jinja templates are defined in `../../../src/app/webroot/templates`.
 Assets (such as necessary JS code) are in `src/app/webroot/static`.
 
 Most of the routes just figure out which data to retrieve

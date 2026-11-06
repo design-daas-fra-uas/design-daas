@@ -22,6 +22,6 @@ These docs use [mkdocs](https://www.mkdocs.org).
 
 Relevant files:
 
-- `mkdocs.yml` contains configuration
-- `docs/` contains documentation pages
-- `src/app` contains the code from which API docs are created
+- `../../mkdocs.yml` contains configuration
+- `` contains documentation pages
+- `../../src/app` contains the code from which API docs are created
