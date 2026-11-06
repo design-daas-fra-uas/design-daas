@@ -302,12 +302,11 @@ async def proxy_ws(args: TaskArgs):
     reqargs = args.req.request_context.request_args
     instance = get_request_object(args.ctx, "entity", InstanceObject)
 
+    # Stopped or deleted while the viewer was open: it keeps reconnecting
+    if instance is None or instance.id_con is None:
+        return "Instance has no connection", 404
 
-    if (
-        instance is not None
-        and instance.id_con is not None
-        and isinstance(instance.app, (ContainerObject, MachineObject))
-    ):
+    if isinstance(instance.app, (ContainerObject, MachineObject)):
         connection_guac = await dbase.get_guacamole_connection(instance.id_con)
         if connection_guac is None:
             return "not found", 404
