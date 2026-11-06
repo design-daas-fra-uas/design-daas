@@ -34,6 +34,7 @@ class BlueprintInfo:
     """Blueprint info"""
 
     endpoint_id: int
+    # Endpoint name of the route (unique per blueprint, used by url_for)
     name: str
     url: str
     methods: list[str]
@@ -48,6 +49,8 @@ class BlueprintInfo:
     processor: ProcessorType
     processor_task: str = ""
     content_type: str = "text/html"
+    # What the route does (the docstring of the route)
+    description: str = ""
     override_target: str = ""
     websocket_request: bool = False
     static_args: dict = field(default_factory=lambda: {})

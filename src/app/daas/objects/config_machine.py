@@ -134,10 +134,7 @@ class MachineConfigBase(MachineEnvironmentBase):
             ret = await instance.inst_vminvoke_ospackage("uninstall", f"{cmd}")
         if ret is not None and ret.response_code == 200:
             return True
-        if ret is not None:
-            print(f"Execute TASK FAILED: {ret}")
-        else:
-            print(f"Execute TASK FAILED: {ret}")
+        self._log_error(f"Task {ttype} failed: {ret}", 1)
         return False
 
     async def _get_inst_by_env(

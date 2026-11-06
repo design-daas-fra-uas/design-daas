@@ -34,13 +34,11 @@ class TemplateProcessor(ProcessorBase):
                 ),
                 500,
             )
-        result = self.create_async_response(
-            render_template(
-                path,
-                **self.template_args,
-                **proc_request.static_args,
-                **proc_request.request_context.request_args,
-            )
+        result = await render_template(
+            path,
+            **self.template_args,
+            **proc_request.static_args,
+            **proc_request.request_context.request_args,
         )
         if isinstance(result, str):
             result = Response(

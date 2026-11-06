@@ -1,7 +1,7 @@
 """Task to clone objects within a background task"""
 
 from typing import Optional
-from nest_asyncio import asyncio
+import asyncio
 from app.daas.objects.object_container import ContainerObject
 from app.daas.objects.object_instance import InstanceObject
 from app.daas.objects.object_machine import MachineObject

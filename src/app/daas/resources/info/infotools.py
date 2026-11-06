@@ -224,7 +224,6 @@ class TaskObject:
     def tojson(self) -> dict:
         """Converts object to json representation"""
         info = self.info.tojson()
-        print(f"TOOLS_INFO: {info}")
         return {
             "info": info,
             "args": self.args.tojson(),

@@ -3,7 +3,6 @@ name = "app"
 dependencies = [
   "quart",
   "quart-cors",
-  "nest_asyncio",
   "sqlalchemy",
   "pymysql",
   "docker",

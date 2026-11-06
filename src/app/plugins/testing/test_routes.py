@@ -1,6 +1,5 @@
 """Default Blueprints"""
 
-import inspect
 from quart import Blueprint
 from app.daas.common.enums import BackendName, LayerName
 from app.plugins.core.db.db_layer import DBObject
@@ -18,7 +17,6 @@ from app.qweb.processing.processor import (
 )
 from app.qweb.service.service_context import LayerObject
 
-
 test_args_objs = ["id"]
 test_args_perf = ["counter", "timestamp"]
 test_backends = [BackendName.DB.value]
@@ -31,6 +29,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=20000,
         name="testing",
+        description="Default Browsertest Endpoint",
         url="/testing",
         methods=["GET"],
         auth_params=test_auth,
@@ -44,6 +43,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=20001,
         name="baseline0",
+        description="Baseline test 0",
         url="/baseline0",
         methods=test_methods,
         auth_params=AuthenticationMode.NONE,
@@ -58,6 +58,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=20002,
         name="baseline1",
+        description="Baseline test 1",
         url="/baseline1",
         methods=test_methods,
         auth_params=test_auth,
@@ -72,6 +73,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=20003,
         name="baseline2",
+        description="Baseline test 2",
         url="/baseline2",
         methods=test_methods,
         auth_params=test_auth,
@@ -86,6 +88,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=20004,
         name="baseline3",
+        description="Baseline test 3",
         url="/baseline3",
         methods=test_methods,
         auth_params=test_auth,
@@ -100,6 +103,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=20005,
         name="baseline4",
+        description="Baseline test 4",
         url="/baseline4",
         methods=test_methods,
         auth_params=test_auth,
@@ -117,6 +121,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=20006,
         name="baseline5",
+        description="Baseline test 5",
         url="/baseline5",
         methods=test_methods,
         auth_params=test_auth,
@@ -134,6 +139,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=20007,
         name="baseline6",
+        description="Baseline test 6",
         url="/baseline6",
         methods=test_methods,
         auth_params=test_auth,
@@ -151,6 +157,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=20108,
         name="dbtests",
+        description="Dbtest layout page",
         url="/dbtests",
         methods=["GET"],
         auth_params=AuthenticationMode.NONE,
@@ -163,6 +170,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=20109,
         name="db_getobject",
+        description="Dbtest endpoint",
         url="/db_getobject",
         methods=test_methods,
         auth_params=AuthenticationMode.NONE,
@@ -179,6 +187,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=20110,
         name="errortest1",
+        description="Error test 1",
         url="/errortest1",
         methods=["GET"],
         auth_params=AuthenticationMode.NONE,
@@ -194,7 +203,8 @@ infos = [
     BlueprintInfo(
         endpoint_id=20111,
         name="testbrowser",
-        url="/testbrowser",
+        description="Default Browsertest Endpoint",
+        url="/testbrowser/<iterations>/<url>",
         methods=["GET"],
         auth_params=AuthenticationMode.NONE,
         conc_params=ConcurrencyMode.AUTH_AND_PROC,
@@ -208,6 +218,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=20112,
         name="jstest",
+        description="Test js Endpoint",
         url="/js/test.js",
         methods=["GET"],
         auth_params=AuthenticationMode.NONE,
@@ -220,6 +231,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=20113,
         name="csstest",
+        description="Test css Endpoint",
         url="/css/test.css",
         methods=["GET"],
         auth_params=AuthenticationMode.NONE,
@@ -232,6 +244,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=20114,
         name="test_debug",
+        description="Default debug-ui Endpoint",
         url="/debug",
         methods=["GET"],
         auth_params=AuthenticationMode.NONE,
@@ -247,6 +260,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=20115,
         name="cssdebug",
+        description="Debug css Endpoint",
         url="/css/debug.css",
         methods=["GET"],
         auth_params=AuthenticationMode.NONE,
@@ -259,6 +273,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=20116,
         name="jsdebug",
+        description="Debug js Endpoint",
         url="/js/debug.js",
         methods=["GET"],
         auth_params=AuthenticationMode.NONE,
@@ -271,146 +286,22 @@ infos = [
 ]
 
 
-async def default_handler():
-    """Default Endpoint"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
 handler = BlueprintHandler(
     blueprints=Blueprint("routes_testing", __name__),
     infos=infos,
-    testing=True,
-    default_handler=default_handler,
 )
 
 
 # pylint: disable=unused-argument
-@handler.blueprints.get("/debug")
-async def test_debug():
-    """Default debug-ui Endpoint"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
 
 
 # pylint: disable=unused-argument
-@handler.blueprints.get("/testing")
-async def testing():
-    """Default Browsertest Endpoint"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
 
 
 # pylint: disable=unused-argument
-@handler.blueprints.get("/testbrowser/<iterations>/<url>")
-async def testbrowser(iterations: int, url: str):
-    """Default Browsertest Endpoint"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.get("/js/test.js")
-async def jstest():
-    """Test js Endpoint"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.get("/css/test.css")
-async def csstest():
-    """Test css Endpoint"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.get("/css/debug.css")
-async def cssdebug():
-    """Debug css Endpoint"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.get("/js/debug.js")
-async def jsdebug():
-    """Debug js Endpoint"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/baseline0")
-async def baseline0():
-    """Baseline test 0"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/baseline1")
-async def baseline1():
-    """Baseline test 1"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/baseline2")
-async def baseline2():
-    """Baseline test 2"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/baseline3")
-async def baseline3():
-    """Baseline test 3"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/baseline4")
-async def baseline4():
-    """Baseline test 4"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/baseline5")
-async def baseline5():
-    """Baseline test 5"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/baseline6")
-async def baseline6():
-    """Baseline test 6"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.get("/errortest1")
-async def errortest1():
-    """Error test 1"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.get("/errortest2")
-async def errortest2():
-    """Error test 2"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
 
 
 # pylint: disable=unused-argument
-@handler.blueprints.get("/dbtests")
-async def dbtests():
-    """Dbtest layout page"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
 
 
 # pylint: disable=unused-argument
-@handler.blueprints.post("/db_getobject")
-async def db_getobject():
-    """Dbtest endpoint"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)

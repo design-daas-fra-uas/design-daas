@@ -4,7 +4,6 @@ import sys
 import asyncio
 from dataclasses import asdict
 from typing import Any, Optional
-import nest_asyncio
 from quart import Quart
 from quart_cors import cors
 from app.qweb.logging.logging import Loggable, QwebLogManager, LogTarget, LoggerConfig
@@ -180,7 +179,7 @@ class QwebServiceRuntime(Loggable):
 
     async def start(self) -> bool:
         """Runs service"""
-        print(self.__repr__())
+        self._log_info(self.__repr__())
         ret = await self.__start_app()
         return ret
 
@@ -289,7 +288,6 @@ class QwebServiceRuntime(Loggable):
         if "enabled" in runargs:
             runargs.pop("enabled")
         if self.app is not None:
-            nest_asyncio.apply()
             self.service_task = asyncio.create_task(self.app.run_task(**runargs))
             await self.service_task
             return True

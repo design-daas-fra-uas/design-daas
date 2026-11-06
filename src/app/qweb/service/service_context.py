@@ -1,6 +1,5 @@
 """Service context"""
 
-from abc import abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Optional
@@ -24,20 +23,23 @@ class QwebBackend:
             f"connected={self.connected},registered={self.registered})"
         )
 
-    @abstractmethod
     def status(self) -> str:
-        """Returns status message"""
-        raise NotImplementedError("Not implemented")
+        """Returns "Active" when connected and registered, else "Inactive" """
+        if self.connected and self.registered:
+            return "Active"
+        return "Inactive"
 
-    @abstractmethod
+    # Backends with a real connection (database, docker, proxmox, ...)
+    # override connect/disconnect; the others are just marked connected
     async def connect(self) -> bool:
-        """Connects database adapter"""
-        raise NotImplementedError("Not implemented")
+        """Connects the component"""
+        self.connected = True
+        return True
 
-    @abstractmethod
     async def disconnect(self) -> bool:
-        """Disconnects database adapter"""
-        raise NotImplementedError("Not implemented")
+        """Disconnects the component"""
+        self.connected = False
+        return True
 
 
 @dataclass

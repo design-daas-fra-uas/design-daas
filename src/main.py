@@ -1,10 +1,11 @@
 """Default app"""
 
 import asyncio
-import sys
+import logging
 from app.plugins.platform.extensions.extensions_plugin import ExtensionsPlugin
 from app.plugins.resources.admin.admin_plugin import AdminPlugin
 from app.qweb.common.config import QwebConfig
+from app.qweb.logging.logging import LogTarget
 from app.qweb.service.service_runtime import get_qweb_runtime
 from app.plugins.common.common import PluginCollection
 from app.plugins.core.auth.auth_plugin import AuthPlugin
@@ -47,37 +48,34 @@ async def _load_plugins(cfg: QwebConfig) -> PluginCollection:
         ],
         cfg.handler.enable_testing,
     )
-    print("--- REGISTER PLUGINS -------------")
+    _log("Register plugins")
     await col.register_plugins()
-    print("--- START PLUGINS -------------")
+    _log("Start plugins")
     await col.start_plugins()
     return col
 
 
+def _log(msg: str):
+    logging.getLogger(LogTarget.RUNTIME.value).info(msg)
+
+
 async def _run_blocking():
-    print("--- INIT RUNTIME -----------------")
+    # Also sets up logging (config/logging.toml)
     runtime_qweb = get_qweb_runtime(qwebfile="config/qweb.toml")
     cfg = runtime_qweb.cfg_qweb
-    print("--- INIT PLUGINS -----------------")
+    _log("Load plugins")
     await _load_plugins(cfg)
-    print("--- START RUNTIME ----------------")
+    _log("Start runtime")
     await runtime_qweb.start()
-    print("")
-    print("--- STOPPING RUNTIME -------------")
-    print("--- STOP BACKENDS ----------------")
+    _log("Stop backends")
     await runtime_qweb.stop_backends()
-    print("--- STOP TASKS -------------------")
+    _log("Stop tasks")
     await runtime_qweb.stop_tasks()
 
 
 if __name__ == "__main__":
-    argv = sys.argv
-    if len(argv) > 1:
-        print(f"ARGV: {len(argv)} {argv}")
-    else:
-        print("DEFAULT STARTUP")
     try:
         asyncio.run(_run_blocking())
-    except Exception as exe:
-        t = type(exe)
-        print(f"Exception handler: {t.__module__}.{t.__qualname__}")
+    except Exception:
+        # Before logging is set up, logging still prints errors to stderr
+        logging.getLogger(LogTarget.RUNTIME.value).exception("Backend stopped")

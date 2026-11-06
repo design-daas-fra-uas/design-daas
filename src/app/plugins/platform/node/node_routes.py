@@ -1,6 +1,5 @@
 """Default Blueprints"""
 
-import inspect
 from quart import Blueprint
 from app.daas.common.enums import BackendName, LayerName
 from app.plugins.core.db.db_layer import DBObject
@@ -21,6 +20,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=50000,
         name="node_vmconfigure_dhcp",
+        description="Configures dhcp for specified instance",
         url="/node/vmconfigure_dhcp",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
@@ -33,11 +33,14 @@ infos = [
         request_args_optional=[],
         request_args_common=perf_args,
         backends=backends,
-        objects=[LayerObject("entity", DBObject.INSTBYID.value, LayerName.DB.value)],
+        objects=[
+            LayerObject("entity", DBObject.INSTBYID.value, LayerName.DB.value)
+        ],
     ),
     BlueprintInfo(
         endpoint_id=50001,
         name="node_vmconfigure_iptables",
+        description="Configures iptables for specified instance",
         url="/node/vmconfigure_iptables",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
@@ -50,11 +53,14 @@ infos = [
         request_args_optional=[],
         request_args_common=perf_args,
         backends=backends,
-        objects=[LayerObject("entity", DBObject.INSTBYID.value, LayerName.DB.value)],
+        objects=[
+            LayerObject("entity", DBObject.INSTBYID.value, LayerName.DB.value)
+        ],
     ),
     BlueprintInfo(
         endpoint_id=50002,
         name="node_vminvoke_upload",
+        description="Uploads file to host",
         url="/node/vminvoke_upload",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
@@ -67,7 +73,9 @@ infos = [
         request_args_optional=[],
         request_args_common=perf_args,
         backends=backends,
-        objects=[LayerObject("entity", DBObject.INSTBYID.value, LayerName.DB.value)],
+        objects=[
+            LayerObject("entity", DBObject.INSTBYID.value, LayerName.DB.value)
+        ],
     ),
 ]
 
@@ -75,27 +83,4 @@ infos = [
 handler = BlueprintHandler(
     blueprints=Blueprint("routes_node", __name__),
     infos=infos,
-    testing=True,
-    default_handler=None,
 )
-
-
-@handler.blueprints.post("/node/vmconfigure_dhcp")
-async def node_vmconfigure_dhcp():
-    """Configures dhcp for specified instance"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/node/vmconfigure_iptables")
-async def node_vmconfigure_iptables():
-    """Configures iptables for specified instance"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/node/vminvoke_upload")
-async def node_vminvoke_upload():
-    """Uploads file to host"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)

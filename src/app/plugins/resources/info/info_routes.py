@@ -1,6 +1,5 @@
 """VM Blueprints"""
 
-import inspect
 from app.daas.common.enums import BackendName
 from app.plugins.resources.info.info_tasks import InfoTask
 from app.qweb.blueprints.blueprint_info import (
@@ -12,7 +11,6 @@ from app.qweb.processing.processor import ApiProcessorAction, ProcessorType
 from quart import Blueprint
 from app.qweb.blueprints.blueprint_handler import BlueprintHandler
 
-
 perf_args = ["counter", "timestamp"]
 backends = [BackendName.INFO.value, BackendName.DB.value]
 
@@ -20,6 +18,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=120000,
         name="dashboard_info",
+        description="Returns dashboardinfo state",
         url="/monitoring/dashboard_info",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
@@ -36,6 +35,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=120001,
         name="get_monitor_info",
+        description="Returns monitor info",
         url="/monitoring/get_monitor_info",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
@@ -52,6 +52,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=120002,
         name="get_monitor_info_tasks",
+        description="Returns monitor info tasks",
         url="/monitoring/get_monitor_info_tasks",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
@@ -68,6 +69,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=120003,
         name="get_monitor_info_apps",
+        description="Returns app infos",
         url="/monitoring/get_monitor_info_apps",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
@@ -84,6 +86,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=120004,
         name="get_monitor_info_files",
+        description="Returns file infos",
         url="/monitoring/get_monitor_info_files",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
@@ -100,6 +103,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=120005,
         name="get_monitor_info_websockets",
+        description="Returns websocket infos",
         url="/monitoring/get_monitor_info_websockets",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
@@ -116,6 +120,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=120006,
         name="get_monitor_info_host",
+        description="Returns host infos",
         url="/monitoring/get_monitor_info_host",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
@@ -132,6 +137,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=120007,
         name="get_monitor_info_objects",
+        description="Returns object infos",
         url="/monitoring/get_monitor_info_objects",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
@@ -148,6 +154,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=120008,
         name="get_monitor_info_utilization",
+        description="Returns resource utilization infos",
         url="/monitoring/get_monitor_info_utilization",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
@@ -164,6 +171,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=120009,
         name="get_monitor_info_limits",
+        description="Returns resource limit infos",
         url="/monitoring/get_monitor_info_limits",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
@@ -183,76 +191,4 @@ infos = [
 handler = BlueprintHandler(
     blueprints=Blueprint("routes_info", __name__),
     infos=infos,
-    testing=True,
-    default_handler=None,
 )
-
-
-@handler.blueprints.post("/monitoring/dashboard_info")
-async def dashboard_info():
-    """Returns dashboardinfo state"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/monitoring/get_monitor_info")
-async def get_monitor_info():
-    """Returns monitor info"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/monitoring/get_monitor_info_tasks")
-async def get_monitor_info_tasks():
-    """Returns monitor info tasks"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/monitoring/get_monitor_info_apps")
-async def get_monitor_info_apps():
-    """Returns app infos"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/monitoring/get_monitor_info_files")
-async def get_monitor_info_files():
-    """Returns file infos"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/monitoring/get_monitor_info_websockets")
-async def get_monitor_info_websockets():
-    """Returns websocket infos"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/monitoring/get_monitor_info_host")
-async def get_monitor_info_host():
-    """Returns host infos"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/monitoring/get_monitor_info_objects")
-async def get_monitor_info_objects():
-    """Returns object infos"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/monitoring/get_monitor_info_utilization")
-async def get_monitor_info_utilization():
-    """Returns resource utilization infos"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/monitoring/get_monitor_info_limits")
-async def get_monitor_info_limits():
-    """Returns resource limit infos"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)

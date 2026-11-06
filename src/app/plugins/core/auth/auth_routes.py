@@ -1,6 +1,5 @@
 """Default Blueprints"""
 
-import inspect
 from quart import Blueprint
 from app.daas.common.enums import BackendName
 from app.qweb.blueprints.blueprint_handler import BlueprintHandler
@@ -15,7 +14,6 @@ from app.qweb.processing.processor import (
     TemplateProcessorAction,
 )
 
-
 test_args = ["counter", "timestamp"]
 test_backends = [BackendName.DB.value]
 test_methods = ["POST"]
@@ -23,6 +21,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=40000,
         name="get_login",
+        description="Default Browsertest Endpoint",
         url="/login",
         methods=["GET"],
         auth_params=AuthenticationMode.NONE,
@@ -36,6 +35,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=40001,
         name="post_login",
+        description="Default Browsertest Endpoint",
         url="/login",
         methods=["POST"],
         auth_params=AuthenticationMode.NONE,
@@ -48,6 +48,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=40002,
         name="jslogin",
+        description="js login endpoint",
         url="/js/login.js",
         methods=["GET"],
         auth_params=AuthenticationMode.NONE,
@@ -63,29 +64,10 @@ infos = [
 handler = BlueprintHandler(
     blueprints=Blueprint("routes_auth", __name__),
     infos=infos,
-    testing=True,
-    default_handler=None,
 )
 
 
 # pylint: disable=unused-argument
-@handler.blueprints.get("/login")
-async def get_login():
-    """Default Browsertest Endpoint"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
 
 
 # pylint: disable=unused-argument
-@handler.blueprints.post("/login")
-async def post_login():
-    """Default Browsertest Endpoint"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.get("/js/login.js")
-async def jslogin():
-    """js login endpoint"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)

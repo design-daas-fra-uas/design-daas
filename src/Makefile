@@ -8,7 +8,7 @@ SHELL:=/bin/bash
 IMGNAME?=skeleton
 # Python packages of the backend venv; installer/daas/install.bash reads this
 # list too
-VENV_INST="quart quart-cors requests aiohttp websockets flake8 pylint pika netifaces psutil sqlalchemy pymysql pylint-per-file-ignores black types-requests types-click types-aiofiles nest_asyncio aiosqlite docker"
+VENV_INST="quart quart-cors requests aiohttp websockets flake8 pylint pika netifaces psutil sqlalchemy pymysql pylint-per-file-ignores black types-requests types-click types-aiofiles aiosqlite docker"
 # ------------------------------------------------------------------------------
 # --- Help
 # ------------------------------------------------------------------------------

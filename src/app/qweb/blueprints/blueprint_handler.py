@@ -1,7 +1,6 @@
 """Handles blueprints"""
 
 import asyncio
-from types import FrameType
 from typing import Any, Optional
 from quart import Blueprint, Response, request, websocket
 from app.qweb.auth.auth_qweb import QwebUser
@@ -36,49 +35,29 @@ class BlueprintHandler(BlueprintHandlerBase):
         self,
         blueprints: Blueprint,
         infos: list[BlueprintInfo],
-        testing: bool,
-        default_handler: Optional[Any],
     ):
+        BlueprintHandlerBase.__init__(self, blueprints=blueprints, infos=infos)
 
-        BlueprintHandlerBase.__init__(
-            self,
-            blueprints=blueprints,
-            infos=infos,
-            testing=testing,
-            default_handler=default_handler,
-        )
-
-    async def handle_frame(
-        self, frame: Optional[FrameType]
-    ) -> tuple[Response | dict | str, int]:
-        """Handles requests"""
-
-        # Init frame
+    async def handle_request(self, name: str) -> tuple[Response | dict | str, int]:
+        """Handles a request of the route called name"""
         timing = await self._init_timing()
-        framename = self._get_frame_name(frame)
-        if framename == "":
-            self._log_error(f"Invalid framename: {framename}", 1)
-            return self._create_error_response("Invalid frame name", 500)
-
-        # handle frame
-        result, code = await self.__try_handle_frame(framename, timing)
+        result, code = await self.__try_handle_request(name, timing)
         if result is None:
-            return self._create_error_response("Response was None", 500)
+            return await self._create_error_response("Response was None", 500)
 
-        # Finalize frame
         await self._append_timing(result, timing)
         return result, code
 
-    async def __try_handle_frame(self, framename: str, timing: Optional[Measurement]):
+    async def __try_handle_request(self, name: str, timing: Optional[Measurement]):
         status_http = 500
         status_sys = 500
         try:
-            result, status_http = await self.__handle_request_stages(framename, timing)
+            result, status_http = await self.__handle_request_stages(name, timing)
         except Exception as exe:
             msg = "Exception in BlueprintHandler"
             ctype = await self.get_requested_content_type()
             self._log_error(f"{msg}:", status_sys, exe)
-            return self._create_error_response(
+            return await self._create_error_response(
                 msg=msg,
                 content_type=ctype,
                 status_http=status_http,
@@ -119,7 +98,7 @@ class BlueprintHandler(BlueprintHandlerBase):
         if info is None or req is None:
             self._log_error("Handler could not prepare stage", 1)
             ctype = await self.get_requested_content_type(info)
-            return self._create_error_response(
+            return await self._create_error_response(
                 "Blueprint handler could not prepare context", 500, content_type=ctype
             )
 
@@ -155,7 +134,7 @@ class BlueprintHandler(BlueprintHandlerBase):
         if ctx is None:
             self._log_error("Sequential stage error during task_context()", 1)
             ctype = await self.get_requested_content_type(info)
-            return self._create_error_response(
+            return await self._create_error_response(
                 "ServiceContext unavailble", 500, content_type=ctype
             )
 
@@ -166,14 +145,14 @@ class BlueprintHandler(BlueprintHandlerBase):
         if authres.authenticated is False:
             self._log_error("Sequential stage error during task_authentication()", 1)
             ctype = await self.get_requested_content_type(info)
-            return self._create_error_response(
+            return await self._create_error_response(
                 "Authentication error", 403, content_type=ctype
             )
 
         # Onership
         if await self.__system_object_denied(ctx.objects.objects, authres, info):
             ctype = await self.get_requested_content_type(info)
-            return self._create_error_response(
+            return await self._create_error_response(
                 "Only admins may change system objects", 403, content_type=ctype
             )
         verified = await self.__verify_entity_ownerships(
@@ -182,7 +161,7 @@ class BlueprintHandler(BlueprintHandlerBase):
         if verified is False:
             self._log_error("Error during ownership_verify (seq)", 2)
             ctype = await self.get_requested_content_type(info)
-            return self._create_error_response(
+            return await self._create_error_response(
                 f"Invalid owner: {authres.id_user}", 500, content_type=ctype
             )
 
@@ -223,7 +202,7 @@ class BlueprintHandler(BlueprintHandlerBase):
         if authres.authenticated is False:
             self._log_error("ctx-auth error during task_authentication()", 1)
             ctype = await self.get_requested_content_type(info)
-            return self._create_error_response(
+            return await self._create_error_response(
                 "Authentication error", 403, content_type=ctype
             )
 
@@ -231,12 +210,12 @@ class BlueprintHandler(BlueprintHandlerBase):
         if ctxres is None:
             self._log_error("ctx-auth error during task_context()", 1)
             ctype = await self.get_requested_content_type(info)
-            return self._create_error_response("ServiceContext unavailable", 500)
+            return await self._create_error_response("ServiceContext unavailable", 500)
 
         # Onership
         if await self.__system_object_denied(ctxres.objects.objects, authres, info):
             ctype = await self.get_requested_content_type(info)
-            return self._create_error_response(
+            return await self._create_error_response(
                 "Only admins may change system objects", 403, content_type=ctype
             )
         verified = await self.__verify_entity_ownerships(
@@ -245,7 +224,7 @@ class BlueprintHandler(BlueprintHandlerBase):
         if verified is False:
             self._log_error("Error during ownership_verify (ctx-auth)", 2)
             ctype = await self.get_requested_content_type(info)
-            return self._create_error_response(
+            return await self._create_error_response(
                 f"Invalid owner: {authres.id_user}", 500, content_type=ctype
             )
 
@@ -275,7 +254,7 @@ class BlueprintHandler(BlueprintHandlerBase):
         if ctx is None:
             self._log_error("auth-proc error during task_context()", 1)
             ctype = await self.get_requested_content_type(info)
-            return self._create_error_response(
+            return await self._create_error_response(
                 "ServiceContext unavailable", 500, content_type=ctype
             )
         if timing is not None:
@@ -300,14 +279,14 @@ class BlueprintHandler(BlueprintHandlerBase):
         if authres.authenticated is False:
             self._log_error("auth-proc error during task_authentication()", 1)
             ctype = await self.get_requested_content_type(info)
-            return self._create_error_response(
+            return await self._create_error_response(
                 f"Procargs not created {authres} {procres}", 500, content_type=ctype
             )
 
         # Onership
         if await self.__system_object_denied(ctx.objects.objects, authres, info):
             ctype = await self.get_requested_content_type(info)
-            return self._create_error_response(
+            return await self._create_error_response(
                 "Only admins may change system objects", 403, content_type=ctype
             )
         verified = await self.__verify_entity_ownerships(
@@ -316,7 +295,7 @@ class BlueprintHandler(BlueprintHandlerBase):
         if verified is False:
             self._log_error("Error during ownership_verify (auth-proc)", 2)
             ctype = await self.get_requested_content_type(info)
-            return self._create_error_response(
+            return await self._create_error_response(
                 f"Invalid owner: {authres.id_user}", 500, content_type=ctype
             )
 

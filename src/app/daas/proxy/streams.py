@@ -2,9 +2,12 @@
 
 import asyncio
 import abc
+import logging
 
 
 from quart import Websocket
+
+from app.qweb.logging.logging import LogTarget
 
 from .syntax import (
     IncrementalGuacamoleParser,
@@ -56,7 +59,9 @@ class GuacamoleSocketWs(GuacamoleSocket):
             if isinstance(raw, str):
                 self.__parser.feed(raw)
             else:
-                print("RECEIVED MALFORMED PACKET")
+                logging.getLogger(LogTarget.PROXY.value).warning(
+                    "Received malformed guacamole packet: %r", raw
+                )
 
     async def send(self, opcode: str, *args: str) -> None:
         await self.__ws.send(format_message(opcode, *args))

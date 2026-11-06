@@ -212,7 +212,7 @@ class ApiProxmox(Loggable):
         """Connects the component"""
         response, data = await self.prox_connection_test()
         if response.status != 200:
-            print(f"Error: {data}")
+            self._log_error(f"Proxmox connection failed: {data}", 1)
             self.connected = False
         else:
             self.connected = True
