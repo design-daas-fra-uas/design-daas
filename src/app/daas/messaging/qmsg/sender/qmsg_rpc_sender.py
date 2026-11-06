@@ -127,20 +127,28 @@ class RpcSender:
             self.waiting = True
             if not self.__publish(queue_name, msg):
                 return None
-            self.__log_info(f"Sending message to {queue_name}: {msg}")
-            counter = self.config.wait_time_total_ms
-            while counter > 0:
+            what = _describe(msg)
+            total_s = self.config.wait_time_total_ms // 1000
+            self.__log_info(f"Sent to {queue_name}: {what}")
+            started = time.monotonic()
+            next_report = 30
+            while time.monotonic() - started < total_s:
                 self.connection.process_data_events()
                 if self.waiting is False:
-                    self.__log_info(f"Got response : {self.response}")
+                    self.__log_answer(queue_name, what, int(time.monotonic() - started))
                     return self.response
                 time.sleep(self.config.wait_time_ms / 1000)
-                counter -= self.config.wait_time_ms
-                if counter % 10000 == 0:
+                waited = int(time.monotonic() - started)
+                if waited >= next_report:
                     self.__log_info(
-                        f"Still waiting for rpc response: {counter} {msg}"
+                        f"Waiting for {queue_name}: {what} ({waited} s of {total_s} s)"
                     )
-            self.__log_error(f"Wait time exceeded for {msg}")
+                    next_report += 30
+            self.__log_error(
+                f"No answer from {queue_name} after {total_s} s: {what} "
+                "(raise inst_queue.wait_time_total_ms in config/messaging.toml "
+                "if the command needs longer)"
+            )
             return None
         except Exception as exe:
             self.__log_error(f"Failed to send RPC call. Error: {exe}")
@@ -171,15 +179,34 @@ class RpcSender:
                 )
                 return True
             except pika.exceptions.AMQPConnectionError as exe:
-                self.__log_error(f"Connection lost on send (attempt {attempt}): {exe}")
+                # Expected after idle time; only failing twice is an error
+                self.__log_info(f"Connection closed by RabbitMQ, reconnecting: {exe}")
                 self.close()
         self.__log_error(f"Failed to send RPC call to {queue_name}: {msg}")
         return False
+
+    def __log_answer(self, queue_name: str, what: str, waited: int):
+        result = self.response.processor_result if self.response else {}
+        code = result.get("code", "?") if isinstance(result, dict) else "?"
+        line = f"Answer from {queue_name} after {waited} s: {what} -> exit code {code}"
+        if code == 0:
+            self.__log_info(line)
+        else:
+            err = str(result.get("std_err", "")).strip()[-300:]
+            self.__log_error(f"{line}: {err}")
+        # The full output (e.g. all apt lines) only on debug level
+        self.logger.debug(f"  QMSG: full answer: {self.response}")
 
     def __log_info(self, msg: str, code: int = 0):
         msg = f"  QMSG: {code:3} -> {msg}"
         self.logger.info(msg)
 
-    def __log_error(self, msg: str, code: int = 0):
+    def __log_error(self, msg: str, code: int = 1):
         msg = f"  QMSG: {code:3} -> {msg}"
-        self.logger.info(msg)
+        self.logger.error(msg)
+
+
+def _describe(msg: RpcRequest) -> str:
+    """Short form of a request for the log, e.g. "ospackage install firefox-esr" """
+    args = " ".join(a for a in msg.request_args if a)
+    return f"{msg.request_type} {msg.request_cmd} {args}".strip()

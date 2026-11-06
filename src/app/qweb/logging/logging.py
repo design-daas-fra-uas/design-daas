@@ -43,28 +43,24 @@ class Loggable:
         self.log_target = target
         self.logger = logging.getLogger(self.log_target.value)
 
+    def _get_logger(self) -> logging.Logger:
+        # Objects loaded from the database are built without __init__, so they
+        # may have no logger yet
+        if getattr(self, "logger", None) is None:
+            self.logger = logging.getLogger("default")
+        return self.logger
+
     def _log_info(self, msg: str, code: Optional[int | bool] = None) -> None:
         """Logs info message"""
-        msg = self._prefix_code(msg, code)
-        if hasattr(self, "logger") is False:
-            self.logger = logging.getLogger("default")
-        if self.logger is not None:
-            return self.logger.info(msg)
-        print(f"No Logger! Using fallback: {msg}")
+        self._get_logger().info(self._prefix_code(msg, code))
 
     def _log_debug(self, msg: str, code: Optional[int | bool] = None) -> None:
         """Logs debug message"""
-        msg = self._prefix_code(msg, code)
-        if self.logger is not None:
-            return self.logger.debug(msg)
-        print(f"No Logger! Using fallback: {msg}")
+        self._get_logger().debug(self._prefix_code(msg, code))
 
     def _log_warn(self, msg: str, code: Optional[int | bool] = None) -> None:
         """Logs warning message"""
-        msg = self._prefix_code(msg, code)
-        if self.logger is not None:
-            return self.logger.warning(msg)
-        print(f"No Logger! Using fallback: {msg}")
+        self._get_logger().warning(self._prefix_code(msg, code))
 
     def _log_error(
         self,
@@ -83,9 +79,7 @@ class Loggable:
             error_msg = f" {type(exception).__qualname__}! {exception}"
             if runtime.cfg_qweb.handler.enable_debugging:
                 error_trace = f"\n{traceback.format_exc()}"
-        if self.logger is not None:
-            return self.logger.error(f"{msg}{error_msg}{error_trace}")
-        print(f"No Logger! Using fallback: {msg}{error_msg}{error_trace}")
+        self._get_logger().error(f"{msg}{error_msg}{error_trace}")
 
     def _prefix_code(self, msg: str, code: Optional[int | bool] = None) -> str:
         code = self._convert_code(code)

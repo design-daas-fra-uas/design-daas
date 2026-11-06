@@ -30,7 +30,7 @@ reconnect_time_client = 1
 reconnect_time_server = 1
 # Poll interval and total wait for RPC replies
 wait_time_ms = 1000
-wait_time_total_ms = 300000  # 5 min
+wait_time_total_ms = 1200000  # 20 min (apt install libreoffice takes > 5 min)
 # One line per instance per second when true
 log_heartbeats = false
 log_topic = "qmsg"

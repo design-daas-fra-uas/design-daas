@@ -69,10 +69,16 @@ class PostbootTask(Loggable):
 
     async def wait_for_boot(self, inst: InstanceObject) -> bool:
         online = await inst.check_online_state()
+        waited = 0
         while not online:
             online = await inst.check_online_state()
             await asyncio.sleep(1)
-            self._log_info("Loop wait postboot task")
+            waited += 1
+            # A fresh install from ISO takes ~20 min: show it is still waiting
+            if waited % 60 == 0:
+                self._log_info(
+                    f"Still waiting for {inst.host or inst.id} to boot: {waited // 60} min"
+                )
         await self.update_boot_time(inst)
         self._log_info(f"Waited for boot (instance={inst.id})", 0)
         return online
