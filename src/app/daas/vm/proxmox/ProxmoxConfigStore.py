@@ -47,7 +47,9 @@ class ProxmoxConfigStore(Loggable):
         # check for unsupported ostype
         if ostype in ("win10", "win11"):
 
-            def select_for_os(*, windows):
+            # Both variants take both arguments: every call passes windows=
+            # and debian=, each variant returns its own one
+            def select_for_os(*, windows, debian):
                 # pylint: disable=unused-argument
                 return windows
 
