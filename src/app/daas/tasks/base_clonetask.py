@@ -15,7 +15,7 @@ from app.daas.tasks.task_config import (
     TasklistObject,
 )
 from app.plugins.platform.phases.enums import PhasesSystemTask
-from app.qweb.common.qweb_tools import run_system_task
+from app.qweb.common.qweb_tools import get_database, run_system_task
 from app.qweb.logging.logging import LogTarget, Loggable
 
 
@@ -54,6 +54,9 @@ class CloneTaskBase(Loggable):
             step_started = time.monotonic()
             self._log_info(f"{flow}: step {number}/{len(steps)} {name}")
             if not await step():
+                if not await self._object_exists():
+                    self._log_info(f"{flow}: stopped, the object was deleted")
+                    return False
                 msg = f"{flow}: FAILED at step {number}/{len(steps)} {name}"
                 self._log_error(f"{msg} after {_duration(step_started)}", 1)
                 await self.obj.set_extended_mode(f"Failed: {name}")
@@ -64,6 +67,14 @@ class CloneTaskBase(Loggable):
             )
         self._log_info(f"{flow}: finished in {_duration(started)}")
         return True
+
+    async def _object_exists(self) -> bool:
+        """False when the user deleted the object while the flow was running:
+        then nothing may be written for it (an update would insert it again)"""
+        from app.daas.db.database import Database
+
+        dbase = await get_database(Database)
+        return await dbase.get_daas_object(self.obj.id) is not None
 
     async def _get_files(
         self,
