@@ -3,8 +3,8 @@
 
 .PHONY: all prepare build run check shell stop clean
 
-# x11vnc: the root image name (default_x11vnc_image_name in
-# src/config/files.toml); daas.contx11: the image the sample container
+# x11vnc: the root image name (sent by the frontend as rootimage when a
+# user builds a container environment); daas.contx11: the image the sample container
 # object contx11 runs (src/app/daas/db/db_samples.py)
 TAGS := x11vnc daas.contx11
 IMAGE := $(firstword $(TAGS))

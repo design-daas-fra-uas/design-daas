@@ -41,7 +41,7 @@ Shortcuts on the desktop: `Alt+Ctrl+` `s` terminal, `b` Firefox, `e` gedit,
 1. `make images` in `installer/` (step 4 of `make install`) builds this
    image with two tags:
    - `x11vnc`: the root image the backend derives user images from
-     (`default_x11vnc_image_name` in `src/config/files.toml`)
+     (the frontend sends it as `rootimage`)
    - `daas.contx11`: what the sample container object `contx11` runs
      (`src/app/daas/db/db_samples.py`)
 2. When a user creates an environment, the backend writes a Dockerfile
