@@ -221,7 +221,7 @@ class BlueprintHandler(BlueprintHandlerBase):
         # Evaluate results
         ctxres, authres = results
         if authres.authenticated is False:
-            self._log_error("ctx-auth error during task_authenitcation()", 1)
+            self._log_error("ctx-auth error during task_authentication()", 1)
             ctype = await self.get_requested_content_type(info)
             return self._create_error_response(
                 "Authentication error", 403, content_type=ctype

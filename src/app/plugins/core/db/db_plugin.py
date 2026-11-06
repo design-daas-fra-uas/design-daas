@@ -50,7 +50,8 @@ class DatabasePlugin(PluginBase):
         if connected:
             db = Database()
             await db.connect()
-            await db.load_demo_apps()
+            if self.cfg.include_samples:
+                await db.load_demo_apps()
         return connected
 
     async def plugin_stop(self) -> bool:

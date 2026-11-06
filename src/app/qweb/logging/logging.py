@@ -45,12 +45,7 @@ class Loggable:
 
     def _log_info(self, msg: str, code: Optional[int | bool] = None) -> None:
         """Logs info message"""
-        exitcode = -1
-        if isinstance(code, bool):
-            exitcode = 0 if code is True else 1
-        elif isinstance(code, int):
-            exitcode = code
-        msg = self._prefix_code(msg, exitcode)
+        msg = self._prefix_code(msg, code)
         if hasattr(self, "logger") is False:
             self.logger = logging.getLogger("default")
         if self.logger is not None:
@@ -115,8 +110,6 @@ class LoggerConfig:
     console_target: str = "console"
     debug_target: str = "debug"
     error_target: str = "error"
-    all_sublogs: bool = False
-    no_sublogs: bool = False
     log_hypercorn: bool = False
     log_web_enabled: bool = False
     log_web_resize: bool = False
@@ -269,7 +262,7 @@ class QwebLogManager:
 
     def _configure_hypercorn(self):
         if self.cfg.log_hypercorn is False:
-            logging.getLogger("hypercorn.access").disabled = False
+            logging.getLogger("hypercorn.access").disabled = True
 
     def _create_logger_config(
         self,
@@ -376,6 +369,7 @@ class QwebLogManager:
         }
         if is_file:
             obj["filename"] = f"{self.cfg.log_dir}/{name}.log"
+            obj["encoding"] = self.cfg.log_encode
         return outname, obj
 
     def _create_logger(self, name: str):
@@ -394,7 +388,6 @@ class QwebLogManager:
         return {
             "format": log_format,
             "datefmt": self.cfg.log_date,
-            "encoding": self.cfg.log_encode,
         }
 
     def _create_logformat(self):
