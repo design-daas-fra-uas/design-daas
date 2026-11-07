@@ -199,7 +199,9 @@ infos = [
         url="/vm/start",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
-        conc_params=ConcurrencyMode.AUTH_AND_PROC,
+        # The task needs the user (owner of the new instance), so it must not
+        # run before authentication has finished (AUTH_AND_PROC)
+        conc_params=ConcurrencyMode.CTX_AND_AUTH,
         processor=ProcessorType.API,
         processor_action=ApiProcessorAction.JSON,
         processor_task=VMTask.VM_START.value,
@@ -226,9 +228,7 @@ infos = [
         request_args_optional=[],
         request_args_common=perf_args,
         backends=backends,
-        objects=[
-            LayerObject("entity", DBObject.INST.value, LayerName.DB.value)
-        ],
+        objects=[LayerObject("entity", DBObject.INST.value, LayerName.DB.value)],
     ),
     BlueprintInfo(
         endpoint_id=60011,

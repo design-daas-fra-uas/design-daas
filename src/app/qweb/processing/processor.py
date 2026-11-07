@@ -58,6 +58,10 @@ class ApiProcessorAction(Enum):
     JSON = 3
 
 
+class ObjectNotFoundError(LookupError):
+    """A task's request object is not in the database (answered with 404)"""
+
+
 @dataclass
 class QwebResult:
     """Common response format for json results"""

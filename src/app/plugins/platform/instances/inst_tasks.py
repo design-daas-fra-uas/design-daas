@@ -84,7 +84,7 @@ async def vminvoke_upload(args: TaskArgs) -> QwebResult:
     entity = get_request_object(args.ctx, "entity", InstanceObject)
     absfile = await _upload_tmpfile(args)
     reqargs = args.req.request_context.request_args
-    run = reqargs["execute"] != ""
+    run = reqargs.get("execute", "") != ""
     return await entity.inst_vminvoke_upload(absfile, run)
 
 

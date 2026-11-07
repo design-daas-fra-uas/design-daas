@@ -7,10 +7,43 @@ and the project uses [Semantic Versioning](https://semver.org/).
 ## [2.0.0]
 
 Review and cleanup of the backend (`src/app`, the DaaS engine). API routes,
-config keys and the database schema are unchanged.
+config keys and the database schema are unchanged. The second review pass
+checked the backend against the frontend (`design-daas-application-frontend`)
+and the auth service (`design-daas-backend-java`).
 
 ### Fixed
 
+- **Admin monitoring always empty**: `/admin/get_monitor_info_*` passed
+  `id_owner` on as a string (`""` for all users, `"5"` for one user), but the
+  monitoring code compares with the int `0` (all) and int owner ids, so
+  nothing matched. `id_owner` is now parsed to an int (empty = all users);
+  `/admin/tasklist`, `/admin/taskstop` and the `owner` of
+  `/admin/assign_obj_to_user` / `/admin/assign_app` too.
+- **`/vm/start` created instances for user `-1`**: the route ran its task in
+  `AUTH_AND_PROC` mode, i.e. in parallel with authentication and with an
+  empty user, so the instance owner and the resource limit check used `-1`.
+  It now authenticates first (`CTX_AND_AUTH`).
+- **Unchecked checkboxes counted as checked**: the frontend sends an
+  unchecked box as `''`, but `connect`, `force` and `detailed` were tested
+  with `"x" in reqargs`, so e.g. an unchecked "connect" still connected and
+  every environment stop was forced. All flags are now
+  `reqargs.get(x, "") != ""`.
+- **Optional arguments read with `reqargs[x]`** (`force` of
+  `/phases/baseimage_stop`, `execute` of `/inst/vminvoke_upload`, `id_object`
+  / `id_instance` of the admin task routes): a request without them failed
+  with a `KeyError` (500). They default to `""` now.
+- **Auth service adapter** (`daas/auth/auth_daas_remote.py`):
+  - When the auth service did not answer, logging the error crashed
+    (`None.status`).
+  - With `enable_auth_endpoint` on, the endpoint check dropped the user's
+    role, so admins lost access to admin routes.
+  - Viewer tokens logged "success" also for unknown tokens, and the token
+    itself was stored as the user name (and so ended up in logs).
+- **HTTP status codes**: a requested object that does not exist now answers
+  `404 "<Type> '<name>' not found"` (new `ObjectNotFoundError`) instead of a
+  500 with a traceback; an ownership failure answers `403` instead of `500`;
+  a failed authentication in `AUTH_AND_PROC` mode answers `403
+  Authentication error` instead of `500 Procargs not created ...`.
 - **Guacamole tunnel** (`daas/proxy/guacamole_proxy.py`):
   - Closed connections stayed in the global `socket_tuples` map for good
     (memory leak), and the socket to guacd was never closed. Both sides are
@@ -86,6 +119,20 @@ config keys and the database schema are unchanged.
   formatted with.
 
 ### Not changed (noted for later)
+
+- **Frontend ↔ backend mismatches**: fixed in the frontend, version 2.2.1
+  (environment stop sent the instance id instead of the object id; three
+  admin actions called endpoints that do not exist; `viewer_resize` /
+  `viewer_scale` values the backend does not accept). See the frontend's
+  `CHANGELOG.md`.
+- **`AUTH_AND_PROC` mode** (33 routes, e.g. `/vm/stop`, `/vm/status`, the
+  viewer and websocket routes) still runs the task before authentication
+  and the ownership check have finished. The checks happen afterwards, so a
+  request with a bad token or for another user's VM has already done its
+  work by the time it is answered with 403.
+- The backend ↔ auth service contract matches: `/oauth2/user/token` (form),
+  `/oauth2/user/session` (`user_id`, `name`, `role`) and
+  `/permissions/{function}/{userId}` (`result`, `user.id`, `user.name`).
 
 - `websockets.WebSocketClientProtocol` is deprecated in websockets 17; the
   type hints still use it.

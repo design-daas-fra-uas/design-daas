@@ -7,6 +7,7 @@ from quart import Response
 from app.qweb.auth.auth_qweb import QwebUser
 from app.qweb.processing.processor import (
     ApiProcessorAction,
+    ObjectNotFoundError,
     QwebResult,
     ProcessorBase,
     ProcessorRequest,
@@ -67,6 +68,10 @@ class ApiProcessor(ProcessorBase):
                 msg = f"Unknown return type: {type(ret)}"
                 self._log_error(msg, 1)
                 resp = self.create_error_dict(msg)
+                return asdict(resp), resp.response_code
+            except ObjectNotFoundError as exe:
+                self._log_warn(f"{info.name}: {exe}")
+                resp = self.create_error_dict(str(exe), 404)
                 return asdict(resp), resp.response_code
             except Exception as exe:
                 resp = self.create_error_dict(

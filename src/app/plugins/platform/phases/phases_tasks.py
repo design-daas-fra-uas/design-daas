@@ -112,7 +112,7 @@ async def baseimage_start(args: TaskArgs) -> QwebResult:
     log_task_arguments(args.ctx, args.req, args.info, args.user)
     entity = get_request_object(args.ctx, "entity", DaasBaseObject)
     reqargs = args.req.request_context.request_args.copy()
-    connect = "connect" in reqargs
+    connect = reqargs.get("connect", "") != ""
     if isinstance(entity, MachineObject | ContainerObject):
         inst = await entity.baseimage_start(args.user.id_user, connect, "run-debug")
         if inst is not None:
@@ -125,7 +125,7 @@ async def baseimage_stop(args: TaskArgs) -> QwebResult:
     log_task_arguments(args.ctx, args.req, args.info, args.user)
     entity = get_request_object_optional(args.ctx, "entity", InstanceObject)
     reqargs = args.req.request_context.request_args.copy()
-    force = reqargs["force"] != ""
+    force = reqargs.get("force", "") != ""
     if entity is not None:
         if isinstance(entity.app, MachineObject | ContainerObject):
             return await entity.app.baseimage_stop(entity, force)

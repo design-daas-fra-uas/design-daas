@@ -107,7 +107,7 @@ async def environment_start(args: TaskArgs) -> QwebResult:
     env = get_request_object(args.ctx, "env", Environment)
     reqargs = args.req.request_context.request_args.copy()
     reqargs["id_owner"] = args.user.id_user
-    connect = "connect" in reqargs and reqargs["connect"] != ""
+    connect = reqargs.get("connect", "") != ""
     objmode = "run-debug"
     if env is not None and isinstance(env, Environment):
         inst = None
@@ -132,7 +132,7 @@ async def environment_run(args: TaskArgs) -> QwebResult:
     env = get_request_object(args.ctx, "env", Environment)
     reqargs = args.req.request_context.request_args.copy()
     reqargs["id_owner"] = args.user.id_user
-    connect = "connect" in reqargs and reqargs["connect"] != ""
+    connect = reqargs.get("connect", "") != ""
     objmode = "run-app"
     if env is not None and isinstance(env, Environment):
         inst = None
@@ -153,7 +153,7 @@ async def environment_stop(args: TaskArgs) -> QwebResult:
     env = get_request_object_optional(args.ctx, "env", Environment)
     reqargs = args.req.request_context.request_args.copy()
     reqargs["id_owner"] = args.user.id_user
-    force = True if "force" in reqargs else False
+    force = reqargs.get("force", "") != ""
     if env is not None and isinstance(env, Environment):
         if isinstance(obj, MachineObject | ContainerObject):
             return await obj.environment_stop(env, force, reqargs)

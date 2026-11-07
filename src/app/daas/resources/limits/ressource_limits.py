@@ -154,9 +154,9 @@ class RessourceLimits(Loggable):
             objres.utilized_diskspace,
         )
         sys_res.add(demand)
-        self._log_info(f"Verify objres: {objres}")
-        self._log_info(f"Verify sysres: {sys_res}")
-        self._log_info(f"Verify demand: {demand}")
+        self._log_debug(f"Verify objres: {objres}")
+        self._log_debug(f"Verify sysres: {sys_res}")
+        self._log_debug(f"Verify demand: {demand}")
         return await self.__verify_limits(sys_res, self.limit_system)
 
     async def verify_configured_limit(self) -> bool:

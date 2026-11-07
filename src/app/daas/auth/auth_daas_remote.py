@@ -77,14 +77,17 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
                 and "user" in response_remote
             ):
                 if response_remote["result"] == "allow":
-                    name = response_remote["user"]["name"]
-                    userid = response_remote["user"]["id"]
-                    result = QwebUser(id_user=userid, name=name, authenticated=True)
+                    result = QwebUser(
+                        id_user=response_remote["user"]["id"],
+                        name=response_remote["user"]["name"],
+                        authenticated=True,
+                        role=user.role,
+                    )
                     self._log_request(
                         f"200 ->   HTTP Remote Auth success for endpoint '{info.name}'"
                     )
                     return result
-            self._log_error(" -1 ->   HTTP Remote Auth error")
+            self._log_error(f"HTTP Remote Auth denied endpoint '{info.name}'", 1)
         return result
 
     async def get_user_session(self, bearer: str) -> dict:
@@ -95,7 +98,7 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
         url = f"{self.cfg_auth.remote.url}/oauth2/user/session"
         response, data = await self.__request_api("get", url, access_token=bearer)
         if response is None or response.status != 200:
-            self._log_error(f"Backend-Auth error on {url}", response.status)
+            self.__log_http_error(url, response)
             return {}
         return data
 
@@ -107,19 +110,16 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
         result = await self.return_default_user(False)
         if self.cfg_auth.enable_auth_token:
             reqargs = req.request_context.request_args
-            token = ""
-            if "token" in reqargs:
-                token = reqargs["token"]
+            token = reqargs.get("token", "")
+            if token != "":
                 con = await dbase.get_guacamole_connection_by_token(token)
                 if con is not None:
                     inst = await dbase.get_instance_by_conid(con.id)
                     if inst is not None:
-                        userid = inst.id_owner
-                        result = QwebUser(userid, token, True)
-                self._log_request(
-                    f"200 ->   HTTP Remote Auth success for user '{result.id_user}'"
-                )
-                return result
+                        result = QwebUser(inst.id_owner, "viewer", True)
+                        self._log_request(
+                            f"200 ->   Viewer token accepted for user '{result.id_user}'"
+                        )
         return result
 
     async def get_endpoint_permission(self, endpoint: str, userid: int) -> dict:
@@ -127,7 +127,7 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
         url = f"{self.cfg_auth.remote.url}/permissions/{endpoint}/{userid}"
         response, data = await self.__request_api("get", url)
         if response is None or response.status != 200:
-            self._log_error(f"Backend-Auth error on {url}", response.status)
+            self.__log_http_error(url, response)
             return {}
         return data
 
@@ -152,7 +152,6 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
             return 1, "", "Authentication error"
         return 0, "", ""
 
-    # pylint: disable=dangerous-default-value
     async def __request_api(
         self, method: str, url: str, *, access_token: str = "", data=None
     ) -> tuple[aiohttp.ClientResponse, dict]:
@@ -218,6 +217,10 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
                 obj = self.token.valid_until
                 fmt = obj.strftime("%Y-%m-%d %H:%M:%S")
                 self._log_request(f"New token expires at: {fmt}")
+
+    def __log_http_error(self, url: str, response) -> None:
+        status = "no response" if response is None else response.status
+        self._log_error(f"Auth service error on {url}: {status}")
 
     def _log_request(self, msg: str) -> None:
         if self.cfg_auth.enable_logging:
