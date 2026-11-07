@@ -146,7 +146,7 @@ class BlueprintHandler(BlueprintHandlerBase):
             self._log_error("Sequential stage error during task_authentication()", 1)
             ctype = await self.get_requested_content_type(info)
             return await self._create_error_response(
-                "Authentication error", 403, content_type=ctype
+                "Authentication error", 401, content_type=ctype
             )
 
         # Ownership
@@ -203,7 +203,7 @@ class BlueprintHandler(BlueprintHandlerBase):
             self._log_error("ctx-auth error during task_authentication()", 1)
             ctype = await self.get_requested_content_type(info)
             return await self._create_error_response(
-                "Authentication error", 403, content_type=ctype
+                "Authentication error", 401, content_type=ctype
             )
 
         # Prepare tasks
@@ -280,7 +280,7 @@ class BlueprintHandler(BlueprintHandlerBase):
             self._log_error("auth-proc error during task_authentication()", 1)
             ctype = await self.get_requested_content_type(info)
             return await self._create_error_response(
-                "Authentication error", 403, content_type=ctype
+                "Authentication error", 401, content_type=ctype
             )
 
         # Ownership

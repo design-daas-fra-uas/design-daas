@@ -28,7 +28,7 @@ ______________________________________________________________________
 - Integration of Virtual Machines and Containers (by using Proxmox and Docker)
 - Browser-based user interaction (by using Guacamole as a Desktop Gateway)
 - Dedicated user frontend [Repo: Frontend](https://github.com/nuromedia/design-daas-application-frontend)
-- Dedicated authentication backend [Repo: Backend](https://github.com/nuromedia/design-daas-application-backend)
+- Dedicated authentication backend [Repo: Backend](https://github.com/design-daas-fra-uas/design-daas-backend-java)
 
 ## Installation
 
@@ -108,4 +108,4 @@ Innovationsprogramm Mittelstand (ZIM)").
 - [Paper: Open Journal of Cloud Computing (OJCC)](https://www.ronpub.com/ojcc/OJCC_2023v8i1n01_Baun.html)
 - [Paper: MobileWeb and Intelligent Information Systems (MobiWIS 2024)](https://link.springer.com/chapter/10.1007/978-3-031-68005-2_1)
 - [Repo: Frontend](https://github.com/nuromedia/design-daas-application-frontend)
-- [Repo: Backend](https://github.com/nuromedia/design-daas-application-backend)
+- [Repo: Backend](https://github.com/design-daas-fra-uas/design-daas-backend-java)

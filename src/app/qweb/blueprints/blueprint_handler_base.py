@@ -142,8 +142,8 @@ class BlueprintHandlerBase(Loggable):
                 bearer = (await request.form)["bearer"]
         json_req = await request.get_json()
         if json_req is not None and "bearer" in json_req:
-            if str((await request.form)["bearer"]) != "":
-                bearer = (await request.form)["bearer"]
+            if str(json_req["bearer"]) != "":
+                bearer = json_req["bearer"]
 
         if bearer != "":
             bearer = str(bearer)

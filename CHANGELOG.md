@@ -13,6 +13,18 @@ and the auth service (`design-daas-backend-java`).
 
 ### Fixed
 
+- **Fresh install had no admin account**: the installer runs the auth service
+  with the `prod` profile, which only creates the bootstrap admin when
+  `ADMIN_INIT_ENABLED=true`, but `installer/auth/docker-compose.yml` never
+  set it. It now does; the auth service skips it once the admin exists.
+- **Expired tokens were never refreshed on DaaS calls**: a failed login check
+  answered `403`, but the frontend only refreshes its token on `401`. Failed
+  authentication now answers `401`; ownership and system-object denials stay
+  `403`.
+- **`bearer` in a JSON body was ignored**: `_extract_bearer` found the key
+  in the JSON body but then read it from the form, which has no such key for
+  JSON requests, so the request failed with a `KeyError`. It now reads it
+  from the JSON body.
 - **Admin monitoring always empty**: `/admin/get_monitor_info_*` passed
   `id_owner` on as a string (`""` for all users, `"5"` for one user), but the
   monitoring code compares with the int `0` (all) and int owner ids, so

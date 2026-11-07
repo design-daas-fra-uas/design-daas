@@ -42,6 +42,9 @@ services:
       DB_URL: jdbc:mariadb://db:3306/${AUTH_DB_NAME}
       DB_USERNAME: ${AUTH_DB_USER}
       DB_PASSWORD: ${AUTH_DB_PASSWORD}
+      # Create ADMIN_EMAIL on the first start (the prod profile turns this
+      # off by default); skipped once the account exists
+      ADMIN_INIT_ENABLED: "true"
       ADMIN_EMAIL: ${ADMIN_EMAIL}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       OAUTH_KEYS_DIR: /app/keys
