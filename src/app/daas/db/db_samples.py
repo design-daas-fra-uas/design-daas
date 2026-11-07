@@ -3,13 +3,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from app.daas.common.model import (
-    DaasObject,
-    Environment,
-    File,
-    GuacamoleConnection,
-    RessourceInfo,
-)
+from app.daas.common.model import File, RessourceInfo
 from app.daas.objects.object_application import ApplicationObject
 from app.daas.objects.object_machine import MachineObject
 from app.daas.objects.object_container import ContainerObject
@@ -45,26 +39,6 @@ class SampleRegistry:
                 mem_max=12 * 1024**3,
                 dsk_max=256 * 1024**3,
             )
-        ]
-
-    def create_demo_instances(
-        self, obj: DaasObject, env: Environment, con: GuacamoleConnection
-    ):
-        owner = self.config.default_owner
-        return [
-        ]
-
-    def create_demo_connection(self):
-        return [
-        ]
-
-    def create_demo_environments(self):
-        """Create environmenst for testing"""
-        owner = self.config.default_owner
-        envtasks = [{"args": "", "cmd": "/usr/bin/galculator", "type": "exec_cmd"}]
-        envapps = [{"args": "", "cmd": "/usr/bin/galculator", "name": "calc"}]
-        envtarget = {"args": "", "cmd": "/usr/bin/galculator", "name": "testname"}
-        return [
         ]
 
     def create_demo_objects(self) -> list:

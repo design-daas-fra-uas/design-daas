@@ -34,7 +34,6 @@ if __name__ == "__main__":
 
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "env")))
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "qmsg")))
-    print(sys.path)
     import asyncio
     from hub_instance import QHubInstance, QHubConfigInstance
 

@@ -84,9 +84,10 @@ class MachineObject(MachineConfigBase):
         userid: int,
         connect: bool,
         object_mode: str = "",
-        args: dict = {},
+        args: Optional[dict] = None,
     ) -> Optional[InstanceObject]:
         """Starts environment instance"""
+        args = args if args is not None else {}
         if not await self.verify_demand(userid):
             return None
         inst = await self.env_start(env, userid, connect, object_mode, args)
@@ -100,9 +101,10 @@ class MachineObject(MachineConfigBase):
         userid: int,
         connect: bool,
         object_mode: str = "",
-        args: dict = {},
+        args: Optional[dict] = None,
     ) -> Optional[InstanceObject]:
         """Runs environment instance"""
+        args = args if args is not None else {}
 
         if not await self.verify_demand(userid):
             return None

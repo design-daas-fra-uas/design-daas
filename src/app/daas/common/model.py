@@ -151,171 +151,6 @@ class DaasObject(DaaSEntity):
             f"obj_type={self.object_type},os_type={self.os_type})"
         )
 
-    # @abstractmethod
-    # async def baseimage_create(self, args: dict) -> tuple:
-    #     """Creates app environment"""
-    #     raise NotImplementedError()
-    #
-    # @abstractmethod
-    # async def baseimage_clone(self, objid: str, args: dict) -> tuple:
-    #     """Clones app environment"""
-    #     raise NotImplementedError()
-    #
-    # @abstractmethod
-    # async def baseimage_delete(self) -> tuple:
-    #     """Deletes app environment"""
-    #     raise NotImplementedError()
-    #
-    # @abstractmethod
-    # async def baseimage_finalize(self) -> tuple:
-    #     """Finalizes baseimage"""
-    #     raise NotImplementedError()
-    #
-    # @abstractmethod
-    # async def start_prepare(self) -> bool:
-    #     """Prepares object for a subsequent call to 'start'"""
-    #     raise NotImplementedError()
-    #
-    # @abstractmethod
-    # async def start(
-    #     self,
-    #     object_mode: str = "",
-    # ) -> Optional[InstanceObject]:
-    #     """Start a new instance of this app"""
-    #     raise NotImplementedError()
-    #
-    # @abstractmethod
-    # async def start_finalize(self, wait_for_boot: bool, object_mode: str = "") -> bool:
-    #     """Finalizes object after prior call to 'start'"""
-    #     raise NotImplementedError()
-    #
-    # @abstractmethod
-    # async def mount_shares(self, adr: str, userid: int, windows: bool) -> tuple:
-    #     """Mount object shares"""
-    #     raise NotImplementedError()
-    #
-    # @abstractmethod
-    # async def unmount_shares(self, adr: str, windows: bool) -> tuple:
-    #     """Unmount object shares"""
-    #     raise NotImplementedError()
-    #
-    # @abstractmethod
-    # async def stop(self, instance: InstanceObject, force: bool) -> None:
-    #     """Stop a running instance and free its resources."""
-    #     raise NotImplementedError()
-    #
-    # @abstractmethod
-    # async def connect_prepare(
-    #     self, instance: InstanceObject, keep_connections: bool = False
-    # ) -> bool:
-    #     """Prepares object for a subsequent call to 'connect'"""
-    #     raise NotImplementedError()
-    #
-    # @abstractmethod
-    # async def connect(
-    #     self, instance: InstanceObject, contype: str, keep_connections: bool = False
-    # ) -> Optional[GuacamoleConnection]:
-    #     """Connects the viewer"""
-    #     raise NotImplementedError()
-    #
-    # @abstractmethod
-    # async def connect_finalize(
-    #     self, instance: InstanceObject, con: GuacamoleConnection
-    # ) -> tuple:
-    #     """Finalizes object after a prior call to 'connect'"""
-    #     raise NotImplementedError()
-    #
-    # @abstractmethod
-    # async def disconnect(self, instance: InstanceObject, force: bool):
-    #     """Disconnects the instance."""
-    #     raise NotImplementedError()
-    #
-    # @abstractmethod
-    # async def status(self) -> dict:
-    #     """Returns status information"""
-    #     raise NotImplementedError()
-    #
-    # @abstractmethod
-    # async def environment_create(self, args: dict) -> Optional[Environment]:
-    #     """Derives new environment"""
-    #     raise NotImplementedError()
-    #
-    # @abstractmethod
-    # async def environment_finalize(self, env: Environment) -> tuple:
-    #     """Finalizes environment"""
-    #     raise NotImplementedError()
-    #
-    # @abstractmethod
-    # async def environment_start(
-    #     self, env: Environment, object_mode: str = ""
-    # ) -> Optional[InstanceObject]:
-    #     """Starts environment instance"""
-    #     raise NotImplementedError()
-    #
-    # @abstractmethod
-    # async def environment_stop(self, env: Environment, force: bool) -> None:
-    #     """Stops environment instance"""
-    #     raise NotImplementedError()
-    #
-    # @abstractmethod
-    # async def environment_run(
-    #     self, env: Environment, object_mode: str = ""
-    # ) -> Optional[InstanceObject]:
-    #     """Runs environment instance"""
-    #     raise NotImplementedError()
-    #
-    # @abstractmethod
-    # async def environment_get(self, name: str) -> Optional[Environment]:
-    #     """Returns specified environment"""
-    #     raise NotImplementedError()
-    #
-    # @abstractmethod
-    # async def environments_get(self) -> list[Environment]:
-    #     """Returns all object environments"""
-    #     raise NotImplementedError()
-    #
-    # @abstractmethod
-    # async def environment_delete(self, env: Environment) -> None:
-    #     """Deletes specified environment"""
-    #     raise NotImplementedError()
-    #
-    # @abstractmethod
-    # async def configure_tasklist(self, tasklist: str, env_name: str = "") -> None:
-    #     """Configures tasklist"""
-    #     raise NotImplementedError()
-    #
-    # @abstractmethod
-    # async def configure_applist(self, applist: str, env_name: str = "") -> None:
-    #     """Configures applist"""
-    #     raise NotImplementedError()
-    #
-    # @abstractmethod
-    # async def configure_target(self, target: str, env_name: str = "") -> None:
-    #     """Configures target"""
-    #     raise NotImplementedError()
-    #
-    # @abstractmethod
-    # async def configure_app_template(
-    #     self, app: Application, env_name: str = ""
-    # ) -> None:
-    #     """Configures app"""
-    #     raise NotImplementedError()
-    #
-    # @abstractmethod
-    # async def change_owner(self, owner: int) -> bool:
-    #     """Adjusts object to new owner"""
-    #     raise NotImplementedError()
-    #
-    # @abstractmethod
-    # async def set_mode(self, mode: str):
-    #     """Sets object mode"""
-    #     raise NotImplementedError()
-    #
-    # @abstractmethod
-    # async def set_extended_mode(self, extmode: str):
-    #     """Sets extended object mode"""
-    #     raise NotImplementedError()
-
 
 @ORMModelDomain(ORMMappingType.File)
 @dataclass
@@ -356,7 +191,6 @@ class File(DaaSEntity):
         )
 
 
-# @ORMModelDomain(ORMMappingType.Application)
 @dataclass
 class Application(DaaSEntity):
     """A configurable application object"""
@@ -501,7 +335,6 @@ class GuacamoleConnection(DaaSEntity):
     id: str
     """Unique ID"""
 
-
     user: str
     """Username for the connection auth."""
 
@@ -557,25 +390,3 @@ class RessourceInfo(DaaSEntity):
             f"res=({self.cpu_max},{self.mem_max},{self.dsk_max})"
             ")"
         )
-
-
-@dataclass(kw_only=True)
-class AccessToken:
-    """
-    Metadata on an access token that can be used for API access.
-
-    Note that the `secret_token` field is not part of this object,
-    since it must only be used during token creation.
-    """
-
-    id: str
-    """ID for this token, useful for revocation."""
-
-    id_user: int
-    """Permission scope."""
-
-    description: str
-    """Textual description to remember what this token was created for."""
-
-    created_at: datetime
-    """When the token was created."""

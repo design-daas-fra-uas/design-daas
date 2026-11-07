@@ -9,7 +9,6 @@ from app.daas.storage.filestore import Filestore
 from app.qweb.common.qweb_tools import get_backend_component
 from app.qweb.processing.processor import QwebResult
 
-
 DEFAULT_TIMEOUTS = 3
 
 
@@ -42,9 +41,12 @@ class InstancePhase(InstanceObjectBase):
         return await self._run_inst("ospackage", cmd, args)
 
     async def inst_vminvoke_upload(
-        self, src: str, win: bool, run: bool, filename: str = ""
+        self, src: str, run: bool, filename: str = ""
     ) -> QwebResult:
-        """Invokes a (blocking) upload command"""
+        """
+        Uploads src into the instance's tmp folder (as filename when given)
+        and runs it when run is set
+        """
         store = await get_backend_component(BackendName.FILE, Filestore)
         win = await self.needs_pstools()
         dst = await store.get_filename_instance(src, win, "tmp")
@@ -60,17 +62,10 @@ class InstancePhase(InstanceObjectBase):
         if run:
             if win:
                 return await self._run_inst("cmd", dst, "")
-            else:
-                await self._run_ssh("/usr/bin/chmod", f"a+x {dst}")
-                return await self._run_inst("cmd", "/usr/bin/xterm", f"-e {dst}")
+            await self._run_ssh("/usr/bin/chmod", f"a+x {dst}")
+            return await self._run_inst("cmd", "/usr/bin/xterm", f"-e {dst}")
 
         return uploaded
-
-    async def inst_vminvoke_filesystem(
-        self, cmd: str, cpub: bool, cshared: bool, cuser: bool
-    ) -> QwebResult:
-        """Invokes a (blocking) filesystem command"""
-        raise NotImplementedError()
 
     async def inst_vminvoke_test_icmp(self) -> QwebResult:
         """Invokes a (blocking) icmp test command (ping)"""
@@ -85,10 +80,6 @@ class InstancePhase(InstanceObjectBase):
         if code == 0:
             return QwebResult(200, {}, 0, f"{msg}{err}")
         return QwebResult(400, {}, 1, "Error on invoke_test_ssh()")
-
-    async def inst_vminvoke_rtt(self) -> QwebResult:
-        """Invokes a (blocking) ssh test command"""
-        raise NotImplementedError()
 
     async def _run_upload(self, src: str, dst: str) -> QwebResult:
         code, msg, err = await self._invoke_scp_upload(self.host, src, dst)
@@ -109,11 +100,3 @@ class InstancePhase(InstanceObjectBase):
         if code == 0:
             return QwebResult(200, {}, 0, f"{msg}{err}")
         return QwebResult(400, {}, 1, "Error on invoke_ssh()")
-
-    async def inst_vmstatus(self, adr: str):
-        """Invoke a status action via client api"""
-        return await self._invoke_instance(adr, "status", "", False)
-
-    async def inst_vmversion(self, adr: str):
-        """Invoke a version action via client api"""
-        return await self._invoke_instance(adr, "version", "", False)

@@ -6,6 +6,91 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [2.0.0]
 
+Review and cleanup of the backend (`src/app`, the DaaS engine). API routes,
+config keys and the database schema are unchanged.
+
+### Fixed
+
+- **Guacamole tunnel** (`daas/proxy/guacamole_proxy.py`):
+  - Closed connections stayed in the global `socket_tuples` map for good
+    (memory leak), and the socket to guacd was never closed. Both sides are
+    now always cleaned up in one `finally`, whichever side closes first,
+    including unexpected errors that used to leave the other task running.
+  - The stats counted client messages as guacd messages and the other way
+    round, counted every client message as a blob, added client bytes twice,
+    and never counted guacd blobs. Counting is now one shared helper; the
+    rates no longer divide by zero.
+  - The idle timeout check compared against the wrong side's timestamp and
+    did nothing (its `raise` was commented out); removed.
+- **Microphone proxy**: the `pacat` process was not stopped when the browser
+  disconnected, and the loop spun the CPU while the pipe was not ready. The
+  process is now always terminated and the connection deregistered.
+- **Printer proxy**: when one direction ended, the other kept running forever.
+  The tunnel now ends when either side closes; it closed the browser socket
+  with the invalid code 512 (now 1000) and did not deregister the connection.
+- **Node routes** (`/node/vmconfigure_dhcp`, `/node/vmconfigure_iptables`)
+  always failed: wrong task signature and missing `await`. `/node/vminvoke_upload`
+  answers `501` instead of raising.
+- **Instance routes** `/inst/vminvoke_filesystem` and `/inst/vminvoke_rtt`
+  called methods with wrong arguments that only raised `NotImplementedError`;
+  they now answer `501 not implemented`.
+- **Test route** `TEST_GET_ENTITY` had the wrong task signature.
+- **Task launch**: `run_apitask` / `run_system_task` checked `task != ""`
+  although a missing task is `None`, so an unknown task name crashed.
+- **Task errors**: the error handler itself crashed (`exe.args[0]`) on
+  exceptions without arguments; the traceback is now logged.
+- **Container installers** were uploaded twice into the instance.
+- **Clone**: the new object kept the old object's id until `clone()` ran, so
+  the resource limit check was skipped when the source object was running.
+- **Host info**: `du` / `df` ran synchronously inside async code and froze the
+  whole backend while `du` walked large folders; they now run as async
+  subprocesses.
+- Error messages of `baseimage_create_from_app` / `baseimage_clone_from_app`
+  said "Clone object failed" for different errors.
+- 22 mutable default arguments (`args: dict = {}`, `files: list = []`)
+  replaced by `None`.
+
+### Removed
+
+- `plugins/platform/vm/vm_tasks_sys.py`: system task `VM_CONFIGURE_PROXMOX_VNC`
+  that was never started and ended in an endless `while True` loop.
+- Commented-out code: the old SQLite schema and access-token functions in
+  `db/database.py`, the commented abstract methods in `common/model.py`, the
+  commented `run_systask` in `qweb/common/qweb_tools.py`.
+- Unused code: `AuthDatabase`, `_execute_sql_insert` and the `aiosqlite`
+  import, `AccessToken`, `DEFAULT_ADMIN_ID`, empty sample factories
+  (`create_demo_instances/connection/environments`), `WebsocketStats.tostring`,
+  `GuacamoleSocket.get_path`, `inst_vmstatus` / `inst_vmversion`,
+  `FilestoreInstances.upload_file_to_instance` and its private upload helper,
+  unused command constants, `DEFAULT_VM_OS`, `DEFAULT_CNT_DISKSIZE_LINUX`,
+  the unused `timeout` / `logme` / `win` parameters, useless `__init__`
+  overrides and a debug `print(sys.path)` in the instance agent.
+
+### Changed
+
+- **Logs**:
+  - Docker start/stop errors name the service or container
+    ("Starting service daas-0-guacd failed: ...") instead of
+    "Exception raised1", and include the traceback in debug mode.
+  - dhcp / iptables setup logs success or the error, not always "configured".
+  - Guacamole, audio and printer connections log which side closed and why,
+    with the connection id.
+  - Sample import logs every imported object, file, limit and application.
+- `TableEntityMapping` simplified (no `None` checks, `dict.get`).
+- `check_data` explains why it reads `orm.app` / `orm.env` (loads the lazy
+  relationships).
+- Default resources in `phases_tasks.py` documented (memory MiB, disk bytes);
+  `DEFAULT_CNT_DISKSIZE_WIN` renamed to `DEFAULT_CNT_DISKSIZE` (used for all
+  containers). Values unchanged.
+- `pyproject.toml`: black `line-length` 80 → 88, which is what the code is
+  formatted with.
+
+### Not changed (noted for later)
+
+- `websockets.WebSocketClientProtocol` is deprecated in websockets 17; the
+  type hints still use it.
+- Many broad `except Exception` blocks remain; they log the error now.
+
 ## [1.0.0]
 
 Branch `new-version` compared with `master`: 104 commits, about 500 files changed 

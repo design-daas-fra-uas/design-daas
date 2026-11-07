@@ -58,9 +58,7 @@ class ContainerConfigBase(ContainerEnvironmentBase):
             env.env_tasks.extend(jsonargs)
         return await dbase.update_environment(env)
 
-    async def configure_target(
-        self, obj: str, env: Optional[Environment]
-    ) -> bool:
+    async def configure_target(self, obj: str, env: Optional[Environment]) -> bool:
         from app.daas.db.database import Database
 
         dbase = await get_database(Database)
@@ -84,9 +82,6 @@ class ContainerConfigBase(ContainerEnvironmentBase):
     ) -> bool:
         store = await get_backend_component(BackendName.FILE, Filestore)
         instance = await self._get_inst_by_env(env)
-        tasks = self.object_tasks
-        if env is not None:
-            tasks = env.env_tasks
         self._log_info("Copy installers:")
 
         name = ""
@@ -105,14 +100,8 @@ class ContainerConfigBase(ContainerEnvironmentBase):
         if len(files) > 0 and instance is not None:
             for file in files:
                 self._log_info(f"Filecopy: {file.id}")
-                # filename, norm_folder, False
-                await instance.inst_vminvoke_upload(
-                    file.localpath, self.is_windows(), False
-                )
-                await store.upload_file_to_instance(file, instance)
+                await instance.inst_vminvoke_upload(file.localpath, False)
         await self.set_extended_mode("Installers uploaded")
-        self._log_info(f"Executing tasks: {tasks}")
-        tasks = self.object_tasks
         return True
 
     async def execute_tasks(

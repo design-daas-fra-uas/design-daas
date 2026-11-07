@@ -6,7 +6,6 @@ import asyncio
 from datetime import datetime
 import subprocess
 from dataclasses import dataclass
-from datetime import timedelta
 import functools
 from typing import Optional, Protocol, TypeAlias
 from collections.abc import Awaitable, Callable
@@ -26,11 +25,8 @@ from app.daas.proxy.handshake import (
 from app.qweb.common.qweb_tools import get_backend_component, get_database
 from app.qweb.logging.logging import LogTarget, Loggable
 
-
 socket_tuples: dict[str, SocketTuple] = {}
 logger = Loggable(LogTarget.PROXY)
-GUACAMOLE_ENCODING = "utf-8"
-TIMEOUT_DELAY = 1.2
 COLLECT_STATS = True
 OPCODE_INTERNAL = ""
 """
@@ -108,68 +104,38 @@ class WebsocketStats:
             self.bytes_per_second = self.total_bytes / self.difftime
             self.blobbytes_per_second = self.size_blobs / self.difftime
 
-    def add_opcode_guacd_to_client(self, opcode: str, args):
-        """Appends opcode from guacd to client"""
-        size_bytes = 0
-        for arg in args:
-            size_bytes += len(arg)
-        self.total_opcodes += 1
+    def add_opcode_guacd_to_client(self, opcode: str, args) -> None:
+        """Counts a message sent from guacd to the client"""
+        size_bytes = self.__count(opcode, args)
         self.total_opcodes_guacd += 1
-        self.total_bytes += size_bytes
         self.total_bytes_guacd += size_bytes
-        if opcode == "blob":
-            pass
-        if opcode not in self.counter_guacd:
-            self.counter_guacd[opcode] = 1
-        else:
-            self.counter_guacd[opcode] += 1
-        tsnow = datetime.now().timestamp()
-        self.difftime = tsnow - self.created_at
-        self.opcodes_per_second = self.total_opcodes / self.difftime
-        self.bytes_per_second = self.total_bytes / self.difftime
-        self.blobs_per_second = self.total_blobs / self.difftime
-        self.blobbytes_per_second = self.size_blobs / self.difftime
+        self.counter_guacd[opcode] = self.counter_guacd.get(opcode, 0) + 1
 
-    def add_opcode_client_to_guacd(self, opcode: str, args):
-        """Appends opcode from client to guacd"""
-        size_bytes = 0
-        for arg in args:
-            size_bytes += len(arg)
-        self.total_opcodes += 1
+    def add_opcode_client_to_guacd(self, opcode: str, args) -> None:
+        """Counts a message sent from the client to guacd"""
+        size_bytes = self.__count(opcode, args)
         self.total_opcodes_client += 1
+        self.total_bytes_client += size_bytes
+        self.counter_client[opcode] = self.counter_client.get(opcode, 0) + 1
+
+    def __count(self, opcode: str, args) -> int:
+        """Updates the totals and rates of both directions, returns the size"""
+        size_bytes = sum(len(arg) for arg in args)
+        self.total_opcodes += 1
         self.total_bytes += size_bytes
-        self.total_bytes_client += size_bytes
-        self.total_blobs += 1
-        self.size_blobs += size_bytes
-        if opcode != "blob":
-            self.total_bytes += size_bytes
-        self.total_bytes_client += size_bytes
-
-        if opcode not in self.counter_client:
-            self.counter_client[opcode] = 1
-        else:
-            self.counter_client[opcode] += 1
-        tsnow = datetime.now().timestamp()
-        self.difftime = tsnow - self.created_at
-        self.opcodes_per_second = self.total_opcodes / self.difftime
-        self.bytes_per_second = self.total_bytes / self.difftime
-        self.blobs_per_second = self.total_blobs / self.difftime
-        self.blobbytes_per_second = self.size_blobs / self.difftime
-
-    def tostring(self) -> str:
-        """Returns shorthand string"""
-        return (
-            f"{self.difftime:4.1f}s,"
-            f"{self.total_opcodes:6} "
-            f"({self.opcodes_per_second:5.1f} ops),"
-            f"{self.total_blobs:6} "
-            f"({self.blobs_per_second:5.1f} bps),"
-            f"{self.total_bytes/1024/1024:6.1f} MB "
-            f"({self.bytes_per_second/1024 /1024:4.1f}MB/s),"
-        )
+        if opcode == "blob":
+            self.total_blobs += 1
+            self.size_blobs += size_bytes
+        self.difftime = datetime.now().timestamp() - self.created_at
+        if self.difftime > 0:
+            self.opcodes_per_second = self.total_opcodes / self.difftime
+            self.bytes_per_second = self.total_bytes / self.difftime
+            self.blobs_per_second = self.total_blobs / self.difftime
+            self.blobbytes_per_second = self.size_blobs / self.difftime
+        return size_bytes
 
     def tojson(self) -> dict:
-        """Returns shorthand string"""
+        """Returns the stats as dict"""
         return {
             "opcodes_per_second": self.opcodes_per_second,
             "bytes_per_second": self.bytes_per_second,
@@ -223,7 +189,7 @@ async def new_guacd_connection() -> GuacamoleSocketStream:
 
     reg = await get_backend_component(BackendName.PROXY, ProxyRegistry)
     connstring = reg.config.guacd
-    host, port = connstring.split(":")  # no IPv6 support, lol
+    host, port = connstring.split(":")  # host:port, no IPv6
     guacd_reader, guacd_writer = await asyncio.open_connection(host, port)
     return GuacamoleSocketStream(reader=guacd_reader, writer=guacd_writer)
 
@@ -275,95 +241,84 @@ async def proxy_guacamole_ws(
     await client_socket.send(OPCODE_INTERNAL, connid)
 
     async def forward_client_to_guacd() -> None:
-        """Handle messages from the client."""
-
-        # select potential message handlers
+        """Forwards the client's messages to guacd (pings, size and
+        internal messages are handled here)"""
         middlewares = [
             _handle_errors(client_socket=client_socket),
             _handle_ping(client_socket=client_socket),
             _handle_ignore_internal,
         ]
-
         if resize_handler:
             middlewares.append(_handle_size_message(resize_handler=resize_handler))
-
         handle_message = _assemble_middlewares(
             *middlewares,
             default=_forward_message(socket=guacd_socket),
         )
-
         while True:
-            try:
-                this_tuple = socket_tuples[connid]
-                diff = abs(datetime.now() - this_tuple.last_seen_guacd)
-                if diff > timedelta(seconds=TIMEOUT_DELAY):
-                    _log_debug(f"GUAC DIFF EXCEEDED: {diff}")
-                    # raise asyncio.CancelledError()  # must re-raise
-                opcode, *args = await client_socket.receive()
-                await handle_message(opcode, tuple(args))
-                if COLLECT_STATS is True:
-                    info.stats.add_opcode_guacd_to_client(opcode, args)
-                this_tuple.last_seen_client = datetime.now()
-                if opcode == "error":
-                    _log_info(f"Error raised on guacd loop -> {opcode} {args}")
-            except asyncio.CancelledError:
-                _log_info("Cancelled error on client_socket")
-                await guacd_socket.send("disconnect", "Error received", "599")
-                await guacd_socket.send("error", "Error received", "599")
-                task_guacd.cancel("client has disconnected")
-                task_client.cancel("client has disconnected")
-                reg.disconnect_connection(connid)
-                raise asyncio.CancelledError()  # must re-raise
+            opcode, *args = await client_socket.receive()
+            await handle_message(opcode, tuple(args))
+            if COLLECT_STATS:
+                info.stats.add_opcode_client_to_guacd(opcode, args)
+            info.last_seen_client = datetime.now()
 
-    async def forward_guacd_to_client():
+    async def forward_guacd_to_client() -> None:
         """
-        Handle messages from the server.
+        Forwards guacd's messages to the client.
 
         In principle they could be forwarded without any parsing,
         but the client might expect to always receive full messages.
         This is in line with the Guacamole Java proxy.
         """
         while True:
-            try:
-                this_tuple = socket_tuples[connid]
-                diff = abs(datetime.now() - this_tuple.last_seen_guacd)
-                if diff > timedelta(seconds=TIMEOUT_DELAY):
-                    _log_debug(f"GUAC DIFF EXCEEDED: {diff}")
-                    # raise asyncio.CancelledError()  # must re-raise
-                opcode, *args = await guacd_socket.receive()
-                if COLLECT_STATS is True:
-                    info.stats.add_opcode_client_to_guacd(opcode, args)
-                await client_socket.send(opcode, *args)
-                this_tuple.last_seen_guacd = datetime.now()
-                if opcode == "error":
-                    _log_info(f"Error raised on guacd loop -> {opcode} {args}")
+            # an empty message (guacd closed the socket) raises ValueError
+            opcode, *args = await guacd_socket.receive()
+            if COLLECT_STATS:
+                info.stats.add_opcode_guacd_to_client(opcode, args)
+            await client_socket.send(opcode, *args)
+            info.last_seen_guacd = datetime.now()
+            if opcode == "error":
+                _log_info(f" PROXY:   0 -> guacd sent error on {connid}: {args}")
 
-            except (asyncio.CancelledError, ValueError):
-                _log_info("Cancelled error on guacd_socket")
-                await client_socket.send("disconnect", "Error received", "599")
-                await client_socket.send("error", "Error received", "599")
-                task_guacd.cancel("server has disconnected")
-                task_client.cancel("server has disconnected")
-                reg.disconnect_connection(connid)
-                raise asyncio.CancelledError()  # must re-raise
+    dbase = await get_database(Database)
+    task_client = asyncio.create_task(forward_client_to_guacd())
+    task_guacd = asyncio.create_task(forward_guacd_to_client())
+    _log_info(
+        f" PROXY:   0 -> Completed Guacamole connection connid={connid} "
+        f"({len(socket_tuples)} open)"
+    )
+    newinstance = await dbase.get_instance_by_id(instance.id)
+    if newinstance is not None:
+        newinstance.connected_at = datetime.now()
+        await dbase.update_instance(newinstance)
 
-            # forward messages to client
+    # Runs until one side closes; the client side closing cancels this coroutine
+    try:
+        done, _ = await asyncio.wait(
+            {task_client, task_guacd}, return_when=asyncio.FIRST_COMPLETED
+        )
+        for task in done:
+            side = "client" if task is task_client else "guacd"
+            _log_info(f" PROXY:   0 -> {side} closed {connid}: {task.exception()!r}")
+    finally:
+        task_client.cancel()
+        task_guacd.cancel()
+        await _notify_disconnect(guacd_socket, client_socket)
+        await guacd_socket.close()
+        socket_tuples.pop(connid, None)
+        reg.disconnect_connection(connid)
+        _log_info(f" PROXY:   0 -> Removed {connid}")
 
-    if isinstance(guacd_socket, GuacamoleSocketStream):
-        # global socket_tuples
-        # global sockets_guacd
 
-        dbase = await get_database(Database)
-
-        task_client = asyncio.create_task(forward_client_to_guacd())
-        task_guacd = asyncio.create_task(forward_guacd_to_client())
-        _log_info(f"Length sockelist: {len(socket_tuples)}")
-        _log_info(f" PROXY:   0 -> Completed Guacamole connection connid={connid}")
-        newinstance = await dbase.get_instance_by_id(instance.id)
-        if newinstance is not None:
-            newinstance.connected_at = datetime.now()
-            await dbase.update_instance(newinstance)
-        await asyncio.gather(task_client, task_guacd)
+async def _notify_disconnect(
+    guacd_socket: GuacamoleSocketStream, client_socket: GuacamoleSocketWs
+) -> None:
+    """Tells both sides that the tunnel is closed (one of them is already gone)"""
+    for socket in (guacd_socket, client_socket):
+        try:
+            await socket.send("disconnect", "Error received", "599")
+            await socket.send("error", "Error received", "599")
+        except Exception:  # pylint: disable=broad-exception-caught
+            pass
 
 
 MessageHandler: TypeAlias = Callable[[str, tuple[str, ...]], Awaitable[None]]
@@ -405,8 +360,8 @@ def _handle_errors(*, client_socket: GuacamoleSocket) -> Middleware:
     ) -> None:
         try:
             return await next_handler(opcode, args)
-        except Exception:  # pylint: disable=broad-exception-caught
-            _log_error(f" PROXY:  -1 -> Exception while handling {opcode} message")
+        except Exception as exe:  # pylint: disable=broad-exception-caught
+            _log_error(f" PROXY:  -1 -> Error while handling {opcode} message: {exe!r}")
         # guacamole status 512 = "server error"
         await client_socket.send("error", "could not handle message", "512")
 

@@ -130,19 +130,13 @@ class InstanceObjectBase(Instance):
         return code, str_out, str_err
 
     async def _invoke_instance_queue(
-        self, adr: str, invocation_type: str, args: str, pstools: bool, timeout: int = 0
+        self, adr: str, invocation_type: str, args: str, pstools: bool
     ) -> tuple[int, str, str]:
         """
         Invoke client api
         """
         hub = await get_backend_component(BackendName.MESSAGING, QHubBackend)
-        cmd = ""
-        client_args = []
-        arr = args.split(" ")
-        if len(args) > 0:
-            cmd = arr[0]
-            if len(args) > 1:
-                client_args = arr[1:]
+        cmd, *client_args = args.split(" ") if args else [""]
         if pstools:
             is_online = hub.heartbeat_receiver.is_online(adr)
             if is_online is None:

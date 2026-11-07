@@ -82,8 +82,8 @@ class BlueprintHandler(BlueprintHandlerBase):
                 hdr_accept = request.headers.get("Accept")
                 if hdr_accept is not None:
                     result = hdr_accept
-            except Exception:
-                pass
+            except RuntimeError:
+                pass  # called outside of a request context
 
         return result
 

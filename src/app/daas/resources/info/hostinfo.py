@@ -2,7 +2,7 @@
 Host information
 """
 
-import subprocess
+import asyncio
 from dataclasses import dataclass
 import os
 import logging
@@ -215,20 +215,16 @@ class Hostinfo:
     async def __get_disk_usage(self, path: str) -> int:
         """Get used bytes for folder"""
         if os.path.exists(path):
-            result = subprocess.run(["du", "-sb", path], stdout=subprocess.PIPE)
-            ret = result.stdout
-            if ret != "":
-                arr = result.stdout.split()
-                if len(arr) > 0:
-                    return int(arr[0])
+            arr = (await _run_output("du", "-sb", path)).split()
+            if len(arr) > 0:
+                return int(arr[0])
         return 0
 
     async def __get_diskinfo(self, path: str) -> PathSize:
         """Returns disk size"""
         if os.path.exists(path):
             total_used_space = await self.__get_disk_usage(path)
-            result = subprocess.run(["df", "-B1", path], stdout=subprocess.PIPE)
-            lines = result.stdout.decode("utf-8").splitlines()
+            lines = (await _run_output("df", "-B1", path)).splitlines()
             if len(lines) > 1:
                 devname, total, used, available, _, mountdir = lines[1].split()
                 return PathSize(
@@ -249,3 +245,12 @@ class Hostinfo:
 
     def __log_info(self, msg: str):
         self.logger.info("Hostinfo          : %s", msg)
+
+
+async def _run_output(*cmd: str) -> str:
+    """Runs cmd without blocking the event loop and returns its stdout"""
+    proc = await asyncio.create_subprocess_exec(
+        *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL
+    )
+    stdout, _ = await proc.communicate()
+    return stdout.decode("utf-8")

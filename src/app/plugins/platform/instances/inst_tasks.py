@@ -85,21 +85,13 @@ async def vminvoke_upload(args: TaskArgs) -> QwebResult:
     absfile = await _upload_tmpfile(args)
     reqargs = args.req.request_context.request_args
     run = reqargs["execute"] != ""
-    win = await entity.needs_pstools()
-    return await entity.inst_vminvoke_upload(absfile, win, run)
+    return await entity.inst_vminvoke_upload(absfile, run)
 
 
 async def vminvoke_filesystem(args: TaskArgs) -> QwebResult:
-    """Invokes filesystem command"""
+    """Invokes filesystem command (not implemented)"""
     log_task_arguments(args.ctx, args.req, args.info, args.user)
-    entity = get_request_object(args.ctx, "entity", InstanceObject)
-    reqargs = args.req.request_context.request_args
-    code, str_out, str_err = await entity.inst_vminvoke_filesystem(
-        reqargs["cmd"], reqargs["args"]
-    )
-    if code == 0:
-        return QwebResult(200, {}, 0, f"{str_out}{str_err}")
-    return QwebResult(400, {}, 1, "Error on invoke_upload()")
+    return QwebResult(501, {}, 1, "vminvoke_filesystem is not implemented")
 
 
 async def vminvoke_list(args: TaskArgs) -> QwebResult:
@@ -124,11 +116,9 @@ async def vminvoke_test_ssh(args: TaskArgs) -> QwebResult:
 
 
 async def vminvoke_rtt(args: TaskArgs) -> QwebResult:
-    """Invokes ssh test command"""
+    """Measures the round trip time (not implemented)"""
     log_task_arguments(args.ctx, args.req, args.info, args.user)
-    entity = get_request_object(args.ctx, "entity", InstanceObject)
-    reqargs = args.req.request_context.request_args
-    return await entity.inst_vminvoke_rtt(reqargs["cmd"], reqargs["args"])
+    return QwebResult(501, {}, 1, "vminvoke_rtt is not implemented")
 
 
 async def _upload_tmpfile(args: TaskArgs) -> str:

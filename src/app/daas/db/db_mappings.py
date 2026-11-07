@@ -6,7 +6,6 @@ from collections import namedtuple
 from typing import Optional, Type
 from app.qweb.logging.logging import LogTarget
 
-
 TableMapping = namedtuple("TableMapping", ["id", "table"])
 
 
@@ -52,9 +51,11 @@ def ORMModelPersistance(etype: ORMMappingType):
 
 
 class TableEntityMapping:
+    """Singleton registry: table name -> ORM class and -> domain class"""
+
     _instance = None
-    _mappings_orm = None
-    _mappings_domain = None
+    _mappings_orm: dict
+    _mappings_domain: dict
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
@@ -64,24 +65,20 @@ class TableEntityMapping:
         return cls._instance
 
     def add_mapping_orm(self, table, orm_entity):
-        if self._mappings_orm is not None and table not in self._mappings_orm:
+        if table not in self._mappings_orm:
             self.__log_info(f"Adding orm {table} with {orm_entity}")
             self._mappings_orm[table] = orm_entity
 
     def add_mapping_domain(self, table, domain_entity):
-        if self._mappings_domain is not None and table not in self._mappings_domain:
+        if table not in self._mappings_domain:
             self.__log_info(f"Adding mod {table} with {domain_entity}")
             self._mappings_domain[table] = domain_entity
 
     def get_orm(self, table) -> Optional[Type[object]]:
-        if self._mappings_orm is not None and table in self._mappings_orm.keys():
-            return self._mappings_orm[table]
-        return None
+        return self._mappings_orm.get(table)
 
     def get_domain(self, table) -> Optional[Type[object]]:
-        if self._mappings_domain is not None and table in self._mappings_domain.keys():
-            return self._mappings_domain[table]
-        return None
+        return self._mappings_domain.get(table)
 
     def __log_info(self, msg: str):
         # Runs at import time, before logging is configured

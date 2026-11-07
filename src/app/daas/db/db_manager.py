@@ -10,7 +10,6 @@ from app.daas.db.db_api import DatabaseApi
 from app.daas.db.db_model import ORMEntity
 from app.qweb.logging.logging import LogTarget, Loggable
 
-
 # Connection attempts to MariaDB at startup (MARIADB_CONNECT_TRIES x WAIT_S)
 MARIADB_CONNECT_TRIES = 30
 MARIADB_CONNECT_WAIT_S = 2
@@ -58,7 +57,7 @@ class DatabaseManager(Loggable):
                 return create_engine(constring, echo=self.cfg.enable_echo)
             except Exception as exe:
                 if attempt == MARIADB_CONNECT_TRIES:
-                    raise Exception(f"Error on db connect: {exe}")
+                    raise ConnectionError(f"Error on db connect: {exe}") from exe
                 self._log_info(
                     f"MariaDB not ready ({attempt}/{MARIADB_CONNECT_TRIES}), "
                     f"retrying in {MARIADB_CONNECT_WAIT_S}s"
@@ -72,7 +71,7 @@ class DatabaseManager(Loggable):
             constring = self.__create_connection_string_sqlite()
             return create_engine(constring, echo=self.cfg.enable_echo)
         except Exception as exe:
-            raise Exception(f"Error on db connect: {exe}")
+            raise ConnectionError(f"Error on db connect: {exe}") from exe
 
     def __create_connection_string_mariadb(self, with_db: bool = True):
         dbtype = self.cfg.db_type
@@ -115,4 +114,3 @@ class DatabaseManager(Loggable):
             self.connected = False
             return True
         return False
-

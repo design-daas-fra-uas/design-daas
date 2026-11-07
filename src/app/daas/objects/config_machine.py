@@ -82,9 +82,7 @@ class MachineConfigBase(MachineEnvironmentBase):
         if len(files) > 0 and instance is not None:
             for file in files:
                 self._log_info(f"Filecopy: {file.id}")
-                await instance.inst_vminvoke_upload(
-                    file.localpath, self.is_windows(), False, file.name
-                )
+                await instance.inst_vminvoke_upload(file.localpath, False, file.name)
         await self.set_extended_mode("Installers uploaded")
         return True
 
