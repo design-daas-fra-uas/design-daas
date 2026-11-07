@@ -27,7 +27,7 @@ from app.qweb.service.service_providers import (
 from app.qweb.service.service_tasks import QwebTaskManager
 from app.qweb.common.tomlfile import read_toml_with_local
 
-RUNTIME_VERSION = "1.0.0"
+RUNTIME_VERSION = "2.0.0"
 
 
 # pylint: disable=import-outside-toplevel
