@@ -1,7 +1,5 @@
 """VM Blueprints"""
 
-import inspect
-
 from app.daas.common.enums import BackendName, LayerName
 from app.plugins.core.db.db_layer import DBObject
 from app.plugins.storage.files.file_tasks import FileTask
@@ -14,7 +12,6 @@ from app.qweb.processing.processor import ApiProcessorAction, ProcessorType
 from quart import Blueprint
 from app.qweb.blueprints.blueprint_handler import BlueprintHandler
 from app.qweb.service.service_context import LayerObject
-
 
 app_args_create = [
     "id",
@@ -43,6 +40,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=80000,
         name="files_get",
+        description="Returns specified file object",
         url="/files/get",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
@@ -55,14 +53,18 @@ infos = [
         request_args_optional=[],
         request_args_common=perf_args,
         backends=backends,
-        objects=[LayerObject("entity", DBObject.FILE.value, LayerName.DB.value)],
+        objects=[
+            LayerObject("entity", DBObject.FILE.value, LayerName.DB.value)
+        ],
     ),
     BlueprintInfo(
         endpoint_id=80001,
         name="files_delete",
+        description="Deletes specified file object",
         url="/files/delete",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
+        protect_system_objects=True,
         conc_params=ConcurrencyMode.CTX_AND_AUTH,
         processor=ProcessorType.API,
         processor_action=ApiProcessorAction.JSON,
@@ -72,14 +74,18 @@ infos = [
         request_args_optional=[],
         request_args_common=perf_args,
         backends=backends,
-        objects=[LayerObject("entity", DBObject.FILE.value, LayerName.DB.value)],
+        objects=[
+            LayerObject("entity", DBObject.FILE.value, LayerName.DB.value)
+        ],
     ),
     BlueprintInfo(
         endpoint_id=80002,
         name="files_delete_shared",
+        description="Deletes specified shared file object",
         url="/files/delete_shared",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
+        protect_system_objects=True,
         conc_params=ConcurrencyMode.CTX_AND_AUTH,
         processor=ProcessorType.API,
         processor_action=ApiProcessorAction.JSON,
@@ -89,11 +95,14 @@ infos = [
         request_args_optional=[],
         request_args_common=perf_args,
         backends=backends,
-        objects=[LayerObject("entity", DBObject.FILE.value, LayerName.DB.value)],
+        objects=[
+            LayerObject("entity", DBObject.FILE.value, LayerName.DB.value)
+        ],
     ),
     BlueprintInfo(
         endpoint_id=80003,
         name="files_list",
+        description="Lists specified file objects",
         url="/files/list",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
@@ -110,6 +119,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=80004,
         name="files_create",
+        description="Creates specified file object",
         url="/files/create",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
@@ -122,15 +132,19 @@ infos = [
         request_args_optional=[],
         request_args_file=["file"],
         request_args_common=perf_args,
-        objects=[LayerObject("entity", DBObject.FILE.value, LayerName.DB.value)],
+        objects=[
+            LayerObject("entity", DBObject.FILE.value, LayerName.DB.value)
+        ],
         backends=backends,
     ),
     BlueprintInfo(
         endpoint_id=80005,
         name="files_update",
+        description="Update specified file object",
         url="/files/update",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
+        protect_system_objects=True,
         conc_params=ConcurrencyMode.CTX_AND_AUTH,
         processor=ProcessorType.API,
         processor_action=ApiProcessorAction.JSON,
@@ -140,12 +154,15 @@ infos = [
         request_args_file=["file"],
         request_args_optional=[],
         request_args_common=perf_args,
-        objects=[LayerObject("entity", DBObject.FILE.value, LayerName.DB.value)],
+        objects=[
+            LayerObject("entity", DBObject.FILE.value, LayerName.DB.value)
+        ],
         backends=backends,
     ),
     BlueprintInfo(
         endpoint_id=80006,
         name="files_create_shared",
+        description="Creates specified shared file object",
         url="/files/create_shared",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
@@ -158,15 +175,19 @@ infos = [
         request_args_optional=[],
         request_args_file=["file"],
         request_args_common=perf_args,
-        objects=[LayerObject("entity", DBObject.FILE.value, LayerName.DB.value)],
+        objects=[
+            LayerObject("entity", DBObject.FILE.value, LayerName.DB.value)
+        ],
         backends=backends,
     ),
     BlueprintInfo(
         endpoint_id=80007,
         name="files_update_shared",
+        description="Update specified shared file object",
         url="/files/update_shared",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
+        protect_system_objects=True,
         conc_params=ConcurrencyMode.CTX_AND_AUTH,
         processor=ProcessorType.API,
         processor_action=ApiProcessorAction.JSON,
@@ -176,12 +197,15 @@ infos = [
         request_args_file=["file"],
         request_args_optional=[],
         request_args_common=perf_args,
-        objects=[LayerObject("entity", DBObject.FILE.value, LayerName.DB.value)],
+        objects=[
+            LayerObject("entity", DBObject.FILE.value, LayerName.DB.value)
+        ],
         backends=backends,
     ),
     BlueprintInfo(
         endpoint_id=80008,
         name="app_get",
+        description="Returns specified app object",
         url="/apps/get",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
@@ -199,9 +223,11 @@ infos = [
     BlueprintInfo(
         endpoint_id=80009,
         name="app_delete",
+        description="Deletes specified app object",
         url="/apps/delete",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
+        protect_system_objects=True,
         conc_params=ConcurrencyMode.CTX_AND_AUTH,
         processor=ProcessorType.API,
         processor_action=ApiProcessorAction.JSON,
@@ -216,9 +242,11 @@ infos = [
     BlueprintInfo(
         endpoint_id=80010,
         name="app_delete_shared",
+        description="Deletes specified shared app object",
         url="/apps/delete_shared",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
+        protect_system_objects=True,
         conc_params=ConcurrencyMode.CTX_AND_AUTH,
         processor=ProcessorType.API,
         processor_action=ApiProcessorAction.JSON,
@@ -233,6 +261,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=80011,
         name="app_list",
+        description="Lists specified app objects",
         url="/apps/list",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
@@ -249,6 +278,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=80012,
         name="app_create",
+        description="Creates specified app object",
         url="/apps/create",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
@@ -267,9 +297,11 @@ infos = [
     BlueprintInfo(
         endpoint_id=80013,
         name="app_update",
+        description="Update specified app object",
         url="/apps/update",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
+        protect_system_objects=True,
         conc_params=ConcurrencyMode.CTX_AND_AUTH,
         processor=ProcessorType.API,
         processor_action=ApiProcessorAction.JSON,
@@ -285,6 +317,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=80014,
         name="app_create_shared",
+        description="Creates specified shared app object",
         url="/apps/create_shared",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
@@ -303,9 +336,11 @@ infos = [
     BlueprintInfo(
         endpoint_id=80015,
         name="app_update_shared",
+        description="Update specified shared app object",
         url="/apps/update_shared",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
+        protect_system_objects=True,
         conc_params=ConcurrencyMode.CTX_AND_AUTH,
         processor=ProcessorType.API,
         processor_action=ApiProcessorAction.JSON,
@@ -324,118 +359,4 @@ infos = [
 handler = BlueprintHandler(
     blueprints=Blueprint("routes_files", __name__),
     infos=infos,
-    testing=True,
-    default_handler=None,
 )
-
-
-@handler.blueprints.post("/files/get")
-async def files_get():
-    """Returns specified file object"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/files/delete")
-async def files_delete():
-    """Deletes specified file object"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/files/delete_shared")
-async def files_delete_shared():
-    """Deletes specified shared file object"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/files/list")
-async def files_list():
-    """Lists specified file objects"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/files/create")
-async def files_create():
-    """Creates specified file object"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/files/update")
-async def files_update():
-    """Update specified file object"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/files/create_shared")
-async def files_create_shared():
-    """Creates specified shared file object"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/files/update_shared")
-async def files_update_shared():
-    """Update specified shared file object"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/apps/get")
-async def app_get():
-    """Returns specified app object"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/apps/delete")
-async def app_delete():
-    """Deletes specified app object"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/apps/delete_shared")
-async def app_delete_shared():
-    """Deletes specified shared app object"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/apps/list")
-async def app_list():
-    """Lists specified app objects"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/apps/create")
-async def app_create():
-    """Creates specified app object"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/apps/update")
-async def app_update():
-    """Update specified app object"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/apps/create_shared")
-async def app_create_shared():
-    """Creates specified shared app object"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/apps/update_shared")
-async def app_update_shared():
-    """Update specified shared app object"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)

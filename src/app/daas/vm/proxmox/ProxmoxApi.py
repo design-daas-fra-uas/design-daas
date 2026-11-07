@@ -1,3 +1,4 @@
+import asyncio
 import os
 import aiohttp
 from dataclasses import dataclass
@@ -29,13 +30,10 @@ class ProxmoxApiConfig:
     bridge_adapter_daas: str
     bridge_name_inst: str
     bridge_cidr_inst: str
-    bridge_adapter_inst: str
     bridge_name_ceph: str
     bridge_cidr_ceph: str
-    bridge_adapter_ceph: str
     bridge_name_cluster: str
     bridge_cidr_cluster: str
-    bridge_adapter_cluster: str
     prefixmac: str
 
 
@@ -58,7 +56,7 @@ class ApiProxmox(Loggable):
             storage_iso=self.config_prox.storage_iso,
             storage_img=self.config_prox.storage_img,
             storage_ceph=self.config_prox.storage_ceph,
-            bridge_name_daas=self.config_prox.bridge_name_inst,
+            bridge_name_inst=self.config_prox.bridge_name_inst,
             prefixmac=self.config_prox.prefixmac,
         )
         self.config_store = ProxmoxConfigStore(cfg_store)
@@ -75,12 +73,6 @@ class ApiProxmox(Loggable):
             result = False
         else:
             self._log_info("Connection test successful: 'proxmox'")
-        # res_node = self.node_connection_test()
-        # if res_node != 0:
-        #     logger.error("Connection test failed: 'node'")
-        #     result = False
-        # else:
-        #     logger.info("Connection test successful: 'node'")
         return result
 
     async def configure_services(self):
@@ -149,10 +141,6 @@ class ApiProxmox(Loggable):
         """
         Configures proxmox network
         """
-        br0 = None
-        br1 = None
-        br8 = None
-        br9 = None
         check_br0, _ = await self.prox_network_status(self.config_prox.node, "vmbr0")
         if check_br0.status != 200:
             self._log_info(f"vmbr0 {self.config_prox.bridge_cidr_daas}")
@@ -224,7 +212,7 @@ class ApiProxmox(Loggable):
         """Connects the component"""
         response, data = await self.prox_connection_test()
         if response.status != 200:
-            print(f"Error: {data}")
+            self._log_error(f"Proxmox connection failed: {data}", 1)
             self.connected = False
         else:
             self.connected = True
@@ -375,20 +363,25 @@ class ApiProxmox(Loggable):
             iso_installer=iso_installer,
             keyboard_layout=keyboard_layout,
         )
-
-        return await self.rest.session_request_sync(
+        args = obj.pop("args", "")
+        result, data = await self.rest.session_request_sync(
             "post", vmnode, url, params={}, data=obj, files={}
         )
+        if result is not None and result.status == 200 and args != "":
+            if not await self.__set_args_as_root(vmid, args):
+                return None, {}
+        return result, data
 
     async def prox_vmdelete(
         self, vmnode: str, vmid: int
     ) -> tuple[aiohttp.ClientResponse, dict]:
         """
-        Deletes a vm via proxmox api
+        Deletes a vm via proxmox api and waits for the destroy task
+        (the returned data holds its exitstatus)
         """
         url = f"nodes/{vmnode}/qemu/{vmid}"
-        return await self.rest.session_request_async(
-            "delete", url, params={}, data={}, files={}
+        return await self.rest.session_request_sync(
+            "delete", vmnode, url, params={}, data={}, files={}
         )
 
     async def prox_vmconfig_get(
@@ -409,10 +402,33 @@ class ApiProxmox(Loggable):
         Posts new vm config to proxmox api
         """
         url = f"nodes/{vmnode}/qemu/{vmid}/config"
+        cfg = dict(cfg)
+        args = cfg.pop("args", "")
         result, data = await self.rest.session_request_sync(
             "post", vmnode, url, params={}, data=cfg, files={}
         )
+        if result is not None and result.status == 200 and args != "":
+            if not await self.__set_args_as_root(vmid, args):
+                return None, {}
         return result, data
+
+    async def __set_args_as_root(self, vmid: int, args: str) -> bool:
+        """
+        Sets the qemu 'args' of a vm with `qm set` on this host.
+        Proxmox lets only root@pam set 'args', the api user may be another one.
+        The backend runs as root and on the proxmox node (single node setup).
+        """
+        proc = await asyncio.create_subprocess_exec(
+            "qm", "set", str(vmid), "--args", args,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        _, err = await proc.communicate()
+        if proc.returncode != 0:
+            self._log_error(f"qm set args failed for {vmid}: {err.decode().strip()}")
+            return False
+        self._log_info(f"qm set args for {vmid}: {args}")
+        return True
 
     # pylint: disable=too-many-arguments
     async def prox_vmconfig_set_pre_install(
@@ -451,15 +467,6 @@ class ApiProxmox(Loggable):
         Posts new vm config to proxmox api
         """
         cfg = self.config_store.create_vmconf_baseimage(vmid, name, keyboard_layout)
-        return await self.prox_vmconfig_set(vmnode, vmid, cfg)
-
-    async def prox_vmconfig_set_template(
-        self, vmnode: str, vmid: int, name: str, keyboard_layout: str
-    ) -> tuple[aiohttp.ClientResponse, dict]:
-        """
-        Posts new vm config to proxmox api
-        """
-        cfg = self.config_store.create_vmconf_template(vmid, name, keyboard_layout)
         return await self.prox_vmconfig_set(vmnode, vmid, cfg)
 
     async def prox_vmclone(

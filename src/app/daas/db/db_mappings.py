@@ -1,8 +1,10 @@
 """Database persistance objects"""
 
+import logging
 from enum import Enum
 from collections import namedtuple
 from typing import Optional, Type
+from app.qweb.logging.logging import LogTarget
 
 
 TableMapping = namedtuple("TableMapping", ["id", "table"])
@@ -53,7 +55,6 @@ class TableEntityMapping:
     _instance = None
     _mappings_orm = None
     _mappings_domain = None
-    _logger = None
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
@@ -83,4 +84,5 @@ class TableEntityMapping:
         return None
 
     def __log_info(self, msg: str):
-        print(f"Mappings: {msg}")
+        # Runs at import time, before logging is configured
+        logging.getLogger(LogTarget.DB.value).debug(msg)

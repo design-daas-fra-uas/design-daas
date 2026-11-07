@@ -1,17 +1,8 @@
-# Import necessary modules
-import os
-import subprocess
+# qtile config of the x11vnc desktop. Programs that run with the desktop
+# (pulseaudio, the DaaS agent, ...) are started by entrypoint.bash, not here.
 from libqtile import layout
 from libqtile.config import Key, Screen, Click, Drag
 from libqtile.lazy import lazy
-from libqtile import hook
-
-
-@hook.subscribe.startup_once
-def autostart():
-    """Default autostart programs"""
-    home = os.path.expanduser("~/.config/qtile/autostart.sh")
-    subprocess.Popen([home])
 
 
 mod = ["mod1", "control"]

@@ -21,13 +21,6 @@ class ExtensionsBackend(QwebBackend):
             self, name=BackendName.EXTENSIONS.value, component=self.component
         )
 
-    def status(self) -> str:
-        """Returns status message"""
-        state = "Inactive"
-        if self.connected and self.registered:
-            state = "Active"
-        return f"{state}"
-
     async def connect(self) -> bool:
         """Connects adapter"""
         if self.component is not None:

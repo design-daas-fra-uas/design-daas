@@ -1,6 +1,5 @@
 """Manages ressource limits"""
 
-import logging
 from dataclasses import dataclass, fields
 from typing import Optional
 from app.daas.common.model import RessourceInfo

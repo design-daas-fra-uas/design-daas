@@ -1,7 +1,7 @@
 """VM Tasks"""
 
 from enum import Enum
-from nest_asyncio import asyncio
+import asyncio
 from app.daas.common.enums import BackendName
 from app.daas.node.nodecontrol import NodeController
 from app.daas.vm.proxmox.ProxmoxApi import ApiProxmox

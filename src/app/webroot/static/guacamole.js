@@ -57,13 +57,27 @@ Guacamole.ArrayBufferReader = function(stream) {
     // Receive blobs as array buffers
     stream.onblob = function(data) {
 
-        // Convert to ArrayBuffer
-        var binary = window.atob(data);
-        var arrayBuffer = new ArrayBuffer(binary.length);
-        var bufferView = new Uint8Array(arrayBuffer);
+        var arrayBuffer, bufferView;
 
-        for (var i=0; i<binary.length; i++)
-            bufferView[i] = binary.charCodeAt(i);
+        // Use native methods for directly decoding base64 to an array buffer
+        // when possible
+        if (Uint8Array.fromBase64) {
+            bufferView = Uint8Array.fromBase64(data);
+            arrayBuffer = bufferView.buffer;
+        }
+
+        // Rely on binary strings and manual conversions where native methods
+        // like fromBase64() are not available
+        else {
+
+            var binary = window.atob(data);
+            arrayBuffer = new ArrayBuffer(binary.length);
+            bufferView = new Uint8Array(arrayBuffer);
+
+            for (var i=0; i<binary.length; i++)
+                bufferView[i] = binary.charCodeAt(i);
+
+        }
 
         // Call handler, if present
         if (guac_reader.ondata)
@@ -4148,19 +4162,6 @@ Guacamole.Display = function() {
     var frames = [];
 
     /**
-     * The ID of the animation frame request returned by the last call to
-     * requestAnimationFrame(). This value will only be set if the browser
-     * supports requestAnimationFrame(), if a frame render is currently
-     * pending, and if the current browser tab is currently focused (likely to
-     * handle requests for animation frames). In all other cases, this will be
-     * null.
-     *
-     * @private
-     * @type {number}
-     */
-    var inProgressFrame = null;
-
-    /**
      * Flushes all pending frames synchronously. This function will block until
      * all pending frames have rendered. If a frame is currently blocked by an
      * asynchronous operation like an image load, this function will return
@@ -4198,45 +4199,6 @@ Guacamole.Display = function() {
 
         if (rendered_frames)
             notifyFlushed(localTimestamp, remoteTimestamp, renderedLogicalFrames);
-
-    };
-
-    /**
-     * Flushes all pending frames asynchronously. This function returns
-     * immediately, relying on requestAnimationFrame() to dictate when each
-     * frame should be flushed.
-     *
-     * @private
-     */
-    var asyncFlush = function asyncFlush() {
-
-        var continueFlush = function continueFlush() {
-
-            // We're no longer waiting to render a frame
-            inProgressFrame = null;
-
-            // Nothing to do if there are no frames remaining
-            if (!frames.length)
-                return;
-
-            // Flush the next frame only if it is ready (not awaiting
-            // completion of some asynchronous operation like an image load)
-            if (frames[0].isReady()) {
-                var frame = frames.shift();
-                frame.flush();
-                notifyFlushed(frame.localTimestamp, frame.remoteTimestamp, frame.logicalFrames);
-            }
-
-            // Request yet another animation frame if frames remain to be
-            // flushed
-            if (frames.length)
-                inProgressFrame = window.requestAnimationFrame(continueFlush);
-
-        };
-
-        // Begin flushing frames if not already waiting to render a frame
-        if (!inProgressFrame)
-            inProgressFrame = window.requestAnimationFrame(continueFlush);
 
     };
 
@@ -4335,33 +4297,12 @@ Guacamole.Display = function() {
 
     };
 
-    // Switch from asynchronous frame handling to synchronous frame handling if
-    // requestAnimationFrame() is unlikely to be usable (browsers may not
-    // invoke the animation frame callback if the relevant tab is not focused)
-    window.addEventListener('blur', function switchToSyncFlush() {
-        if (inProgressFrame && !document.hasFocus()) {
-
-            // Cancel pending asynchronous processing of frame ...
-            window.cancelAnimationFrame(inProgressFrame);
-            inProgressFrame = null;
-
-            // ... and instead process it synchronously
-            syncFlush();
-
-        }
-    }, true);
-
     /**
      * Flushes all pending frames.
      * @private
      */
     function __flush_frames() {
-
-        if (window.requestAnimationFrame && document.hasFocus())
-            asyncFlush();
-        else
-            syncFlush();
-
+        syncFlush();
     }
 
     /**
@@ -4515,7 +4456,10 @@ Guacamole.Display = function() {
         this.unblock = function() {
             if (task.blocked) {
                 task.blocked = false;
-                __flush_frames();
+
+                if (frames.length)
+                    __flush_frames();
+
             }
         };
 
@@ -4940,17 +4884,38 @@ Guacamole.Display = function() {
      */
     this.drawStream = function drawStream(layer, x, y, stream, mimetype) {
 
-        // If createImageBitmap() is available, load the image as a blob so
-        // that function can be used
-        if (window.createImageBitmap) {
-            var reader = new Guacamole.BlobReader(stream, mimetype);
-            reader.onend = function drawImageBlob() {
-                guac_display.drawBlob(layer, x, y, reader.getBlob());
-            };
+        // Leverage ImageDecoder to decode the image stream as it is received
+        // whenever possible, as this reduces latency that might otherwise be
+        // caused by waiting for the full image to be received
+        if (window.ImageDecoder && window.ReadableStream) {
+
+            var imageDecoder = new ImageDecoder({
+                type: mimetype,
+                data: stream.toReadableStream()
+            });
+
+            var decodedFrame = null;
+
+            // Draw image once loaded
+            var task = scheduleTask(function drawImageBitmap() {
+                layer.drawImage(x, y, decodedFrame);
+            }, true);
+
+            imageDecoder.decode({ completeFramesOnly: true }).then(function bitmapLoaded(result) {
+                decodedFrame = result.image;
+                task.unblock();
+            });
+
         }
 
-        // Lacking createImageBitmap(), fall back to data URIs and the Image
-        // object
+        // NOTE: We do not use Blobs and createImageBitmap() here, as doing so
+        // is very latent compared to the old data URI method and the new
+        // ImageDecoder object. The new ImageDecoder object is currently
+        // supported by most browsers, with other browsers being much faster if
+        // data URIs are used. The iOS version of Safari is particularly laggy
+        // if Blobs and createImageBitmap() are used instead.
+
+        // Lacking ImageDecoder, fall back to data URIs and the Image object
         else {
             var reader = new Guacamole.DataURIReader(stream, mimetype);
             reader.onend = function drawImageDataURI() {
@@ -6685,6 +6650,68 @@ Guacamole.InputStream = function(client, index) {
         client.sendAck(guac_stream.index, message, code);
     };
 
+    /**
+     * Creates a new ReadableStream that receives the data sent to this stream
+     * by the Guacamole server. This function may be invoked at most once per
+     * stream, and invoking this function will overwrite any installed event
+     * handlers on this stream.
+     * 
+     * A ReadableStream is a JavaScript object defined by the "Streams"
+     * standard. It is supported by most browsers, but not necessarily all
+     * browsers. The caller should verify this support is present before
+     * invoking this function. The behavior of this function when the browser
+     * does not support ReadableStream is not defined.
+     *
+     * @see {@link https://streams.spec.whatwg.org/#rs-class}
+     *
+     * @returns {!ReadableStream}
+     *     A new ReadableStream that receives the bytes sent along this stream
+     *     by the Guacamole server.
+     */
+    this.toReadableStream = function toReadableStream() {
+        return new ReadableStream({
+            type: 'bytes',
+            start: function startStream(controller) {
+
+                var reader = new Guacamole.ArrayBufferReader(guac_stream);
+
+                // Provide any received blocks of data to the ReadableStream
+                // controller, such that they will be read by whatever is
+                // consuming the ReadableStream
+                reader.ondata = function dataReceived(data) {
+
+                    if (controller.byobRequest) {
+
+                        var view = controller.byobRequest.view;
+                        var length = Math.min(view.byteLength, data.byteLength);
+                        var byobBlock = new Uint8Array(data, 0, length);
+
+                        view.buffer.set(byobBlock);
+                        controller.byobRequest.respond(length);
+
+                        if (length < data.byteLength) {
+                            controller.enqueue(data.slice(length));
+                        }
+
+                    }
+
+                    else {
+                        controller.enqueue(new Uint8Array(data));
+                    }
+
+                };
+
+                // Notify the ReadableStream when the end of the stream is
+                // reached
+                reader.onend = function dataComplete() {
+                    controller.close();
+                };
+
+            }
+        });
+
+    };
+
 };
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -6877,6 +6904,341 @@ Guacamole.JSONReader = function guacamoleJSONReader(stream) {
      * @event
      */
     this.onend = null;
+
+};
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+var Guacamole = Guacamole || {};
+
+/**
+ * An object that will accept raw key events and produce a chronologically
+ * ordered array of key event objects. These events can be obtained by
+ * calling getEvents().
+ *
+ * @constructor
+ * @param {number} [startTimestamp=0]
+ *     The starting timestamp for the recording being intepreted. If provided,
+ *     the timestamp of each intepreted event will be relative to this timestamp.
+ *     If not provided, the raw recording timestamp will be used.
+ */
+Guacamole.KeyEventInterpreter = function KeyEventInterpreter(startTimestamp) {
+
+    // Default to 0 seconds to keep the raw timestamps
+    if (startTimestamp === undefined || startTimestamp === null)
+        startTimestamp = 0;
+
+    /**
+     * A precursor array to the KNOWN_KEYS map. The objects contained within
+     * will be constructed into full KeyDefinition objects.
+     *
+     * @constant
+     * @private
+     * @type {Object[]}
+     */
+    var _KNOWN_KEYS = [
+        {keysym: 0xFE03, name: 'AltGr' },
+        {keysym: 0xFF08, name: 'Backspace' },
+        {keysym: 0xFF09, name: 'Tab' },
+        {keysym: 0xFF0B, name: 'Clear' },
+        {keysym: 0xFF0D, name: 'Return', value: "\n" },
+        {keysym: 0xFF13, name: 'Pause' },
+        {keysym: 0xFF14, name: 'Scroll' },
+        {keysym: 0xFF15, name: 'SysReq' },
+        {keysym: 0xFF1B, name: 'Escape' },
+        {keysym: 0xFF50, name: 'Home' },
+        {keysym: 0xFF51, name: 'Left' },
+        {keysym: 0xFF52, name: 'Up' },
+        {keysym: 0xFF53, name: 'Right' },
+        {keysym: 0xFF54, name: 'Down' },
+        {keysym: 0xFF55, name: 'Page Up' },
+        {keysym: 0xFF56, name: 'Page Down' },
+        {keysym: 0xFF57, name: 'End' },
+        {keysym: 0xFF63, name: 'Insert' },
+        {keysym: 0xFF65, name: 'Undo' },
+        {keysym: 0xFF6A, name: 'Help' },
+        {keysym: 0xFF7F, name: 'Num' },
+        {keysym: 0xFF80, name: 'Space', value: " " },
+        {keysym: 0xFF8D, name: 'Enter', value: "\n" },
+        {keysym: 0xFF95, name: 'Home' },
+        {keysym: 0xFF96, name: 'Left' },
+        {keysym: 0xFF97, name: 'Up' },
+        {keysym: 0xFF98, name: 'Right' },
+        {keysym: 0xFF99, name: 'Down' },
+        {keysym: 0xFF9A, name: 'Page Up' },
+        {keysym: 0xFF9B, name: 'Page Down' },
+        {keysym: 0xFF9C, name: 'End' },
+        {keysym: 0xFF9E, name: 'Insert' },
+        {keysym: 0xFFAA, name: '*', value: "*" },
+        {keysym: 0xFFAB, name: '+', value: "+" },
+        {keysym: 0xFFAD, name: '-', value: "-" },
+        {keysym: 0xFFAE, name: '.', value: "." },
+        {keysym: 0xFFAF, name: '/', value: "/" },
+        {keysym: 0xFFB0, name: '0', value: "0" },
+        {keysym: 0xFFB1, name: '1', value: "1" },
+        {keysym: 0xFFB2, name: '2', value: "2" },
+        {keysym: 0xFFB3, name: '3', value: "3" },
+        {keysym: 0xFFB4, name: '4', value: "4" },
+        {keysym: 0xFFB5, name: '5', value: "5" },
+        {keysym: 0xFFB6, name: '6', value: "6" },
+        {keysym: 0xFFB7, name: '7', value: "7" },
+        {keysym: 0xFFB8, name: '8', value: "8" },
+        {keysym: 0xFFB9, name: '9', value: "9" },
+        {keysym: 0xFFBE, name: 'F1' },
+        {keysym: 0xFFBF, name: 'F2' },
+        {keysym: 0xFFC0, name: 'F3' },
+        {keysym: 0xFFC1, name: 'F4' },
+        {keysym: 0xFFC2, name: 'F5' },
+        {keysym: 0xFFC3, name: 'F6' },
+        {keysym: 0xFFC4, name: 'F7' },
+        {keysym: 0xFFC5, name: 'F8' },
+        {keysym: 0xFFC6, name: 'F9' },
+        {keysym: 0xFFC7, name: 'F10' },
+        {keysym: 0xFFC8, name: 'F11' },
+        {keysym: 0xFFC9, name: 'F12' },
+        {keysym: 0xFFCA, name: 'F13' },
+        {keysym: 0xFFCB, name: 'F14' },
+        {keysym: 0xFFCC, name: 'F15' },
+        {keysym: 0xFFCD, name: 'F16' },
+        {keysym: 0xFFCE, name: 'F17' },
+        {keysym: 0xFFCF, name: 'F18' },
+        {keysym: 0xFFD0, name: 'F19' },
+        {keysym: 0xFFD1, name: 'F20' },
+        {keysym: 0xFFD2, name: 'F21' },
+        {keysym: 0xFFD3, name: 'F22' },
+        {keysym: 0xFFD4, name: 'F23' },
+        {keysym: 0xFFD5, name: 'F24' },
+        {keysym: 0xFFE1, name: 'Shift' },
+        {keysym: 0xFFE2, name: 'Shift' },
+        {keysym: 0xFFE3, name: 'Ctrl' },
+        {keysym: 0xFFE4, name: 'Ctrl' },
+        {keysym: 0xFFE5, name: 'Caps' },
+        {keysym: 0xFFE7, name: 'Meta' },
+        {keysym: 0xFFE8, name: 'Meta' },
+        {keysym: 0xFFE9, name: 'Alt' },
+        {keysym: 0xFFEA, name: 'Alt' },
+        {keysym: 0xFFEB, name: 'Super' },
+        {keysym: 0xFFEC, name: 'Super' },
+        {keysym: 0xFFED, name: 'Hyper' },
+        {keysym: 0xFFEE, name: 'Hyper' },
+        {keysym: 0xFFFF, name: 'Delete' }
+    ];
+
+    /**
+     * All known keys, as a map of X11 keysym to KeyDefinition.
+     *
+     * @constant
+     * @private
+     * @type {Object.<String, KeyDefinition>}
+     */
+    var KNOWN_KEYS = {};
+    _KNOWN_KEYS.forEach(function createKeyDefinitionMap(keyDefinition) {
+
+        // Construct a map of keysym to KeyDefinition object
+        KNOWN_KEYS[keyDefinition.keysym] = (
+                new Guacamole.KeyEventInterpreter.KeyDefinition(keyDefinition));
+
+    });
+
+    /**
+     * All key events parsed as of the most recent handleKeyEvent() invocation.
+     *
+     * @private
+     * @type {!Guacamole.KeyEventInterpreter.KeyEvent[]}
+     */
+    var parsedEvents = [];
+
+    /**
+     * If the provided keysym corresponds to a valid UTF-8 character, return
+     * a KeyDefinition for that keysym. Otherwise, return null.
+     *
+     * @private
+     * @param {Number} keysym
+     *     The keysym to produce a UTF-8 KeyDefinition for, if valid.
+     *
+     * @returns {Guacamole.KeyEventInterpreter.KeyDefinition}
+     *     A KeyDefinition for the provided keysym, if it's a valid UTF-8
+     *     keysym, or null otherwise.
+     */
+    function getUnicodeKeyDefinition(keysym) {
+
+        // Translate only if keysym maps to Unicode
+        if (keysym < 0x00 || (keysym > 0xFF && (keysym | 0xFFFF) != 0x0100FFFF))
+            return null;
+
+        // Convert to UTF8 string
+        var codepoint = keysym & 0xFFFF;
+        var name = String.fromCharCode(codepoint);
+
+        // Create and return the definition
+        return new Guacamole.KeyEventInterpreter.KeyDefinition({
+                keysym: keysym, name: name, value: name});
+
+    }
+
+    /**
+     * Return a KeyDefinition corresponding to the provided keysym.
+     *
+     * @private
+     * @param {Number} keysym
+     *     The keysym to return a KeyDefinition for.
+     *
+     * @returns {KeyDefinition}
+     *     A KeyDefinition corresponding to the provided keysym.
+     */
+    function getKeyDefinitionByKeysym(keysym) {
+
+        // If it's a known type, return the existing definition
+        if (keysym in KNOWN_KEYS)
+            return KNOWN_KEYS[keysym];
+
+        // Return a UTF-8 KeyDefinition, if valid
+        var definition = getUnicodeKeyDefinition(keysym);
+        if (definition != null)
+            return definition;
+
+        // If it's not UTF-8, return an unknown definition, with the name
+        // just set to the hex value of the keysym
+        return new Guacamole.KeyEventInterpreter.KeyDefinition({
+            keysym: keysym,
+            name: '0x' + String(keysym.toString(16))
+        })
+
+    }
+
+    /**
+     * Handles a raw key event, appending a new key event object for every
+     * handled raw event.
+     *
+     * @param {!string[]} args
+     *     The arguments of the key event.
+     */
+    this.handleKeyEvent = function handleKeyEvent(args) {
+
+        // The X11 keysym
+        var keysym = parseInt(args[0]);
+
+        // Either 1 or 0 for pressed or released, respectively
+        var pressed = parseInt(args[1]);
+
+        // The timestamp when this key event occured
+        var timestamp = parseInt(args[2]);
+
+        // The timestamp relative to the provided initial timestamp
+        var relativeTimestap = timestamp - startTimestamp;
+
+        // Known information about the parsed key
+        var definition = getKeyDefinitionByKeysym(keysym);
+
+        // Push the latest parsed event into the list
+        parsedEvents.push(new Guacamole.KeyEventInterpreter.KeyEvent({
+            definition: definition,
+            pressed: pressed,
+            timestamp: relativeTimestap
+        }));
+
+    };
+
+    /**
+     * Return the current batch of typed text. Note that the batch may be
+     * incomplete, as more key events might be processed before the next
+     * batch starts.
+     *
+     * @returns {Guacamole.KeyEventInterpreter.KeyEvent[]}
+     *     The current batch of text.
+     */
+    this.getEvents = function getEvents() {
+        return parsedEvents;
+    };
+
+};
+
+/**
+ * A definition for a known key.
+ *
+ * @constructor
+ * @param {Guacamole.KeyEventInterpreter.KeyDefinition|object} [template={}]
+ *     The object whose properties should be copied within the new
+ *     KeyDefinition.
+ */
+Guacamole.KeyEventInterpreter.KeyDefinition = function KeyDefinition(template) {
+
+    // Use empty object by default
+    template = template || {};
+
+    /**
+     * The X11 keysym of the key.
+     * @type {!number}
+     */
+    this.keysym = parseInt(template.keysym);
+
+    /**
+     * A human-readable name for the key.
+     * @type {!String}
+     */
+    this.name = template.name;
+
+    /**
+     * The value which would be typed in a typical text editor, if any. If the
+     * key is not associated with any typeable value, this will be undefined.
+     * @type {String}
+     */
+    this.value = template.value;
+
+};
+
+/**
+ * A granular description of an extracted key event, including a human-readable
+ * text representation of the event, whether the event is directly typed or not,
+ * and the timestamp when the event occured.
+ *
+ * @constructor
+ * @param {Guacamole.KeyEventInterpreter.KeyEvent|object} [template={}]
+ *     The object whose properties should be copied within the new
+ *     KeyEvent.
+ */
+Guacamole.KeyEventInterpreter.KeyEvent = function KeyEvent(template) {
+
+    // Use empty object by default
+    template = template || {};
+
+    /**
+     * The key definition for the pressed key.
+     *
+     * @type {!Guacamole.KeyEventInterpreter.KeyDefinition}
+     */
+    this.definition = template.definition;
+
+    /**
+     * True if the key was pressed to create this event, or false if it was
+     * released.
+     *
+     * @type {!boolean}
+     */
+    this.pressed = !!template.pressed;
+
+    /**
+     * The timestamp from the recording when this event occured.
+     *
+     * @type {!Number}
+     */
+    this.timestamp = template.timestamp;
 
 };
 /*
@@ -7352,7 +7714,7 @@ Guacamole.Keyboard = function Keyboard(element) {
         "CapsLock": [0xFFE5],
         "Cancel": [0xFF69],
         "Clear": [0xFF0B],
-        "Convert": [0xFF21],
+        "Convert": [0xFF23],
         "Copy": [0xFD15],
         "Crsel": [0xFD1C],
         "CrSel": [0xFD1C],
@@ -7419,6 +7781,7 @@ Guacamole.Keyboard = function Keyboard(element) {
         "Left": [0xFF51],
         "Meta": [0xFFE7, 0xFFE7, 0xFFE8],
         "ModeChange": [0xFF7E],
+        "NonConvert": [0xFF22],
         "NumLock": [0xFF7F],
         "PageDown": [0xFF56],
         "PageUp": [0xFF55],
@@ -7428,6 +7791,7 @@ Guacamole.Keyboard = function Keyboard(element) {
         "PrintScreen": [0xFF61],
         "Redo": [0xFF66],
         "Right": [0xFF53],
+        "Romaji": [0xFF24],
         "RomanCharacters": null,
         "Scroll": [0xFF14],
         "Select": [0xFF60],
@@ -9816,9 +10180,16 @@ Guacamole.Mouse = function Mouse(element) {
 
     }
 
-    element.addEventListener('DOMMouseScroll', mousewheel_handler, false);
-    element.addEventListener('mousewheel',     mousewheel_handler, false);
-    element.addEventListener('wheel',          mousewheel_handler, false);
+    if (window.WheelEvent) {
+        // All modern browsers support wheel events.
+        element.addEventListener('wheel', mousewheel_handler, false);
+    }
+    else {
+        // Legacy FireFox wheel events.
+        element.addEventListener('DOMMouseScroll', mousewheel_handler, false);
+        // Legacy Chrome/IE/other wheel events.
+        element.addEventListener('mousewheel', mousewheel_handler, false);
+    }
 
     /**
      * Whether the browser supports CSS3 cursor styling, including hotspot
@@ -12289,7 +12660,7 @@ Guacamole.Parser = function Parser() {
                     // Immediately truncate buffer if its contents have been
                     // completely parsed, so that the next call to receive()
                     // need not append to the buffer unnecessarily
-                    if (elementEnd + 1 === buffer.length) {
+                    if (!isBuffer && elementEnd + 1 === buffer.length) {
                         elementEnd = -1;
                         buffer = '';
                     }
@@ -13069,6 +13440,28 @@ Guacamole.SessionRecording = function SessionRecording(source, refreshInterval) 
     playbackClient.getDisplay().showCursor(false);
 
     /**
+     * A key event interpreter to split all key events in this recording into
+     * human-readable batches of text. Constrcution is deferred until the first
+     * event is processed, to enable recording-relative timestamps.
+     *
+     * @type {!Guacamole.KeyEventInterpreter}
+     */
+    var keyEventInterpreter = null;
+
+    /**
+     * Initialize the key interpreter. This function should be called only once
+     * with the first timestamp in the recording as an argument.
+     *
+     * @private
+     * @param {!number} startTimestamp
+     *     The timestamp of the first frame in the recording, i.e. the start of
+     *     the recording.
+     */
+    function initializeKeyInterpreter(startTimestamp) {
+        keyEventInterpreter = new Guacamole.KeyEventInterpreter(startTimestamp);
+    }
+
+    /**
      * Handles a newly-received instruction, whether from the main Blob or a
      * tunnel, adding new frames and keyframes as necessary. Load progress is
      * reported via onprogress automatically.
@@ -13099,6 +13492,11 @@ Guacamole.SessionRecording = function SessionRecording(source, refreshInterval) 
             frames.push(frame);
             frameStart = frameEnd;
 
+            // If this is the first frame, intialize the key event interpreter
+            // with the timestamp of the first frame
+            if (frames.length === 1)
+                initializeKeyInterpreter(timestamp);
+
             // This frame should eventually become a keyframe if enough data
             // has been processed and enough recording time has elapsed, or if
             // this is the absolute first frame
@@ -13106,6 +13504,7 @@ Guacamole.SessionRecording = function SessionRecording(source, refreshInterval) 
                     && timestamp - frames[lastKeyframe].timestamp >= KEYFRAME_TIME_INTERVAL)) {
                 frame.keyframe = true;
                 lastKeyframe = frames.length - 1;
+
             }
 
             // Notify that additional content is available
@@ -13114,6 +13513,8 @@ Guacamole.SessionRecording = function SessionRecording(source, refreshInterval) 
 
         }
 
+        else if (opcode === 'key')
+            keyEventInterpreter.handleKeyEvent(args);
     };
 
     /**
@@ -13179,6 +13580,11 @@ Guacamole.SessionRecording = function SessionRecording(source, refreshInterval) 
                     recordingBlob = new Blob([recordingBlob, instructionBuffer]);
                     instructionBuffer = '';
                 }
+
+                // Now that the recording is fully processed, and all key events
+                // have been extracted, call the onkeyevents handler if defined
+                if (recording.onkeyevents)
+                    recording.onkeyevents(keyEventInterpreter.getEvents());
 
                 // Consider recording loaded if tunnel has closed without errors
                 if (!errorEncountered)
@@ -13564,6 +13970,17 @@ Guacamole.SessionRecording = function SessionRecording(source, refreshInterval) 
      * @event
      */
     this.onpause = null;
+
+    /**
+     * Fired with all extracted key events when the recording is fully
+     * processed. The callback will be invoked with an empty list
+     * if no key events were extracted.
+     *
+     * @event
+     * @param {!Guacamole.KeyEventInterpreter.KeyEvent[]} batch
+     *     The extracted key events.
+     */
+    this.onkeyevents = null;
 
     /**
      * Fired whenever the playback position within the recording changes.
@@ -16375,7 +16792,7 @@ var Guacamole = Guacamole || {};
  *
  * @type {!string}
  */
-Guacamole.API_VERSION = "1.5.3";
+Guacamole.API_VERSION = "1.6.0";
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file

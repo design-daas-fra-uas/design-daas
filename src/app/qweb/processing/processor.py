@@ -1,11 +1,10 @@
 """Processor"""
 
-import asyncio
 from abc import ABC, abstractmethod
 from enum import Enum
-from dataclasses import asdict, dataclass, is_dataclass
+from dataclasses import dataclass
 import traceback
-from typing import Coroutine, Optional
+from typing import Optional
 from app.qweb.common.config import QuartConfig, QuartProcessorConfig
 from quart import Request, Response, Websocket
 
@@ -127,24 +126,6 @@ class ProcessorBase(ABC, Loggable):
             "hostip": self.cfg_proc.hostip,
             "hostport": self.cfg_proc.hostport,
         }
-
-    def create_async_response(self, coro: Coroutine) -> Response | dict | str:
-        """Synchronously retrieves asynchronous result"""
-        loop = asyncio.get_event_loop()
-        future = asyncio.ensure_future(coro)
-        result = loop.run_until_complete(future)
-        return result
-
-    async def get_context_object(self, name: str, ctx: QwebProcessorContexts) -> dict:
-        """Returns specified object"""
-        req_objects = ctx.objects.objects
-        if name in req_objects:
-            obj1 = req_objects[name]
-            if isinstance(obj1, dict):
-                return obj1
-            if is_dataclass(obj1) and not isinstance(obj1, type):
-                return asdict(obj1)
-        return {}
 
     async def run_apitask(
         self, ctx: QwebProcessorContexts, proc_request: ProcessorRequest, info, user

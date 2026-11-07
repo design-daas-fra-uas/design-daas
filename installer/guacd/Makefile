@@ -1,23 +1,23 @@
-.PHONY: all build prepare start commit stop clean
+# guacd image, see README.md. Run as root (docker).
+# The DaaS backend starts the container; here it is only built and tested.
 
+.PHONY: all build check clean
+
+# Image name in src/config/container.toml
 TAG := daas-0-guacd
-CMD := /bin/bash -i
+# Must match the guacamole-server-<version>.tar.gz in this folder
+GUACD_VERSION := 1.6.0
+BUILDOPT ?=
 
-all: build #commit
+all: build
 
+build:
+	test -f guacamole-server-$(GUACD_VERSION).tar.gz
+	docker build $(BUILDOPT) --build-arg GUACD_VERSION=$(GUACD_VERSION) -t $(TAG) .
 
-build: | stop
-	docker build -t $(TAG) .
+# Start a test container (no published ports), check guacd, remove it
+check:
+	./check.bash $(TAG) $(TAG)-test
 
-start: build
-	docker run -d --rm -p 4822:4822 -e GUACD_LOGLEVEL=trace --name $(TAG) $(TAG)
-
-commit: start
-	#docker commit $(TAG)
-	docker kill $(TAG)
-
-stop:
-	-docker kill $(TAG)
-
-clean: stop
-	-docker rmi $(TAG)
+clean:
+	-docker image rm $(TAG)

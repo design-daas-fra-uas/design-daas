@@ -68,24 +68,3 @@ class ProxyRegistry:
         if id_instance in self.active_connections:
             return self.active_connections[id_instance].stats
         return None
-
-    def get_stats_active(self) -> dict[str, dict]:
-        """Returns collection of statistic objects"""
-        result = {}
-        for connid, info in self.active_connections.items():
-            result[connid] = info.stats.tojson()
-        return result
-
-    def get_stats_closed(self) -> dict[str, dict]:
-        """Returns collection of statistic objects"""
-        result = {}
-        for connid, info in self.closed_connections.items():
-            result[connid] = info.stats.tojson()
-        return result
-
-    def get_stats_all(self) -> dict[str, dict]:
-        """Returns collection of statistic objects"""
-        result = {}
-        result.update(self.get_stats_active())
-        result.update(self.get_stats_closed())
-        return result

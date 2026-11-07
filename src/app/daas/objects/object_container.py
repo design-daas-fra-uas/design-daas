@@ -7,6 +7,7 @@ from app.daas.common.model import Environment, File
 from app.daas.db.db_mappings import ORMMappingType, ORMModelDomain
 from app.daas.objects.config_factory import get_empty_object_dict
 from app.daas.objects.config_container import ContainerConfigBase
+from app.daas.objects.base_object import LIMIT_REACHED
 from app.daas.objects.object_instance import InstanceObject
 from app.qweb.common.qweb_tools import get_database
 from app.qweb.logging.logging import LogTarget, Loggable
@@ -30,13 +31,15 @@ class ContainerObject(ContainerConfigBase):
         )
 
     async def baseimage_create(self, args: dict) -> QwebResult:
-        assert await self.verify_demand(args["id_owner"])
+        if not await self.verify_demand(args["id_owner"]):
+            return QwebResult(400, {}, 1, LIMIT_REACHED)
         code, str_out, str_err = await self.create(args)
         status = 200 if code == 0 else 400
         return QwebResult(status, {}, code, f"{str_out}{str_err}")
 
     async def baseimage_clone(self, oldid: str, args: dict) -> QwebResult:
-        assert await self.verify_demand(args["id_owner"])
+        if not await self.verify_demand(args["id_owner"]):
+            return QwebResult(400, {}, 1, LIMIT_REACHED)
         code, str_out, str_err = await self.clone(oldid, args)
         status = 200 if code == 0 else 400
         return QwebResult(status, {}, code, f"{str_out}{str_err}")
@@ -79,10 +82,13 @@ class ContainerObject(ContainerConfigBase):
         userid: int,
         connect: bool,
         object_mode: str = "",
-        args: dict = {},
+            args=None,
     ) -> Optional[InstanceObject]:
         """Starts environment instance"""
-        assert await self.verify_demand(userid)
+        if args is None:
+            args = {}
+        if not await self.verify_demand(userid):
+            return None
         inst = await self.env_start(env, userid, connect, object_mode, args, True)
         if inst is not None:
             return await self._return_connected_instance(connect)
@@ -94,10 +100,13 @@ class ContainerObject(ContainerConfigBase):
         userid: int,
         connect: bool,
         object_mode: str = "",
-        args: dict = {},
+            args=None,
     ) -> Optional[InstanceObject]:
         """Runs environment instance"""
-        assert await self.verify_demand(userid)
+        if args is None:
+            args = {}
+        if not await self.verify_demand(userid):
+            return None
         inst = await self.env_start(env, userid, connect, object_mode, args, True)
         if inst is not None:
             if object_mode != "":
@@ -106,8 +115,6 @@ class ContainerObject(ContainerConfigBase):
                 await asyncio.sleep(3)
             if await self.execute_task(inst, env.env_target, args):
                 await self.set_extended_mode("done")
-            # else:
-            # self._log_error("Execute task failed")
             return await self._return_connected_instance(connect)
         return None
 
@@ -135,7 +142,7 @@ class ContainerObject(ContainerConfigBase):
     async def cfg_set_target(
         self, obj: str, env: Optional[Environment], args: dict
     ) -> QwebResult:
-        if await self.configure_target(obj, env, args):
+        if await self.configure_target(obj, env):
             return QwebResult(200, {})
         return QwebResult(400, {}, 1, "Error on target config")
 
@@ -147,7 +154,7 @@ class ContainerObject(ContainerConfigBase):
         env: Optional[Environment],
         args: dict,
     ) -> QwebResult:
-        if await self.copy_installers(files, installers, userid, env, args):
+        if await self.copy_installers(files, installers, userid, env):
             return QwebResult(200, {})
         return QwebResult(400, {}, 1, "error on installer_deploy")
 
@@ -166,7 +173,7 @@ class ContainerObject(ContainerConfigBase):
         env: Optional[Environment],
         args: dict,
     ) -> QwebResult:
-        if await self.copy_installers(files, installers, userid, env, args):
+        if await self.copy_installers(files, installers, userid, env):
             if await self.execute_tasks(installers, env, args):
                 return QwebResult(200, {})
         return QwebResult(400, {}, 1, "error on installation")

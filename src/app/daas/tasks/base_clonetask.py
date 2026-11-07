@@ -1,5 +1,6 @@
-from dataclasses import asdict, dataclass
-from typing import Optional
+import time
+from dataclasses import asdict
+from typing import Awaitable, Callable, Optional
 from quart import json
 from app.daas.common.model import Environment, File
 from app.daas.objects.object_application import ApplicationObject
@@ -14,7 +15,7 @@ from app.daas.tasks.task_config import (
     TasklistObject,
 )
 from app.plugins.platform.phases.enums import PhasesSystemTask
-from app.qweb.common.qweb_tools import run_system_task
+from app.qweb.common.qweb_tools import get_database, run_system_task
 from app.qweb.logging.logging import LogTarget, Loggable
 
 
@@ -37,6 +38,43 @@ class CloneTaskBase(Loggable):
         self.obj: MachineObject | ContainerObject = self.args["obj"]
         self.inst: InstanceObject = self.args["inst"]
         self.env: Optional[Environment] = None
+
+    async def _run_steps(
+        self, kind: str, steps: list[tuple[str, Callable[[], Awaitable]]]
+    ) -> bool:
+        """
+        Runs the steps of a clone/create flow in order and logs each one with
+        its duration. Stops at the first step that returns a falsy value and
+        logs which one it was (shown to the user as the object's mode too).
+        """
+        flow = f"{kind} {self.app.name} -> {self.obj.id}"
+        started = time.monotonic()
+        self._log_info(f"{flow}: started")
+        for number, (name, step) in enumerate(steps, start=1):
+            step_started = time.monotonic()
+            self._log_info(f"{flow}: step {number}/{len(steps)} {name}")
+            if not await step():
+                if not await self._object_exists():
+                    self._log_info(f"{flow}: stopped, the object was deleted")
+                    return False
+                msg = f"{flow}: FAILED at step {number}/{len(steps)} {name}"
+                self._log_error(f"{msg} after {_duration(step_started)}", 1)
+                await self.obj.set_extended_mode(f"Failed: {name}")
+                return False
+            self._log_info(
+                f"{flow}: step {number}/{len(steps)} {name} done "
+                f"({_duration(step_started)})"
+            )
+        self._log_info(f"{flow}: finished in {_duration(started)}")
+        return True
+
+    async def _object_exists(self) -> bool:
+        """False when the user deleted the object while the flow was running:
+        then nothing may be written for it (an update would insert it again)"""
+        from app.daas.db.database import Database
+
+        dbase = await get_database(Database)
+        return await dbase.get_daas_object(self.obj.id) is not None
 
     async def _get_files(
         self,
@@ -113,3 +151,11 @@ class CloneTaskBase(Loggable):
         )
         assert task is not None
         await task.task
+
+
+def _duration(started: float) -> str:
+    """Time since started (time.monotonic()), e.g. "12 min 3 s" or "8 s" """
+    seconds = int(time.monotonic() - started)
+    if seconds < 60:
+        return f"{seconds} s"
+    return f"{seconds // 60} min {seconds % 60} s"

@@ -1,66 +1,101 @@
-#!/bin/bash
+#!/usr/bin/env bash
+#
+# Configures nginx for the frontend (see README.md):
+#   - installs frontend.conf: :8443 -> the daas-frontend container
+#     (127.0.0.1:5001), /auth/ -> auth service (127.0.0.1:AUTH_PORT)
+#   - its server name is the host of FRONTEND_PUBLIC_URL (installer/daas.env);
+#     without an env file frontN.cluster.local (N = trailing digit of -h)
+#   - adds that name to /etc/hosts when this host cannot resolve it
+#
+# Requires daas/configure.bash to have run first (nginx.conf with the
+# upstream_front upstream, and the certificate that covers the name).
 
-# Configurable variables
-SERVICE_NAME=frontend
-export DEBIAN_FRONTEND=noninteractive
+source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.bash"
 
-# help message
-usage() { echo "Usage: $0 [-r <daas-repo> -f <frontend-repo> -h <hostname>]" 1>&2; exit 1; }
+usage() {
+    cat <<EOF >&2
+Usage: $0 -r <repo-folder> -h <hostname> [-e <env-file>] [-f <frontend-folder>]
 
-# Read options
-REPO_FOLDER=/home/design-daas
-FRONTEND_FOLDER=
-HOST_NAME=
-while getopts ":r:f:h:" o; do
-    case "${o}" in
-        r)
-            REPO_FOLDER=${OPTARG}
-            ;;
-        f)
-            FRONTEND_FOLDER=${OPTARG}
-            ;;
-        h)
-            HOST_NAME=${OPTARG}
-            ;;
-        *)
-            usage
-            ;;
+Options:
+    -r    Design DaaS repository folder
+    -h    Host name (without an env file its trailing digit 1-3 selects frontN)
+    -e    Stack env file (installer/daas.env): FRONTEND_PUBLIC_URL, AUTH_PORT
+    -f    Frontend repository folder (unused, accepted for symmetry)
+EOF
+    exit 1
+}
+
+REPO_FOLDER=""
+HOST_NAME=""
+ENV_FILE=""
+while getopts ":r:f:h:e:" o; do
+    case "$o" in
+        r) REPO_FOLDER="${OPTARG%/}" ;;
+        f) ;;
+        h) HOST_NAME="$OPTARG" ;;
+        e) ENV_FILE="$OPTARG" ;;
+        :) die "Option -$OPTARG requires an argument." ;;
+        *) usage ;;
     esac
 done
-shift $((OPTIND-1))
+shift $((OPTIND - 1))
 
-# Bail if requirements are not met
-if [ -z "$REPO_FOLDER" ] ; then
-    usage
+[[ -n "$REPO_FOLDER" && -n "$HOST_NAME" ]] || usage
+
+require_root
+require_cmds sed grep getent hostname openssl nginx systemctl
+require_dir "$REPO_FOLDER"
+
+CONFIG_SOURCE="$REPO_FOLDER/installer/frontend/frontend.conf"
+NGINX_CONFIG="/etc/nginx/sites-available/frontend.conf"
+NGINX_ENABLED="/etc/nginx/sites-enabled/frontend.conf"
+require_file "$CONFIG_SOURCE"
+require_file /etc/nginx/ssl/selfsigned.crt
+
+AUTH_PORT=8080
+if [[ -n "$ENV_FILE" ]]; then
+    load_stack_env "$ENV_FILE"
+    FRONT_DOMAIN="$(url_host "$FRONTEND_PUBLIC_URL")"
+    port="$(url_port "$FRONTEND_PUBLIC_URL")"
+    [[ "$port" == 8443 ]] \
+        || warn "FRONTEND_PUBLIC_URL uses port $port, nginx serves the frontend on 8443 (fine behind a proxy)"
+else
+    ID=0
+    [[ "$HOST_NAME" =~ ([123])$ ]] && ID="${BASH_REMATCH[1]}"
+    FRONT_DOMAIN="front${ID}.cluster.local"
 fi
-if [ -z "$FRONTEND_FOLDER" ] ; then
-    usage
+FRONT_IP="$(hostname -I | awk '{print $1}')"
+
+info "Repository: $REPO_FOLDER"
+info "Frontend:   https://$FRONT_DOMAIN:8443"
+info "Auth:       /auth/ -> 127.0.0.1:$AUTH_PORT"
+
+# ============================================================
+step "Name resolution ($FRONT_DOMAIN)"
+# ============================================================
+
+if getent hosts "$FRONT_DOMAIN" >/dev/null; then
+    info "$FRONT_DOMAIN resolves to $(getent hosts "$FRONT_DOMAIN" | awk '{print $1; exit}')"
+else
+    [[ -n "$FRONT_IP" ]] || die "Could not determine the host IP (hostname -I is empty)"
+    echo "$FRONT_IP $FRONT_DOMAIN" >> /etc/hosts
+    success "Added to /etc/hosts: $FRONT_IP $FRONT_DOMAIN"
 fi
-if [ -z "$HOST_NAME" ] ; then
-    usage
+
+if ! openssl x509 -noout -ext subjectAltName -in /etc/nginx/ssl/selfsigned.crt 2>/dev/null \
+        | grep -qF "DNS:$FRONT_DOMAIN"; then
+    warn "The certificate does not cover $FRONT_DOMAIN: run 'make daas-configure' first"
 fi
 
-# Extract ID from isoname
-ID=0
-[[ $HOST_NAME = *[1] ]] && ID=1
-[[ $HOST_NAME = *[2] ]] && ID=2
-[[ $HOST_NAME = *[3] ]] && ID=3
+# ============================================================
+step "nginx"
+# ============================================================
 
-export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no"
-rm -rf "$FRONTEND_FOLDER"
-#git clone git@github.com:Nuromedia/design-daas-application-frontend.git "$FRONTEND_FOLDER"
+sed -e "s#front1.cluster.local#${FRONT_DOMAIN}#g" \
+    -e "s#http://127.0.0.1:8080/#http://127.0.0.1:${AUTH_PORT}/#" \
+    "$CONFIG_SOURCE" | write_file "$NGINX_CONFIG"
+run ln -sfn "$NGINX_CONFIG" "$NGINX_ENABLED"
 
-NAME_TEST=`cat /etc/hosts | grep "front$ID" | wc -l`
-if [[ $NAME_TEST -eq 0 ]] ; then
-    echo "192.168.123.11$ID front$ID.cluster.local front$ID" >> /etc/hosts
-    echo "Appended hostname 'front$ID.cluster.local+front$ID' in /etc/hosts"
-fi
-cd "$REPO_FOLDER/installer/frontend" || exit 1
-cp frontend.conf /etc/nginx/sites-available/frontend.conf
-sed -i -e "s#front1.cluster.local#front$ID.cluster.local#g" /etc/nginx/sites-available/frontend.conf
-rm -rf /etc/nginx/sites-enabled/frontend.conf
-ln -s /etc/nginx/sites-available/frontend.conf /etc/nginx/sites-enabled/
-systemctl restart nginx
-cd - || exit 1
+reload_nginx
 
-
+success "Frontend reachable at https://$FRONT_DOMAIN:8443 once frontend.service is running"

@@ -1,10 +1,8 @@
 """Handles blueprints"""
 
-import asyncio
 from dataclasses import dataclass, asdict
 import traceback
-from types import FrameType
-from typing import Any, Coroutine, Optional
+from typing import Optional
 from app.qweb.logging.logging import LogTarget, Loggable
 from quart import Blueprint, Response, render_template, request, websocket
 from app.qweb.auth.auth_qweb import QwebAuthenticatorBase
@@ -47,11 +45,8 @@ class BlueprintHandlerBase(Loggable):
         self,
         blueprints: Blueprint,
         infos: list[BlueprintInfo],
-        testing: bool,
-        default_handler: Any,
     ):
         Loggable.__init__(self, LogTarget.SYS)
-        self.testing = testing
         self.fileproc = FileProcessor()
         self.tmplproc = TemplateProcessor()
         self.apiproc = ApiProcessor()
@@ -59,11 +54,32 @@ class BlueprintHandlerBase(Loggable):
         self.blueprints = blueprints
         self.infos = {}
         self.requestlog = []
-        self.default_handler = default_handler
         self.cfg_handler = BlueprintHandlerConfig(True, True, True, True, True, 3000)
         self.cfg_quart = QuartConfig("", "", "", "", "")
         for info in infos:
             self.infos[info.name] = info
+            self._add_route(info)
+
+    def _add_route(self, info: BlueprintInfo):
+        """Registers info.url on the blueprint; every request goes to
+        handle_request(info.name)"""
+
+        # URL variables (<id>) are read from request.view_args later on
+        async def view(**_url_args):
+            return await self.handle_request(info.name)
+
+        view.__name__ = info.name
+        view.__doc__ = info.description
+        if info.processor == ProcessorType.WEBSOCKET:
+            self.blueprints.add_websocket(info.url, info.name, view)
+        else:
+            self.blueprints.add_url_rule(
+                info.url, info.name, view, methods=info.methods
+            )
+
+    async def handle_request(self, name: str):
+        """Handles a request of the route called name"""
+        raise NotImplementedError("Implemented by BlueprintHandler")
 
     def set_configs(
         self,
@@ -172,7 +188,7 @@ class BlueprintHandlerBase(Loggable):
             bearer = await self._extract_bearer()
             url = request.url
         target = self._get_processor_target(info)
-        ctx = self._get_request_context(info)
+        ctx = await self._get_request_context(info)
         if ctx is None:
             return None
         return ProcessorRequest(
@@ -188,7 +204,7 @@ class BlueprintHandlerBase(Loggable):
             request_context=ctx,
         )
 
-    def _get_request_context(
+    async def _get_request_context(
         self, info: BlueprintInfo
     ) -> Optional[ProcessorRequestContext]:
         mandatory = info.request_args_mandatory
@@ -198,13 +214,13 @@ class BlueprintHandlerBase(Loggable):
         file = info.request_args_file
 
         if info.processor == ProcessorType.WEBSOCKET:
-            args_query = self._loop_exec(self._read_socketargs(query))
+            args_query = await self._read_socketargs(query)
             args = {**args_query}
             return ProcessorRequestContext(
                 request_quart=None, request_websocket=websocket, request_args=args
             )
         else:
-            args_mandatory = self._loop_exec(self._read_formargs(mandatory))
+            args_mandatory = await self._read_formargs(mandatory)
             if len(args_mandatory) != len(info.request_args_mandatory):
                 self._log_error(
                     (
@@ -214,10 +230,10 @@ class BlueprintHandlerBase(Loggable):
                     )
                 )
                 return None
-            args_optional = self._loop_exec(self._read_formargs(optional))
-            args_common = self._loop_exec(self._read_formargs(common))
-            args_query = self._loop_exec(self._read_queryargs(query))
-            args_file = self._loop_exec(self._read_fileargs(file))
+            args_optional = await self._read_formargs(optional)
+            args_common = await self._read_formargs(common)
+            args_query = await self._read_queryargs(query)
+            args_file = await self._read_fileargs(file)
             args = {
                 **args_mandatory,
                 **args_optional,
@@ -290,13 +306,7 @@ class BlueprintHandlerBase(Loggable):
 
         return result
 
-    def _loop_exec(self, coro: Coroutine) -> Any:
-        """Executes couroutine and waits for result"""
-        loop = asyncio.get_event_loop()
-        future = asyncio.ensure_future(coro)
-        return loop.run_until_complete(future)
-
-    def _create_error_response(
+    async def _create_error_response(
         self,
         msg: str,
         status_http: int = 500,
@@ -313,9 +323,9 @@ class BlueprintHandlerBase(Loggable):
         }
         if content_type == "application/json":
             return self._create_error_response_dict(**args)
-        return self._create_error_response_text(**args)
+        return await self._create_error_response_text(**args)
 
-    def _create_error_response_text(
+    async def _create_error_response_text(
         self,
         msg: str,
         status_http: int = 500,
@@ -328,7 +338,7 @@ class BlueprintHandlerBase(Loggable):
             msg, status_http, status_sys, {}, exception
         )
         return (
-            self._loop_exec(render_template("layout-error.html", **args)),
+            await render_template("layout-error.html", **args),
             status_http,
         )
 
@@ -362,12 +372,6 @@ class BlueprintHandlerBase(Loggable):
             return name[1:]
         return name
 
-    def _get_frame_name(self, frame: Optional[FrameType]) -> str:
-        """Extracts name from FrameType"""
-        if frame is not None and frame.f_code is not None:
-            return frame.f_code.co_name
-        return ""
-
     def _get_info(self, name: str) -> Optional[BlueprintInfo]:
         """Retrieves endpoint info"""
         if name in self.infos:
@@ -377,14 +381,14 @@ class BlueprintHandlerBase(Loggable):
     async def _init_timing(self) -> Optional[Measurement]:
         timing = None
         if self.cfg_handler.enable_timings:
-            formdata = self._loop_exec(request.form)
+            formdata = await request.form
             if formdata is not None:
                 val = formdata.getlist("timestamp")
                 if len(val) > 0:
                     cli_ms = int(val[0])
                     timing = Measurement()
                     timing.start(cli_ms)
-            json = self._loop_exec(request.get_json())
+            json = await request.get_json()
             if json is not None and "timestamp" in json:
                 cli_ms = json["timestamp"]
                 timing = Measurement()

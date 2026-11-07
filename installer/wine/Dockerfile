@@ -1,144 +1,95 @@
-FROM x11vnc
+# Wine desktop image for DaaS container instances: a Linux desktop plus
+# Wine, for running Windows apps (see README.md).
+# Build it with `make build`: the build context needs the DaaS agent (agent/),
+# authorized_keys and app.exe, which `make prepare` puts there.
 
-# Install essentials
+# trixie: the image needs python3 >= 3.11 for qtile and the agent
+FROM debian:trixie
+
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt update -y && apt upgrade -y
-RUN apt install -y x11vnc tigervnc-standalone-server openssh-server xvfb
-RUN apt install -y xterm python3 pip wget
-RUN apt install -y kitty
-RUN apt install -y locales vim galculator
-RUN pip install click psutil xcffib --break-system-packages
-RUN pip install cairocffi --no-cache-dir  --break-system-packages
-RUN pip install dbus-next qtile  --no-cache-dir  --break-system-packages
+ENV TZ=Europe/Berlin
 
-# Wine
-# https://wiki.winehq.org/Debian
-RUN dpkg --add-architecture i386
-RUN mkdir -pm755 /etc/apt/keyrings
-RUN wget -O /etc/apt/keyrings/winehq-archive.key https://dl.winehq.org/wine-builds/winehq.key
-RUN wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/debian/dists/bookworm/winehq-bookworm.sources
-RUN apt update -y && apt upgrade -y
-RUN apt install -y --install-recommends sudo wine32 wine64 curl zenity mono-complete
-RUN apt install -y --install-recommends ca-certificates \
-	apt-transport-https cabextract git gnupg gosu gpg-agent p7zip \
-	pulseaudio pulseaudio-utils unzip winbind
+# Desktop (X server, window manager, apps), sound, printing, ssh, ceph
+# (shared folders) and the Python modules of the DaaS agent
+RUN apt-get update -y && apt-get upgrade -y \
+    && apt-get install -y \
+    x11vnc tigervnc-standalone-server xterm xvfb \
+    openssh-server python3 pip kitty vim net-tools netcat-traditional \
+    ceph ceph-common ceph-fuse cups locales tzdata \
+    galculator firefox-esr libreoffice \
+    htop rofi gedit pulseaudio pulseeffects \
+    systemd systemd-sysv systemd-timesyncd gnome-calculator \
+    && rm -rf /var/lib/apt/lists/*
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-# Winetricks
-# https://github.com/Winetricks/winetricks
-RUN wget https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks
-RUN chmod +x winetricks
-RUN mv winetricks /usr/bin
-RUN wget https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks.bash-completion
-RUN mv winetricks.bash-completion /usr/share/bash-completion/completions/winetricks
-RUN wget https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks.1
-RUN mv winetricks.1 /usr/share/man/man1/winetricks.1
+RUN pip install --no-cache-dir --break-system-packages \
+    setuptools wheel && \
+    pip install --no-cache-dir --break-system-packages \
+    dbus-next pika netifaces click psutil xcffib cairocffi qtile
 
-# RUN echo 'deb http://download.opensuse.org/repositories/home:/strycore/Debian_12/ /' | tee /etc/apt/sources.list.d/home:strycore.list
-# RUN curl -fsSL https://download.opensuse.org/repositories/home:strycore/Debian_12/Release.key | gpg --dearmor | tee /etc/apt/trusted.gpg.d/home_strycore.gpg > /dev/null
-# RUN apt update
-# RUN apt install -y lutris
+# Wine (64 + 32 bit) from Debian, winetricks from contrib, and what Windows
+# apps commonly need: 32-bit sound/SDL libraries, cabextract/7z/unzip for
+# winetricks, zenity for its dialogs, winbind for NTLM logins, mono
+RUN dpkg --add-architecture i386 \
+    && sed -i 's/^Components: main$/Components: main contrib/' /etc/apt/sources.list.d/debian.sources \
+    && apt-get update -y \
+    && apt-get install -y --install-recommends \
+    wine wine32 wine64 winetricks \
+    libasound2-plugins:i386 libsdl2-2.0-0:i386 libdbus-1-3:i386 libsqlite3-0:i386 \
+    cabextract p7zip unzip zenity winbind mono-complete \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install necessary packages and dependencies
-RUN apt-get update -y && apt-get install -y \
-	git \
-	build-essential \
-	wine64 \
-	wine32
+# Terminal
+RUN echo 'export DISPLAY=:0' > /root/.bashrc \
+    && echo 'export TERM=xterm' >> /root/.bashrc \
+    && echo 'xterm*faceName: Monospace' > /root/.Xresources \
+    && echo 'xterm*faceSize: 14' >> /root/.Xresources \
+    && echo "de_DE.UTF-8 UTF-8" > /etc/locale.gen \
+    && locale-gen
 
-RUN sudo sed 's/main/main contrib non-free non-free-firmware/g' \
-	-i /etc/apt/sources.list.d/debian.sources
+# The DaaS agent runs as root and starts the apps, so they use this prefix.
+# Prepared at build time (fonts included), so the first app starts quickly.
+ENV WINEARCH=win64
+ENV WINEPREFIX=/root/.wine
+RUN xvfb-run -a wineboot -u \
+    && xvfb-run -a winetricks -q arial corefonts \
+    && wineserver -w
+# ssh sessions do not get the ENV above
+RUN printf 'export WINEARCH=%s\nexport WINEPREFIX=%s\n' "$WINEARCH" "$WINEPREFIX" >> /root/.bashrc
 
-RUN apt-get update -y && apt-get upgrade -y && apt-get install -y \
-	meson glslang-tools \
-	libasound2-plugins:i386 \
-	libsdl2-2.0-0:i386 libdbus-1-3:i386 libsqlite3-0:i386 \
-	gcc-multilib g++-multilib \
-	&& apt-get clean \
-	&& rm -rf /var/lib/apt/lists/* \
-	&& apt-get update -y && apt-get upgrade -y
-
-#Set environment variables to avoid interaction during installation
-ENV DEBIAN_FRONTEND=noninteractive
-
-
-# Create a non-root user and switch to it
-RUN adduser --disabled-password --gecos "" wineuser
-RUN sudo usermod -aG sudo wineuser
-#VOLUME /home/wineuser/.wine32
-
-
-# Vulkan/Nvidia
-# RUN apt-get update -y && apt-get upgrade -y && apt-get install -y \
-# 	libgl1-mesa-dri:i386 mesa-vulkan-drivers mesa-vulkan-drivers:i386 \
-# 	goverlay mangohud gamemode \
-# 	libsdl2-2.0-0:i386 libdbus-1-3:i386 libsqlite3-0:i386 \
-# 	nvidia-driver nvidia-driver-libs:i386 \
-# 	nvidia-vulkan-icd:i386 nvidia-vulkan-common:i386 \
-# 	libvulkan1 libvulkan1:i386 nvidia-opencl-common:i386 \
-# 	&& apt-get clean \
-# 	&& rm -rf /var/lib/apt/lists/*
-# Create wine environments
-#COPY wine-init.bash /wine-init.bash
-
-# Locale
-RUN echo "de_DE.UTF-8 UTF-8" > /etc/locale.gen
-RUN locale-gen
-
-# ssh
+# ssh: the backend logs in as root with the host's /root/.ssh/id_rsa
 COPY ./authorized_keys /root/.ssh/authorized_keys
 EXPOSE 22
 
-# Daas Environment
-RUN mkdir -p /root/daas/env
-RUN mkdir -p /root/daas/qmsg
-RUN mkdir -p /root/daas/status
-RUN touch /root/daas/status/cmdout.txt
-# COPY ./qmsg/* /root/daas/
-COPY ./daas.jpg /root/daas/env/daas.jpg
-COPY ./daas-logo.png /root/daas/env/daas-logo.png
-RUN [ -f /usr/bin/python ] || ln -s /usr/bin/python3 /usr/bin/python
+# pulseaudio: a virtual speaker (its monitor is the virtual mic) and TCP
+# access for the containers on the docker bridge (extensions container)
+ENV PA_OPTS="auth-ip-acl=172.17.0.0/24 auth-anonymous=1"
+RUN printf '%s\n' \
+    'load-module module-null-sink' \
+    'load-module module-null-sink sink_name="virtual_speaker" sink_properties=device.description="virtual_speaker"' \
+    'load-module module-remap-source master="virtual_speaker.monitor" source_name="virtual_mic"' \
+    "load-module module-native-protocol-tcp $PA_OPTS" \
+    >> /etc/pulse/default.pa
+
+# tigervnc: guacd logs in with this password (vnc_password in
+# src/app/daas/objects/config_factory.py), so change both together
+ARG VNC_PASSWORD=user1234
+RUN echo "$VNC_PASSWORD" | vncpasswd -f > /tiger-vnc-password.txt \
+    && chmod 600 /tiger-vnc-password.txt
+EXPOSE 5900
 
 # qtile
 COPY ./config.py /root/.config/qtile/config.py
 
-# tigervnc
-COPY ./tiger-vnc-password.txt /tiger-vnc-password.txt
-EXPOSE 5900
+# DaaS agent (src/app/daas/messaging + src/app/inst), run as daas.runner_instance
+COPY ./agent/ /root/daas/
+COPY ./daas.jpg ./daas-logo.png /root/daas/env/
+RUN ln -s /usr/bin/python3 /usr/bin/python
 
-# pulse audio
-#COPY pulse-client.conf /root/pulse/client.config
-
-
-# Terminal
-COPY ./.bashrc /root/.bashrc
-COPY ./.Xresources /root/.Xresources
-# RUN mkdir /root/.wine32
-# RUN mkdir /root/.wine64
-
-# Test application
-COPY ./app.exe /root/shared/.wine64/drive_c/app.exe
-RUN chmod a+x /root/shared/.wine64/drive_c/app.exe
+# Test application (`make prepare` downloads it, see the Makefile)
+COPY ./app.exe /root/.wine/drive_c/app.exe
 
 # entrypoint
 COPY ./entrypoint.bash /entrypoint.bash
 RUN chmod a+x /entrypoint.bash
-
-USER wineuser
-WORKDIR /home/wineuser
-
-# 32 bit
-RUN mkdir -p /home/wineuser/shared/.wine32
-RUN WINEARCH=win32 WINEPREFIX=/home/wineuser/shared/.wine32 \
-	xvfb-run -a wine wineboot -u
-RUN WINEARCH=win32 WINEPREFIX=/home/wineuser/shared/.wine32 \
-	xvfb-run -a winetricks arial corefonts
-
-# 64 bit
-RUN mkdir -p /home/wineuser/shared/.wine64
-RUN WINEARCH=win64 WINEPREFIX=/home/wineuser/shared/.wine64 \
-	xvfb-run -a wine wineboot -u
-
-USER root
-WORKDIR /
-
 ENTRYPOINT [ "/entrypoint.bash" ]

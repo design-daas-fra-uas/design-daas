@@ -1,0 +1,7 @@
+# Only what the Dockerfile copies
+*
+!id_rsa.pub
+!package.json
+!package-lock.json
+!server.js
+!scripts/

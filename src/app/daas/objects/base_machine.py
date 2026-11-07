@@ -20,6 +20,18 @@ from app.qweb.common.qweb_tools import get_backend_component
 from app.qweb.processing.processor import QwebResult
 
 
+async def choose_template_root(ostype: str) -> str:
+    """Choose isofile for specified operating system"""
+    result = ""
+    if ostype == "win10":
+        result = "win10-daas.iso"
+    elif ostype == "win11":
+        result = "win11-daas.iso"
+    elif ostype == "l26" or ostype == "l26vm":
+        result = "debian12-daas.iso"
+    return result
+
+
 @dataclass(kw_only=True)
 class MachineBase(DaasBaseObject):
     """Configuration for a virtualized object using Guacamole."""
@@ -32,12 +44,13 @@ class MachineBase(DaasBaseObject):
         keep_connections: bool = False,
     ) -> Optional[InstanceObject]:
         """Start the application."""
-        assert await self.verify_demand(userid)
+        if not await self.verify_demand(userid):
+            return None
         api = await get_backend_component(BackendName.VM, ApiProxmox)
         if await self.start_prepare(keep_connections):
             response, _ = await api.prox_vmstart(api.config_prox.node, self.id_proxmox)
             if response is not None and response.status == 200:
-                if await self.start_finalize(userid, True, object_mode=object_mode):
+                if await self.start_finalize(userid, object_mode=object_mode):
                     return await self._return_connected_instance(connect)
         return None
 
@@ -91,14 +104,3 @@ class MachineBase(DaasBaseObject):
         args = await create_args_post_install(self.id_proxmox, args)
         response, data = await api.prox_vmconfig_set_post_install(**args)
         return await create_response_by_exitstatus(data, response, False)
-
-    async def choose_template_root(self, ostype: str) -> str:
-        """Choose isofile for specified operating system"""
-        result = ""
-        if ostype == "win10":
-            result = "win10-daas.iso"
-        elif ostype == "win11":
-            result = "win11-daas.iso"
-        elif ostype == "l26" or ostype == "l26vm":
-            result = "debian12-daas.iso"
-        return result

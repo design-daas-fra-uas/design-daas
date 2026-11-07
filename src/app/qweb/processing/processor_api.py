@@ -2,11 +2,8 @@
 
 import asyncio
 from dataclasses import asdict
-import traceback
-from types import TracebackType
 from typing import Any
 from quart import Response
-from app.daas.common.errors import ObjectProcessingError
 from app.qweb.auth.auth_qweb import QwebUser
 from app.qweb.processing.processor import (
     ApiProcessorAction,
@@ -104,7 +101,7 @@ class ApiProcessor(ProcessorBase):
         return resp, 500
 
     async def __delay(self, proc_request: ProcessorRequest):
-        if DELAY_PROC > 0 and proc_request.path not in ("baseline0"):
+        if DELAY_PROC > 0 and proc_request.path != "baseline0":
             await self.__sleep(DELAY_PROC)
 
     async def __sleep(self, time_s: float):

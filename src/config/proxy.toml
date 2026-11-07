@@ -1,9 +1,17 @@
+# Remote desktop viewer. Read by ProxyPlugin -> ViewerConfig
+# (app/daas/proxy/config.py).
+
 [viewer]
+# guacd container (daas-0-guacd)
 guacd = "127.0.0.1:4822"
+# Public URL of the viewer (behind nginx)
 viewer_protocol = "https"
+# Set by installer/daas/configure.bash
 viewer_host = "pve.cluster.local"
 viewer_port = 443
+# Length of the random connection tokens (secrets.token_urlsafe)
 token_length = 32
+# Client timings (ms)
 fetch_ms = 3000
 check_ms = 1000
 observer_ms = 250

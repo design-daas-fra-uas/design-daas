@@ -1,6 +1,5 @@
 """DB Backend"""
 
-from typing import Optional
 from app.daas.adapter.adapter_http import HttpAdapterConfig
 from app.daas.auth.auth_daas_local import DaasLocalAuthenticator
 from app.daas.auth.auth_daas_remote import DaasRemoteAuthenticator
@@ -12,7 +11,7 @@ from app.qweb.service.service_context import QwebBackend
 
 # pylint: disable=too-few-public-methods
 class AuthBackend(QwebBackend):
-    """Core backend"""
+    """Auth backend"""
 
     cfg: QwebAuthenticatorConfig
     auth: QwebAuthenticatorBase
@@ -31,20 +30,3 @@ class AuthBackend(QwebBackend):
             self.auth = DaasLocalAuthenticator(self.cfg)
 
         QwebBackend.__init__(self, name=BackendName.AUTH.value, component=self.auth)
-
-    def status(self) -> str:
-        """Returns status message"""
-        state = "Inactive"
-        if self.connected and self.registered:
-            state = "Active"
-        return state
-
-    async def connect(self) -> bool:
-        """Connects adapter"""
-        self.connected = True
-        return self.connected
-
-    async def disconnect(self) -> bool:
-        """Disconnects adapter"""
-        self.connected = True
-        return True

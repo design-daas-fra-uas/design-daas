@@ -21,23 +21,6 @@ class TestBackend(QwebBackend):
             self, BackendName.TESTING.value, [{"id": "abc"}, {"id": "def"}]
         )
 
-    def status(self) -> str:
-        """Returns status message"""
-        state = "Inactive"
-        if self.connected and self.registered:
-            state = "Active"
-        return f"{state}"
-
-    async def connect(self) -> bool:
-        """Connects database adapter"""
-        self.connected = True
-        return True
-
-    async def disconnect(self) -> bool:
-        """Disconnects database adapter"""
-        self.connected = False
-        return True
-
 
 class TestObjectLayer(QwebObjectLayer):
     """Testlayer for objects"""

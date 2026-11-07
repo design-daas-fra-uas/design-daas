@@ -138,6 +138,8 @@ class QHubInstance:
             request.request_args,
         )
         code, std_out, std_err = self.execute_via_proxy(request)
+        if self.config_hub.force_ip == "":
+            self.ip_address = self.tools.get_own_ip()
         response = RpcResponse(
             datetime.now().timestamp(),
             request,
@@ -165,7 +167,6 @@ class QHubInstance:
         :param process_request: A callable function that processes the RPC request.
         """
         if self.task_rpc_server is None:
-            self.rpc_server.connect()
             self.task_rpc_server = self.rpc_server.run_in_thread()
             self.logger.info("RpcServer task started.")
 

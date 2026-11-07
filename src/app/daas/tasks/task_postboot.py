@@ -7,7 +7,6 @@ from app.daas.common.enums import BackendName
 from app.daas.common.model import DaasObject
 from app.daas.node.nodecontrol import NodeController
 from app.daas.objects.object_instance import InstanceObject
-from app.daas.proxy.proxy_extensions import ProxyExtensions
 from app.daas.vm.proxmox.ProxmoxApi import ApiProxmox
 from app.plugins.platform.messaging.messaging_backend import MessagingBackend
 from app.qweb.common.common import SystemTaskArgs
@@ -70,10 +69,16 @@ class PostbootTask(Loggable):
 
     async def wait_for_boot(self, inst: InstanceObject) -> bool:
         online = await inst.check_online_state()
-        while online is False:
+        waited = 0
+        while not online:
             online = await inst.check_online_state()
             await asyncio.sleep(1)
-            self._log_info("Loop wait postboot task")
+            waited += 1
+            # A fresh install from ISO takes ~20 min: show it is still waiting
+            if waited % 60 == 0:
+                self._log_info(
+                    f"Still waiting for {inst.host or inst.id} to boot: {waited // 60} min"
+                )
         await self.update_boot_time(inst)
         self._log_info(f"Waited for boot (instance={inst.id})", 0)
         return online
@@ -85,8 +90,6 @@ class PostbootTask(Loggable):
         if inst.booted_at == inst.created_at:
             inst.booted_at = datetime.now()
             if isinstance(inst.app, MachineObject | ContainerObject):
-                #     if inst.app.object_mode == "debug":
-                #         inst.app.object_mode_extended = "done"
                 await inst.app.update()
         return await inst.update()
 
@@ -100,7 +103,7 @@ class PostbootTask(Loggable):
 
     async def wait_for_shutdown(self, inst: InstanceObject) -> bool:
         online = await inst.check_online_state()
-        if online is False:
+        if not online:
             self._log_info(f"Shutdown-Wait not needed (instance={inst.id})", True)
             return True
 
@@ -138,13 +141,19 @@ class PostbootTask(Loggable):
         return True
 
     async def _add_printer(self, instance: InstanceObject):
+        from app.daas.proxy.proxy_extensions import ProxyExtensions
+
         self._log_info(f"Adding printer for {instance.host}")
-        # extensions = await get_backend_component(
-        #     BackendName.EXTENSIONS, ProxyExtensions
-        # )
-        # iswin = instance.app.os_type in ("win10", "win11")
-        # result = await extensions.add_printer_instance(
-        #     instance.host, instance.app.id_owner, iswin
-        # )
-        return True
-        # return result
+        extensions = await get_backend_component(
+            BackendName.EXTENSIONS, ProxyExtensions
+        )
+        owner = instance.app.id_owner
+        # The desktop's printer forwards to the owner's queue on the print
+        # service, so that queue must exist before the first job
+        if not await extensions.add_printer_service(instance.host, owner):
+            self._log_error(f"Printer service queue not created for owner {owner}")
+            return False
+        iswin = instance.app.os_type in ("win10", "win11")
+        added = await extensions.add_printer_instance(instance.host, owner, iswin)
+        self._log_info(f"Printer added for {instance.host}: {added}")
+        return added

@@ -2,7 +2,7 @@
 Docker facade
 """
 
-import time
+import asyncio
 import os
 import json
 import ast
@@ -102,7 +102,7 @@ class DockerRequest(Loggable):
                 self._log_info(
                     f"Waiting {self.config.wait_services_ms}ms for started services"
                 )
-                time.sleep(self.config.wait_services_ms / 1000)
+                await asyncio.sleep(self.config.wait_services_ms / 1000)
             self.connected = True
         return self.connected
 
@@ -124,7 +124,7 @@ class DockerRequest(Loggable):
         """Build image"""
         if self.docker is None:
             return 1, "", "No docker env"
-        if os.path.exists(dockerfile) is False:
+        if not os.path.exists(dockerfile):
             return 2, "", f"File is not present: '{dockerfile}'"
         path = os.path.dirname(dockerfile)
 
@@ -188,6 +188,8 @@ class DockerRequest(Loggable):
             result = 0, "", ""
         except docker.errors.ImageNotFound:
             result = 1, "", "Image not found"
+        except docker.errors.APIError as exe:
+            result = 1, "", str(exe)
         return result
 
     async def docker_service_start(self, cfg: ContainerConfigDocker) -> tuple:
@@ -207,6 +209,7 @@ class DockerRequest(Loggable):
         )
         try:
             await self.docker_container_stop(cfg.name, True)
+            self._remove_stale_container(cfg.name)
             self._log_info(f"Running service: {cfg.name}")
             container = self.docker.containers.run(**container_config)
             if container is not None:
@@ -237,12 +240,16 @@ class DockerRequest(Loggable):
         cpus: int,
         memory_b: int,
         privileged: bool = False,
-        ports: list[str] = [],
-        volumes: list[str] = [],
+        ports = None,
+        volumes = None,
     ) -> tuple:
         """
         Starts a new container based on specified image
         """
+        if volumes is None:
+            volumes = []
+        if ports is None:
+            ports = []
         if self.docker is None:
             return 1, "", "No docker env"
         container_config = self._create_run_config(
@@ -250,6 +257,7 @@ class DockerRequest(Loggable):
         )
         try:
             await self.docker_container_stop(name, True)
+            self._remove_stale_container(name)
             container = self.docker.containers.run(**container_config)
             if container is not None:
                 name = container.name
@@ -259,6 +267,16 @@ class DockerRequest(Loggable):
         except Exception as exe:
             self._log_error(f"  1 -> Exception raised1: {exe}")
         return 1, "", "Container was not created!"
+
+    def _remove_stale_container(self, name: str):
+        """
+        Removes a non-running container (created/exited) that would block
+        `containers.run` with a name conflict
+        """
+        for cont in self.docker.containers.list(all=True, filters={"name": name}):
+            if cont.name == name and cont.status != "running":
+                cont.remove(force=True)
+                self._log_info(f"Removed stale container {cont.short_id} ({name})")
 
     async def docker_container_stop(self, name: str, force: bool) -> tuple:
         """
@@ -280,7 +298,7 @@ class DockerRequest(Loggable):
                             container.stop()
                             self._log_info(f"Stopped {container.short_id}")
                         while await self.docker_container_get(name) is not None:
-                            time.sleep(0.1)
+                            await asyncio.sleep(0.1)
                         return 0, name, ""
                 except Exception as exe:
                     self._log_error(f"  1 -> Exception raised2: {exe}")

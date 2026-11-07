@@ -1,25 +1,25 @@
+# Database. Read by DatabasePlugin -> DatabaseConfig (app/daas/common/config.py)
+# and Database -> SampleRegistryConfig (app/daas/db/db_samples.py).
+
 [db]
-database = "daas-web-db.sqlite"
-admin_credentials = "admin:admin"
-include_samples = true
-enable_echo = false
+# "mariadb" (db_* settings below, the daas-0-mariadb container) or "sqlite"
+# (file data_path/sqlite/<db_name>.sqlite3)
+db_type = "mariadb"
+# Relative to qweb.toml [sys] data_path (src/data/db)
 data_path = "db"
-db_type = "sqlite"
+enable_echo = false
+# Insert the sample objects/apps of [samples] on startup (missing ones only)
+include_samples = true
+# MariaDB connection (root may only log in from this host, see
+# installer/mariadb); the password comes from DAAS_DB_PASSWORD
 db_name = "mergedb"
 db_user = "root"
-db_pass = "my-secret-pw"
+db_pass = ""  # set by the installer in config/local/db.toml (not in git)
 db_host = "127.0.0.1"
 db_port = 3306
 
 [samples]
+# Owners and screen resolution of the sample objects (db.include_samples)
 shared_owner = 0
-shared_owner_name = "shared"
-test_owner = 0
-test_owner_name = "test"
 default_owner = 0
-default_owner_name = "admin"
 default_resolution = "max"
-persist_files = true
-persist_apps = true
-persist_objects = true
-persist_session = true

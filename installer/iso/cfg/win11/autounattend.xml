@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <!--*************************************************
 Windows 10 Answer File Generator
 Created using Windows AFG found at:
@@ -7,28 +8,26 @@ Installation Notes
 Location:
 Notes: Enter your comments here...
 **************************************************-->
-
-<?xml version="1.0" encoding="utf-8"?>
 <unattend xmlns="urn:schemas-microsoft-com:unattend">
 <settings pass="windowsPE">
 <component name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="x86" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 <SetupUILanguage>
-<UILanguage>de-DE</UILanguage>
+<UILanguage>en-US</UILanguage>
 </SetupUILanguage>
 <InputLocale>0407:00000407</InputLocale>
 <SystemLocale>de-DE</SystemLocale>
-<UILanguage>de-DE</UILanguage>
-<UILanguageFallback>de-DE</UILanguageFallback>
+<UILanguage>en-US</UILanguage>
+<UILanguageFallback>en-US</UILanguageFallback>
 <UserLocale>de-DE</UserLocale>
 </component>
 <component name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 <SetupUILanguage>
-<UILanguage>de-DE</UILanguage>
+<UILanguage>en-US</UILanguage>
 </SetupUILanguage>
 <InputLocale>0407:00000407</InputLocale>
 <SystemLocale>de-DE</SystemLocale>
-<UILanguage>de-DE</UILanguage>
-<UILanguageFallback>de-DE</UILanguageFallback>
+<UILanguage>en-US</UILanguage>
+<UILanguageFallback>en-US</UILanguageFallback>
 <UserLocale>de-DE</UserLocale>
 </component>
 <component name="Microsoft-Windows-PnPCustomizationsWinPE" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -138,9 +137,6 @@ Notes: Enter your comments here...
 <AcceptEula>true</AcceptEula>
 <FullName>user</FullName>
 <Organization></Organization>
-<ProductKey>
-<Key>VK7JG-NPHTM-C97JM-9MPGT-3V66T</Key>
-</ProductKey>
 </UserData>
 </component>
 </settings>
@@ -158,8 +154,8 @@ Notes: Enter your comments here...
 <component name="Microsoft-Windows-International-Core" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 <InputLocale>0407:00000407</InputLocale>
 <SystemLocale>de-DE</SystemLocale>
-<UILanguage>de-DE</UILanguage>
-<UILanguageFallback>de-DE</UILanguageFallback>
+<UILanguage>en-US</UILanguage>
+<UILanguageFallback>en-US</UILanguageFallback>
 <UserLocale>de-DE</UserLocale>
 </component>
 <component name="Microsoft-Windows-Security-SPP-UX" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">

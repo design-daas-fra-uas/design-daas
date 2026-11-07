@@ -1,7 +1,7 @@
 """Task to create objects within a background task"""
 
 from typing import Optional
-from nest_asyncio import asyncio
+import asyncio
 from app.daas.objects.object_container import ContainerObject
 from app.daas.objects.object_instance import InstanceObject
 from app.daas.objects.object_machine import MachineObject
@@ -18,12 +18,24 @@ class CreateTask(CloneTaskBase):
         super().__init__(cfg)
 
     async def run(self) -> QwebResult:
-        self._log_info("Enter create task")
-        if await self._handle_state_baseimage():
-            if await self._handle_state_environment(self.args):
-                return QwebResult(200, {})
-            return QwebResult(400, {}, 1, "Error on handle_env()")
-        return QwebResult(400, {}, 2, "Error on handle_baseimage()")
+        args = self.args
+        ok = await self._run_steps(
+            "Create",
+            [
+                ("boot and finalize base image", self._handle_state_baseimage),
+                ("create environment", lambda: self._create_env(args)),
+                ("configure connection", self._configure_connection),
+                ("configure environment", lambda: self._configure_env(args)),
+                ("install app", lambda: self._install_env(args)),
+                ("finalize environment", lambda: self._finalize_env(args)),
+                ("start app", lambda: self._run_env(args)),
+            ],
+        )
+        if ok:
+            return QwebResult(200, {})
+        return QwebResult(
+            400, {}, 1, f"Create failed: {self.obj.object_mode_extended}"
+        )
 
     async def _handle_state_baseimage(self) -> bool:
         await self._update_state("Wait for instance boot (baseimage)")
@@ -34,15 +46,6 @@ class CreateTask(CloneTaskBase):
             await self._update_state("Error on Finalize")
             return False
         await self._update_state("Finalized baseimage")
-        return True
-
-    async def _handle_state_environment(self, args: dict) -> bool:
-        assert await self._create_env(args)
-        assert await self._configure_connection()
-        assert await self._configure_env(args)
-        assert await self._install_env(args)
-        assert await self._finalize_env(args)
-        assert await self._run_env(args)
         return True
 
     async def _create_env(self, args: dict) -> bool:

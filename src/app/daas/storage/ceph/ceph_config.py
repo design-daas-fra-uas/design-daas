@@ -2,16 +2,6 @@ from dataclasses import dataclass
 
 
 @dataclass(kw_only=True)
-class CephStoreFilesystemFolder:
-    """Ceph based filestore"""
-
-    name: str
-    src: str
-    dst_linux: str
-    dst_win: str
-
-
-@dataclass(kw_only=True)
 class CephstoreFilesystemConfig:
     """Config data for Ceph filesystem"""
 
@@ -23,9 +13,6 @@ class CephstoreFilesystemConfig:
     folder_user: str
     folder_keyrings: str
     folder_mount: str
-    mappings_public: CephStoreFilesystemFolder
-    mappings_shared: CephStoreFilesystemFolder
-    mappings_user: CephStoreFilesystemFolder
 
 
 @dataclass(kw_only=True)

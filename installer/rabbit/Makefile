@@ -1,26 +1,20 @@
-.PHONY: all prepare build start commit stop clean clean-all
+# RabbitMQ broker image, see README.md. Run as root (docker).
+# The DaaS backend starts the container; here it is only built and tested.
 
+.PHONY: all build check clean
+
+# Image name in src/config/container.toml
 TAG := daas-0-rabbit
-CMD := /bin/bash -i
-HOSTIP:=172.17.0.1
+BUILDOPT ?=
 
-all: commit
+all: build
 
-build: | stop
-	docker build -t $(TAG) .
-start: build
-	sudo docker run -d \
-		-p $(HOSTIP):4369:4369 -e RABBITMQ_HEARTBEAT=30 -p $(HOSTIP):5672:5672 \
-		--name $(TAG) --rm $(TAG)
-commit: start
-	docker commit $(TAG)
-	docker kill $(TAG)
+build:
+	docker build $(BUILDOPT) -t $(TAG) .
 
-stop:
-	-docker kill $(TAG)
+# Start a test container (no published ports), check the broker, remove it
+check:
+	./check.bash $(TAG) $(TAG)-test
 
-clean: stop
-	-docker rmi $(TAG)
-	rm -rf noweb
-
-
+clean:
+	-docker image rm $(TAG)

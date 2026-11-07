@@ -1,8 +1,14 @@
+# Authentication. Read by AuthPlugin -> QwebAuthenticatorConfig
+# (app/qweb/common/config.py).
+
 [auth]
-authenticator_type = "local"
+# "local": every request runs as [auth.local] default user
+# "remote": tokens are checked against the OAuth backend in [auth.remote]
+authenticator_type = "remote"
 enable_auth_user = true
 enable_auth_token = true
-enable_auth_endpoint = true
+enable_auth_endpoint = false
+# Check that loaded objects belong to the requesting user
 enable_entity_verification = true
 enable_verify_tls = false
 enable_logging = false
@@ -15,8 +21,9 @@ default_userid = 5
 default_username = "default_user"
 
 [auth.remote]
-url = "https://backend.application.daas-design.de"
+# WARNING: real-looking account in git; replace for a real deployment
+url = "http://127.0.0.1:8080"
 clientid = "test-client"
 scope = "admin"
-username = "johannes.bouche@fb2.fra-uas.de"
-password = "Design.2024"
+username = "admin@design.local"
+password = ""  # set by the installer in config/local/auth.toml (not in git)

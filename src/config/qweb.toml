@@ -1,4 +1,8 @@
+# Core web runtime (Quart). Read by ConfigReader -> QwebConfig
+# (app/qweb/common/config.py).
+
 [sys]
+# Runtime data folder, relative to src/
 data_path = "data"
 
 [cors]
@@ -10,15 +14,17 @@ allow_credentials = false
 
 [handler]
 enable_debugging = true
-enable_testing = true
+# Registers the TestPlugin and its /test/* routes
+enable_testing = false
 enable_timings = false
+# Echo exceptions / request args in API responses
 enable_exceptions_echo = false
 enable_args_echo = false
 recursion_limit = 10000
 
 [run]
-debug = true
-host = "0.0.0.0"
+debug = false
+host = "127.0.0.1"
 port = 5000
 
 [quart]
@@ -28,11 +34,15 @@ template_folder = "app/webroot/templates"
 static_folder = "app/webroot/static"
 
 [ssl]
+# TLS for :5000 (nginx proxies to it); files are relative to data_path and
+# created by `make install` (scripts/genkey.bash)
 enabled = true
 certfile = "keys/cert.pem"
 keyfile = "keys/key.pem"
 
 [template_args]
+# Public URL used in the viewer templates
 hostproto = "https"
+# Set by installer/daas/configure.bash
 hostip = "pve.cluster.local"
 hostport = 443

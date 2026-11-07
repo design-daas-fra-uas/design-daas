@@ -1,18 +1,15 @@
 """Service runtime"""
 
-import os
 import sys
 import asyncio
-import tomllib
 from dataclasses import asdict
 from typing import Any, Optional
-import nest_asyncio
 from quart import Quart
 from quart_cors import cors
 from app.qweb.logging.logging import Loggable, QwebLogManager, LogTarget, LoggerConfig
 from app.qweb.auth.auth_dummy import QwebDummyAuthenticator
 from app.qweb.blueprints.blueprint_info import BlueprintInfo
-from app.qweb.common.config import ConfigReader, QwebAuthenticatorConfig, QwebConfig
+from app.qweb.common.config import ConfigReader, QwebConfig
 from app.qweb.service.service_context import (
     BackendContext,
     ObjectContext,
@@ -28,8 +25,9 @@ from app.qweb.service.service_providers import (
     ObjectLayerContextProvider,
 )
 from app.qweb.service.service_tasks import QwebTaskManager
+from app.qweb.common.tomlfile import read_toml_with_local
 
-RUNTIME_VERSION = "1.0.0"
+RUNTIME_VERSION = "2.0.0"
 
 
 # pylint: disable=import-outside-toplevel
@@ -51,7 +49,7 @@ class QwebServiceRuntime(Loggable):
 
         data = self.get_config("logging.toml")
         self.cfg_log = LoggerConfig(**data["log"])
-        if self.cfg_log.log_dir.startswith("/") is False:
+        if not self.cfg_log.log_dir.startswith("/"):
             self.cfg_log.log_dir = (
                 f"{self.cfg_qweb.sys.root_path}"
                 f"/{self.cfg_qweb.sys.data_path}"
@@ -124,10 +122,6 @@ class QwebServiceRuntime(Loggable):
         """Returns qweb config"""
         return self.cfg_qweb
 
-    def get_config_auth(self) -> QwebAuthenticatorConfig:
-        """Returns auth config"""
-        return self.cfg_auth
-
     def get_config(self, filename: str) -> dict:
         """Reads config from config folder"""
         return self._read_toml_file(filename)
@@ -168,17 +162,7 @@ class QwebServiceRuntime(Loggable):
         result = True
         for layer in layers:
             ret = self.layers.add(layer.name, layer)
-            if ret is False:
-                result = False
-                break
-        return result
-
-    def add_backends(self, backends: list[QwebBackend]) -> bool:
-        """Adds new backends"""
-        result = True
-        for backend in backends:
-            ret = self.backends.add(backend.name, backend)
-            if ret is False:
+            if not ret:
                 result = False
                 break
         return result
@@ -187,25 +171,15 @@ class QwebServiceRuntime(Loggable):
         """Adds new backend"""
         result = True
         ret = self.backends.add(backend.name, backend)
-        if ret is False:
+        if not ret:
             result = False
         else:
             backend.registered = True
         return result
 
-    def remove_backends(self, names: list[str]) -> bool:
-        """Adds new backend"""
-        result = True
-        for name in names:
-            ret = self.backends.remove(name)
-            if ret is False:
-                result = False
-                break
-        return result
-
     async def start(self) -> bool:
         """Runs service"""
-        print(self.__repr__())
+        self._log_info(self.__repr__())
         ret = await self.__start_app()
         return ret
 
@@ -242,11 +216,7 @@ class QwebServiceRuntime(Loggable):
         """Reads toml file from config folder"""
         qweb_conf = self.get_config_qweb()
         config_path = qweb_conf.quart.config_folder
-        fullname = f"{config_path}/{file}"
-        if os.path.exists(fullname):
-            with open(file=fullname, mode="rb") as pointer:
-                return tomllib.load(pointer)
-        return {}
+        return read_toml_with_local(f"{config_path}/{file}")
 
     def __get_service_context(self) -> CoreContext:
         needed = []
@@ -283,20 +253,26 @@ class QwebServiceRuntime(Loggable):
         handler_default.set_configs(
             self.cfg_qweb.proc, self.cfg_qweb.quart, self.cfg_qweb.handler
         )
-        # handler_testing.set_config(self.config.handler)
 
         # Blueprints
         self.app.register_blueprint(handler_default.blueprints)
-        # if self.config.handler.enable_testing:
-        #     self.app.register_blueprint(handler_testing.blueprints)
 
         return self.app
 
     async def __stop_app(self) -> bool:
-        for name, backend in self.backends.backends.items():
+        # Reverse start order: the container backend started the service
+        # containers (MariaDB, RabbitMQ) first, so it must stop them last,
+        # after the database and messaging backends have disconnected
+        for name, backend in reversed(list(self.backends.backends.items())):
             if isinstance(backend, QwebBackend):
                 self._log_info(f"Stopping backend {name}")
-                await backend.disconnect()
+                try:
+                    await backend.disconnect()
+                except Exception as exe:
+                    t = type(exe)
+                    self._log_info(
+                        f"Error stopping backend {name}: {t.__module__}.{t.__qualname__}: {exe}"
+                    )
 
         self._log_info("Stopping Service")
         if self.service_task is not None:
@@ -312,7 +288,6 @@ class QwebServiceRuntime(Loggable):
         if "enabled" in runargs:
             runargs.pop("enabled")
         if self.app is not None:
-            nest_asyncio.apply()
             self.service_task = asyncio.create_task(self.app.run_task(**runargs))
             await self.service_task
             return True

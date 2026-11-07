@@ -21,22 +21,15 @@ class LimitBackend(QwebBackend):
             self, name=BackendName.LIMITS.value, component=self.component
         )
 
-    def status(self) -> str:
-        """Returns status message"""
-        state = "Inactive"
-        if self.connected and self.registered:
-            state = "Active"
-        return f"{state}"
-
     async def connect(self) -> bool:
-        """Connects database adapter"""
+        """Connects adapter"""
         if self.component is not None:
             await self.component.initialize()
             return True
         return False
 
     async def disconnect(self) -> bool:
-        """Disconnects database adapter"""
+        """Disconnects adapter"""
         if self.component is not None:
             self.connected = False
             return True

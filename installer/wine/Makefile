@@ -1,42 +1,58 @@
-.PHONY: all prepare build start commit stop clean clean-all
+# Wine desktop image for DaaS container instances, see README.md.
+# Run as root (docker, /root/.ssh/id_rsa.pub).
 
-TAG := wine
-PORT := 5900
-CMD := /bin/bash -i
-PASSWORD := user1234
-QMSGDIR := ../../src/app/daas/messaging
-QINSTDIR := ../../src/app/inst
+.PHONY: all prepare build run check shell stop clean
+
+# wine: the root image name (sent by the frontend as rootimage, and
+# DEFAULT_CNT_IMAGE of new containers in src/app/plugins/platform/phases/phases_tasks.py); daas.contwine: the image the sample
+# container object contwine runs (src/app/daas/db/db_samples.py)
+TAGS := wine daas.contwine
+IMAGE := $(firstword $(TAGS))
+# Test container of `make run` / `make check`
+NAME := wine
+VNC_PORT ?= 5902
+SSH_PORT ?= 2222
+# Must match vnc_password in src/app/daas/objects/config_factory.py
+VNC_PASSWORD ?= user1234
+# Public key the backend logs in with (created by `make deps`)
+SSH_KEY ?= /root/.ssh/id_rsa.pub
+AGENT_SRC := ../../src/app/daas/messaging
+AGENT_ENV := ../../src/app/inst
+# Test application put into the prefix as C:\app.exe
 APP_URL := https://download-installer.cdn.mozilla.net/pub/thunderbird/releases/115.6.1/win64/de/Thunderbird%20Setup%20115.6.1.exe
 BUILDOPT ?=
-all: commit
 
+all: build
+
+# Build context: the DaaS agent from src/, the backend's ssh key, the test app
 prepare:
-	rm -rf qmsg
-	mkdir -p qmsg/env
-	cp -r $(QMSGDIR)/* qmsg
-	cp -r $(QINSTDIR)/* qmsg/env
-	cp /root/.ssh/id_rsa.pub authorized_keys
-	sudo chmod -R a+rwx qmsg
-	if [ ! -f ./app.exe ]; then \
-		curl -o app.exe $(APP_URL) ; \
-	fi
+	test -r $(SSH_KEY) || { echo "Missing $(SSH_KEY): run 'make deps' in installer/"; exit 1; }
+	rm -rf agent
+	mkdir -p agent/env
+	cp -r $(AGENT_SRC)/* agent
+	cp -r $(AGENT_ENV)/* agent/env
+	cp $(SSH_KEY) authorized_keys
+	test -f app.exe || curl -fL -o app.exe "$(APP_URL)"
 
-build: | stop prepare
-	docker build $(BUILDOPT) -t $(TAG) .
+build: prepare
+	docker build $(BUILDOPT) --build-arg VNC_PASSWORD=$(VNC_PASSWORD) \
+		$(addprefix -t ,$(TAGS)) .
 
-start: build
-	sudo docker run -d \
-		-p 0.0.0.0:$(PORT):$(PORT) -p 127.0.0.1:2222:22 \
-		--name $(TAG) --rm  $(TAG) $(CMD)
+# Start a test container: VNC on 127.0.0.1:VNC_PORT, ssh on 127.0.0.1:SSH_PORT
+run: stop
+	docker run -d --rm --name $(NAME) \
+		-p 127.0.0.1:$(VNC_PORT):5900 -p 127.0.0.1:$(SSH_PORT):22 $(IMAGE)
 
-commit: start
-	docker commit $(TAG)
-	docker kill $(TAG)
+# Start a test container, check the desktop and Wine in it, remove it
+check:
+	./check.bash $(IMAGE) $(NAME)
+
+shell:
+	docker exec -it $(NAME) bash
 
 stop:
-	-docker kill $(TAG)
+	-docker rm -f $(NAME) 2>/dev/null
 
 clean: stop
-	-docker rmi $(TAG)
-	rm -rf noweb
-
+	-docker image rm $(TAGS)
+	rm -rf agent authorized_keys app.exe

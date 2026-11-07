@@ -28,7 +28,7 @@ class HttpAdapter(Loggable):
     def __init__(self, cfg: HttpAdapterConfig) -> None:
         Loggable.__init__(self, LogTarget.HTTP)
         self.config = cfg
-        if self.config.verify_tls is False:
+        if not self.config.verify_tls:
             urllib3.disable_warnings()
 
     # pylint: disable=too-many-arguments,unused-argument,dangerous-default-value
@@ -36,15 +36,25 @@ class HttpAdapter(Loggable):
         self,
         method: str,
         url: str,
-        header: dict[str, str] = {},
-        cookies: dict[str, str] = {},
-        params: dict[str, str] = {},
-        data: dict[str, Any] = {},
-        files: dict[str, Any] = {},
+        header=None,
+        cookies=None,
+        params=None,
+        data=None,
+        files=None,
     ) -> tuple[aiohttp.ClientResponse, dict]:
         """
         Perform request with specified parameters
         """
+        if files is None:
+            files = {}
+        if data is None:
+            data = {}
+        if params is None:
+            params = {}
+        if header is None:
+            header = {}
+        if cookies is None:
+            cookies = {}
         encoded_data: dict[str, Any] | str = data
         if "Content-Type" in header:
             if header["Content-Type"] == "application/json":
@@ -74,7 +84,7 @@ class HttpAdapter(Loggable):
 
         try:
             ssl_context = ssl.create_default_context()
-            if self.config.verify_tls is False:
+            if not self.config.verify_tls:
                 ssl_context.check_hostname = False
                 ssl_context.verify_mode = ssl.CERT_NONE
             async with aiohttp.ClientSession() as session:

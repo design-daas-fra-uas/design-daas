@@ -229,7 +229,9 @@ class ProxyExtensions(Loggable):
         if serviceip == "":
             serviceip = await self._get_service_ip(self.config.update_service_ip)
         url = f"ipp://{serviceip}:{port}/printers/{printername}"
-        args = f"-x {self.config.displayname} ; lpadmin -p {self.config.displayname} -E -v {url}"
+        name = self.config.displayname
+        # Replace an old printer, add it, and make it the default destination
+        args = f"-x {name} ; lpadmin -p {name} -E -v {url} && lpadmin -d {name}"
         return cmd, args
 
     async def _get_windows_params(self, owner: int) -> tuple[str, str]:
@@ -241,7 +243,6 @@ class ProxyExtensions(Loggable):
             serviceip = await self._get_service_ip(self.config.update_service_ip)
         url = f"http://{serviceip}:{port}/printers/{printername}"
         args = (
-            # f'printui.dll,PrintUIEntry /dl /n "{self.config.displayname}" ; '
             "printui.dll,PrintUIEntry "
             f'/if /b "{self.config.displayname}" /r "{url}" /m "Generic / Text Only" /z'
         )

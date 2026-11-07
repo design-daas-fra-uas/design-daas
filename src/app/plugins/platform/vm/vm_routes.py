@@ -1,7 +1,5 @@
 """VM Blueprints"""
 
-import inspect
-
 from app.daas.common.enums import BackendName, LayerName
 from app.plugins.core.db.db_layer import DBObject
 from app.plugins.platform.vm.vm_tasks import VMTask
@@ -15,7 +13,6 @@ from quart import Blueprint
 from app.qweb.blueprints.blueprint_handler import BlueprintHandler
 from app.qweb.service.service_context import LayerObject
 
-
 perf_args = ["counter", "timestamp"]
 backends = [BackendName.VM.value, BackendName.DB.value]
 
@@ -23,6 +20,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=60000,
         name="vmlist",
+        description="Get vm list from proxmox api",
         url="/vm/list",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
@@ -39,6 +37,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=60001,
         name="vmstatus",
+        description="Get vm status from proxmox api",
         url="/vm/status",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
@@ -56,6 +55,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=60002,
         name="vmconfig_get",
+        description="Retrieves vm configuration",
         url="/vm/config_get",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
@@ -73,9 +73,11 @@ infos = [
     BlueprintInfo(
         endpoint_id=60003,
         name="vmconfig_set_pre_install",
+        description="Sets vm configuration (pre)",
         url="/vm/config_set_pre_install",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
+        protect_system_objects=True,
         conc_params=ConcurrencyMode.AUTH_AND_PROC,
         processor=ProcessorType.API,
         processor_action=ApiProcessorAction.JSON,
@@ -99,9 +101,11 @@ infos = [
     BlueprintInfo(
         endpoint_id=60004,
         name="vmconfig_set_post_install",
+        description="Sets vm configuration (post)",
         url="/vm/config_set_post_install",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
+        protect_system_objects=True,
         conc_params=ConcurrencyMode.AUTH_AND_PROC,
         processor=ProcessorType.API,
         processor_action=ApiProcessorAction.JSON,
@@ -116,6 +120,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=60005,
         name="vmsnapshot_list",
+        description="Lists all snapshots of a vm via proxmox api",
         url="/vm/snapshot_list",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
@@ -133,9 +138,11 @@ infos = [
     BlueprintInfo(
         endpoint_id=60006,
         name="vmsnapshot_create",
+        description="Creates snapshots for a specific vm via proxmox api",
         url="/vm/snapshot_create",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
+        protect_system_objects=True,
         conc_params=ConcurrencyMode.AUTH_AND_PROC,
         processor=ProcessorType.API,
         processor_action=ApiProcessorAction.JSON,
@@ -150,9 +157,11 @@ infos = [
     BlueprintInfo(
         endpoint_id=60007,
         name="vmsnapshot_rollback",
+        description="Restores snapshots of a vm via proxmox api",
         url="/vm/snapshot_rollback",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
+        protect_system_objects=True,
         conc_params=ConcurrencyMode.AUTH_AND_PROC,
         processor=ProcessorType.API,
         processor_action=ApiProcessorAction.JSON,
@@ -167,9 +176,11 @@ infos = [
     BlueprintInfo(
         endpoint_id=60008,
         name="vmtemplate_convert",
+        description="Converts vm object into template via proxmox api",
         url="/vm/template_convert",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
+        protect_system_objects=True,
         conc_params=ConcurrencyMode.AUTH_AND_PROC,
         processor=ProcessorType.API,
         processor_action=ApiProcessorAction.JSON,
@@ -184,6 +195,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=60009,
         name="vmstart",
+        description="Starts vm object",
         url="/vm/start",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
@@ -201,6 +213,7 @@ infos = [
     BlueprintInfo(
         endpoint_id=60010,
         name="vmstop",
+        description="Stops vm object",
         url="/vm/stop",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
@@ -213,14 +226,18 @@ infos = [
         request_args_optional=[],
         request_args_common=perf_args,
         backends=backends,
-        objects=[LayerObject("entity", DBObject.INST.value, LayerName.DB.value)],
+        objects=[
+            LayerObject("entity", DBObject.INST.value, LayerName.DB.value)
+        ],
     ),
     BlueprintInfo(
         endpoint_id=60011,
         name="vmdelete",
+        description="Deletes vm object",
         url="/vm/delete",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
+        protect_system_objects=True,
         conc_params=ConcurrencyMode.AUTH_AND_PROC,
         processor=ProcessorType.API,
         processor_action=ApiProcessorAction.JSON,
@@ -235,9 +252,11 @@ infos = [
     BlueprintInfo(
         endpoint_id=60012,
         name="vmcreate",
+        description="Creates vm object",
         url="/vm/create",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
+        protect_system_objects=True,
         conc_params=ConcurrencyMode.CTX_AND_AUTH,
         processor=ProcessorType.API,
         processor_action=ApiProcessorAction.JSON,
@@ -268,7 +287,8 @@ infos = [
     BlueprintInfo(
         endpoint_id=60012,
         name="vmclone",
-        url="/vm/vm",
+        description="Creates vm object",
+        url="/vm/clone",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
         conc_params=ConcurrencyMode.CTX_AND_AUTH,
@@ -277,7 +297,12 @@ infos = [
         processor_task=VMTask.VM_CLONE.value,
         content_type="application/json",
         request_args_mandatory=["id", "newid", "name", "kb"],
-        request_args_optional=["ceph_public", "ceph_shared", "ceph_user", "snapname"],
+        request_args_optional=[
+            "ceph_public",
+            "ceph_shared",
+            "ceph_user",
+            "snapname",
+        ],
         request_args_common=perf_args,
         backends=backends,
         objects=[
@@ -291,104 +316,4 @@ infos = [
 handler = BlueprintHandler(
     blueprints=Blueprint("routes_vm", __name__),
     infos=infos,
-    testing=True,
-    default_handler=None,
 )
-
-
-@handler.blueprints.post("/vm/template_convert")
-async def vmtemplate_convert():
-    """Converts vm object into template via proxmox api"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/vm/snapshot_create")
-async def vmsnapshot_create():
-    """Creates snapshots for a specific vm via proxmox api"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/vm/snapshot_rollback")
-async def vmsnapshot_rollback():
-    """Restores snapshots of a vm via proxmox api"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/vm/snapshot_list")
-async def vmsnapshot_list():
-    """Lists all snapshots of a vm via proxmox api"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/vm/list")
-async def vmlist():
-    """Get vm list from proxmox api"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/vm/status")
-async def vmstatus():
-    """Get vm status from proxmox api"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/vm/config_get")
-async def vmconfig_get():
-    """Retrieves vm configuration"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/vm/config_set_pre_install")
-async def vmconfig_set_pre_install():
-    """Sets vm configuration (pre)"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/vm/config_set_post_install")
-async def vmconfig_set_post_install():
-    """Sets vm configuration (post)"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/vm/start")
-async def vmstart():
-    """Starts vm object"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/vm/stop")
-async def vmstop():
-    """Stops vm object"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/vm/create")
-async def vmcreate():
-    """Creates vm object"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/vm/clone")
-async def vmclone():
-    """Creates vm object"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/vm/delete")
-async def vmdelete():
-    """Deletes vm object"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)

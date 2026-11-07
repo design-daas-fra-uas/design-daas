@@ -4,12 +4,11 @@ from enum import Enum
 from app.daas.objects.object_application import ApplicationObject
 from app.qweb.common.common import TaskArgs
 from app.qweb.processing.processor import QwebResult
-from app.daas.common.model import Application, Environment
+from app.daas.common.model import Environment
 from app.daas.objects.base_object import DaasBaseObject
 from app.daas.objects.object_container import ContainerObject
 from app.daas.objects.object_machine import MachineObject
 from app.daas.common.ctx import (
-    create_response_url_start,
     get_request_object,
     get_request_object_optional,
     log_task_arguments,

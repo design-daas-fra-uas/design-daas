@@ -5,7 +5,6 @@ from app.daas.common.enums import BackendName
 from app.daas.objects.object_instance import InstanceObject
 from app.daas.storage.filestore import Filestore
 from app.qweb.common.common import TaskArgs
-from app.qweb.common.qweb_tools import get_database
 from app.qweb.processing.processor import QwebResult
 from app.daas.common.ctx import (
     get_backend_component,
@@ -114,7 +113,6 @@ async def vminvoke_test_icmp(args: TaskArgs) -> QwebResult:
     """Invokes icmp test command"""
     log_task_arguments(args.ctx, args.req, args.info, args.user)
     entity = get_request_object(args.ctx, "entity", InstanceObject)
-    reqargs = args.req.request_context.request_args
     return await entity.inst_vminvoke_test_icmp()
 
 
@@ -122,7 +120,6 @@ async def vminvoke_test_ssh(args: TaskArgs) -> QwebResult:
     """Invokes ssh test command"""
     log_task_arguments(args.ctx, args.req, args.info, args.user)
     entity = get_request_object(args.ctx, "entity", InstanceObject)
-    reqargs = args.req.request_context.request_args
     return await entity.inst_vminvoke_test_ssh()
 
 

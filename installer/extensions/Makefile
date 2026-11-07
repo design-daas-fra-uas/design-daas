@@ -1,33 +1,31 @@
-.PHONY: all prepare build ensureKey start commit stop clean clean-all
+# Extensions image (printing), see README.md. Run as root (docker,
+# /root/.ssh/id_rsa.pub). The DaaS backend starts the container; here it is
+# only built and tested.
 
+.PHONY: all prepare build check clean
+
+# Image name in src/config/container.toml
 TAG := daas-0-extensions
-CMD := /bin/bash -i
-HOSTIP := 0.0.0.0
-BUILDOPT?=
+# Public key the backend logs in with (created by `make deps`)
+SSH_KEY ?= /root/.ssh/id_rsa.pub
+BUILDOPT ?=
 
-all: commit
+all: build
 
-ensureKey:
-	if [ ! -f ./VNCService/id_rsa.pub ] ; then \
-		cp /root/.ssh/id_rsa.pub ./VNCService/id_rsa.pub ; \
-	fi
+# Build context: the backend's ssh key (copied every time, so a new key
+# reaches the image)
+prepare:
+	test -r $(SSH_KEY) || { echo "Missing $(SSH_KEY): run 'make deps' in installer/"; exit 1; }
+	cp $(SSH_KEY) VNCService/id_rsa.pub
 
-build: | stop ensureKey
-	cd VNCService && docker build $(BUILDOPT) -t $(TAG) .
-start: build
-	sudo docker run -d \
-        -p "$(HOSTIP):631:631" \
-        -p "$(HOSTIP):8010:8010" \
-        -p "$(HOSTIP):8020:8020" \
-		--name $(TAG) --rm $(TAG)
-commit: start
-	docker commit $(TAG)
-	docker kill $(TAG)
+build: prepare
+	docker build $(BUILDOPT) -t $(TAG) VNCService
 
-stop:
-	-docker kill $(TAG)
+# Start a test container (no published ports), print a test page, check
+# that bad input is rejected, remove it
+check:
+	./check.bash $(TAG) $(TAG)-test
 
-clean: stop
-	-docker rmi $(TAG)
-
-
+clean:
+	-docker image rm $(TAG)
+	rm -f VNCService/id_rsa.pub

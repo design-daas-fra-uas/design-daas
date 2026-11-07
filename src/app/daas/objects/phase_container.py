@@ -110,9 +110,9 @@ class ContainerPhase(ContainerBase):
         return False
 
     async def _phase_clone_check_args(self, args: dict) -> bool:
-        required = ["id", "newid", "name", "rootimage"]
+        required = ["id", "newid", "name"]
         for k in required:
-            if k in args is False:
+            if k not in args:
                 self._log_error(f"Required argument missing: {k}", 1)
                 return False
         return await self._phase_new_check_id(args)
@@ -120,7 +120,7 @@ class ContainerPhase(ContainerBase):
     async def _phase_new_check_args(self, args: dict) -> bool:
         required = ["id", "id_owner", "name", "cores", "memsize", "disksize"]
         for k in required:
-            if k in args is False:
+            if k not in args:
                 self._log_error(f"Required argument missing: {k}", 1)
                 return False
         if await self._phase_new_check_id(args):

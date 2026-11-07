@@ -1,35 +1,52 @@
+# Proxmox. Read by VmPlugin -> ProxmoxRestConfig / HttpAdapterConfig /
+# ProxmoxApiConfig (app/daas/vm/proxmox/, app/daas/adapter/adapter_http.py).
+
 [vm_rest]
-apiuser = "root@pam"
-apipass = "root"
+# WARNING: prototype credentials; use a dedicated Proxmox user for real setups
+apiuser = "daas@pve"
+apipass = ""  # set by the installer in config/local/vm.toml (not in git)
 apiurl = "https://127.0.0.1:8006/api2/json"
 sessionurl = "access/ticket"
+# Seconds before the API ticket is renewed
 session_lifetime = 3600
 
 [vm_http]
 logging = true
+# Proxmox uses a self-signed certificate
 verify_tls = false
 logrequests = true
 logresults = false
 
 [vm_api]
+# Set by installer/daas/configure.bash
 node = "pve"
-hostIp = "192.168.123.1"
+# Set by installer/daas/configure.bash
+hostIp = "192.168.123.11"
+# Instance network (vmbr1); dnsmasq hands out these addresses
 prefixip = "192.168.223"
+prefixmac = "de:ad:be:ef:00"
+
+# Storages created by the backend on startup as folders under main_folder
 main_folder = "/home"
 storage_iso = "daas-iso"
 storage_img = "daas-img"
 storage_ceph = "daas-ceph"
+
+# Bridges created by the backend on startup if missing.
+# The cidr/gw/adapter values of vmbr0 and the cidr of the others are set by
+# installer/daas/configure.bash. An empty adapter means no physical port;
+# only vmbr0 can have one, the others are internal.
+# DaaS network (vmbr0)
 bridge_name_daas = "vmbr0"
-bridge_cidr_daas = "192.168.123.1/24"
+bridge_cidr_daas = "192.168.123.11/24"
 bridge_gw_daas = ""
 bridge_adapter_daas = ""
+# Instance network (vmbr1)
 bridge_name_inst = "vmbr1"
-bridge_cidr_inst = "192.168.223.1/24"
-bridge_adapter_inst = ""
+bridge_cidr_inst = "192.168.223.11/24"
+# Ceph network (vmbr8)
 bridge_name_ceph = "vmbr8"
-bridge_cidr_ceph = "192.168.100.1/24"
-bridge_adapter_ceph = ""
+bridge_cidr_ceph = "192.168.100.11/24"
+# Cluster network (vmbr9)
 bridge_name_cluster = "vmbr9"
-bridge_cidr_cluster = "192.168.200.1/24"
-bridge_adapter_cluster = ""
-prefixmac = "de:ad:be:ef:00"
+bridge_cidr_cluster = "192.168.200.11/24"

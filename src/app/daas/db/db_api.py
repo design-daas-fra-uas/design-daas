@@ -46,13 +46,6 @@ class DatabaseApiBase(Loggable):
                 return mapping
         return None
 
-    async def _get_table_mapping_domain(self, tab: Table) -> Optional[type[DaaSEntity]]:
-        mappings = TableEntityMapping()
-        mapping = mappings.get_domain(tab.name)
-        if mapping is not None and issubclass(mapping, DaaSEntity):
-            return mapping
-        return None
-
 
 class DatabaseApi(DatabaseApiBase):
     """Handles calls to the database"""
@@ -82,15 +75,6 @@ class DatabaseApi(DatabaseApiBase):
     async def model_to_orm(self, model: DaaSEntity):
         """Converts model object to orm object"""
         return create_orm(model)
-
-    async def db_session_flush(
-        self,
-    ) -> bool:
-        """Flush all changes to the db"""
-        if self.session is None:
-            return False
-        self.session.flush()
-        return True
 
     def db_session_create(
         self,
@@ -180,7 +164,7 @@ class DatabaseApi(DatabaseApiBase):
         mapping: Optional[Type[object]] = await self.get_mapping_orm(tablename.value)
         if mapping is None:
             return []
-        self._log_info(f"SQL (Select) {tablename}")
+        self._log_debug(f"SQL (Select) {tablename}")
         qresult = await self.db_session_query(mapping, filter)
         if qresult is None:
             return []
@@ -192,10 +176,6 @@ class DatabaseApi(DatabaseApiBase):
             return self.metadata.tables[name]
         return None
 
-    async def get_table_by_orm(self, orm: ORMEntity) -> Optional[Table]:
-        """Gets Table associated with specified orm type"""
-        return orm.get_table()
-
     async def get_table_by_domain(self, model: DaaSEntity) -> Optional[Table]:
         """Gets Table associated with specified model type"""
         orm = await self.model_to_orm(model)
@@ -204,11 +184,6 @@ class DatabaseApi(DatabaseApiBase):
         return None
 
     async def get_mapping_orm(self, name: str) -> Optional[ORMEntity]:
-        """Get mapping orm"""
-        tab: Optional[Table] = await self.get_table(name)
-        return await self._get_table_mapping_orm(tab)
-
-    async def get_mapping_domain(self, name: str) -> Optional[DaaSEntity]:
         """Get mapping orm"""
         tab: Optional[Table] = await self.get_table(name)
         return await self._get_table_mapping_orm(tab)

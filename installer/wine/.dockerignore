@@ -1,0 +1,10 @@
+# Only what the Dockerfile copies
+*
+!agent/
+!authorized_keys
+!app.exe
+!config.py
+!daas.jpg
+!daas-logo.png
+!entrypoint.bash
+**/__pycache__

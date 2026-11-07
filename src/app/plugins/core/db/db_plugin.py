@@ -1,4 +1,3 @@
-import os
 from app.daas.common.enums import ConfigFile, ConfigSections
 from app.daas.db.database import Database
 from app.qweb.service.service_plugin import LoadOrder, PluginBase
@@ -51,7 +50,8 @@ class DatabasePlugin(PluginBase):
         if connected:
             db = Database()
             await db.connect()
-            await db.load_demo_apps()
+            if self.cfg.include_samples:
+                await db.load_demo_apps()
         return connected
 
     async def plugin_stop(self) -> bool:

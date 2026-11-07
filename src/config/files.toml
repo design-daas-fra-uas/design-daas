@@ -1,14 +1,14 @@
+# Local file storage. Read by FilePlugin -> FilestoreConfig
+# (app/daas/storage/local/fs_config.py). Paths are relative to src/.
+
 [filestore]
 folder_tmp = "data/tmp"
 folder_shared = "data/shared"
 folder_upload = "data/upload"
 folder_docker = "data/docker"
-folder_inst_env = "env"
+# JSON files describing endpoint permission groups (*.json with "endpoints")
+folder_endpoint_info = "data/endpoint_info"
+
+# Folder names inside an instance
 folder_inst_status = "status"
-folder_endpoint_info = "/home/design-daas/backend/web/data/endpoint_info"
 instance_status_outfile_name = "cmdout.txt"
-instance_status_pidfile_name = "pid.txt"
-default_wine_image_folder = "/home/design-daas/backend/installer/wine"
-default_wine_image_name = "wine"
-default_x11vnc_image_folder = "/home/design-daas/backend/installer/x11vnc"
-default_x11vnc_image_name = "x11vnc"

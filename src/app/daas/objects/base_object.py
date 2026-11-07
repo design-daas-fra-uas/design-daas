@@ -34,6 +34,10 @@ EXCLUDED_PROPERTIES = [
 ]
 
 
+# Answer when verify_demand refuses a new object or instance
+LIMIT_REACHED = "Resource limit reached"
+
+
 @dataclass
 class DaasBaseObject(DaasObject):
     """Acts as a baseclass for the For MachineApp and ContainerApp"""
@@ -64,8 +68,13 @@ class DaasBaseObject(DaasObject):
         return QwebResult(200, await self.status())
 
     async def verify_demand(self, userid: int) -> bool:
+        """True when the user's limits allow starting this object"""
         from app.daas.resources.limits.ressource_limits import RessourceLimits
 
+        # A running object is already part of the user's usage: restarting it
+        # or switching it to an environment needs nothing on top
+        if await self._get_db_instance() is not None:
+            return True
         limits = await get_backend_component(BackendName.LIMITS, RessourceLimits)
         demand_vm = 0
         demand_cnt = 0
@@ -82,7 +91,10 @@ class DaasBaseObject(DaasObject):
             self.hw_memory,
             self.hw_disksize,
         )
-        return await limits.verify_demand(userid, info)
+        if await limits.verify_demand(userid, info):
+            return True
+        self._log_info(f"Resource limit reached for user {userid}: {self.id}")
+        return False
 
     async def status(self) -> dict:
         """Returns status information"""
@@ -144,7 +156,7 @@ class DaasBaseObject(DaasObject):
         return True
 
     async def start_finalize(
-        self, userid: int, wait_for_boot: bool, object_mode: str = ""
+        self, userid: int, object_mode: str = ""
     ) -> bool:
         """Finalize instance start"""
         from app.daas.db.database import Database
@@ -156,8 +168,6 @@ class DaasBaseObject(DaasObject):
         await self.run_system_task_postboot(inst)
         self.object_mode = object_mode
         self.object_mode_extended = "booting"
-        # TODO: Insert postboot actions ->
-        # await self.post_boot_actions(instance, wait_for_boot, False, False, True, True)
         return await dbase.update_daas_object(self)
 
     async def run_system_task_postboot(
@@ -168,7 +178,7 @@ class DaasBaseObject(DaasObject):
 
     async def stop_prepare(self, instance: InstanceObject, force: bool) -> bool:
         """Prepare instance stop"""
-        # await self.disconnect(instance, force)
+        await instance.disconnect(force)
         return True
 
     async def stop_finalize(self, instance: InstanceObject) -> bool:
@@ -188,21 +198,47 @@ class DaasBaseObject(DaasObject):
         """delete the instance."""
         from app.daas.db.database import Database
 
-        deleted = False
-        clean = False
         dbase = await get_database(Database)
         if self.is_machine():
-            api = await get_backend_component(BackendName.VM, ApiProxmox)
-            resp, _ = await api.prox_vmdelete(api.config_prox.node, self.id_proxmox)
-            deleted = resp.status == 200
+            deleted = await self._delete_vm()
         else:
-            api = await get_backend_component(BackendName.CONTAINER, DockerRequest)
-            tag = await self.get_container_tag()
-            code, _, _ = await api.docker_image_delete(tag)
-            deleted = code == 0
+            deleted = await self._delete_image()
         if deleted is True:
-            clean = await dbase.delete_daas_object(self)
-        return clean
+            return await dbase.delete_daas_object(self)
+        return False
+
+    async def _delete_vm(self) -> bool:
+        api = await get_backend_component(BackendName.VM, ApiProxmox)
+        node = api.config_prox.node
+        resp, data = await api.prox_vmdelete(node, self.id_proxmox)
+        if resp is not None and resp.status == 200 and data.get("exitstatus") == "OK":
+            return True
+        # Already gone (removed in Proxmox, or a reset database): only the row is left
+        resp_list, vms = await api.prox_vmlist(node)
+        if resp_list is not None and resp_list.status == 200:
+            if all(int(vm["vmid"]) != self.id_proxmox for vm in vms.get("data", [])):
+                self._log_info(f"VM {self.id_proxmox} does not exist, removing {self.id}")
+                return True
+        self._log_error(f"Deleting VM {self.id_proxmox} failed: {data}")
+        return False
+
+    async def _delete_image(self) -> bool:
+        api = await get_backend_component(BackendName.CONTAINER, DockerRequest)
+        tag = await self.get_container_tag()
+        # A container can run without an instance row (e.g. after a backend
+        # restart), so baseimage_delete did not stop it; it is named after the
+        # tag. Without this the forced image delete only removes the tag and
+        # the container keeps running. Containers run with remove=True.
+        await api.docker_container_stop(tag, True)
+        code, _, msg = await api.docker_image_delete(tag)
+        if code == 0:
+            return True
+        # Already gone: only the row is left
+        if msg == "Image not found":
+            self._log_info(f"Image {tag} does not exist, removing {self.id}")
+            return True
+        self._log_error(f"Deleting image {tag} failed: {msg}")
+        return False
 
     async def set_contype(self, contype: str):
         """Sets extended object mode"""
@@ -262,23 +298,7 @@ class DaasBaseObject(DaasObject):
     def is_windows(self) -> bool:
         """Checks if current object is a windows object"""
         if self.is_machine():
-            if self.os_type in ("win10, win11"):
-                return True
-        return False
-
-    def is_linux(self) -> bool:
-        """Checks if current object is a linux object"""
-        if self.is_machine():
-            if self.os_type in ("l26"):
-                return True
-        if self.is_container():
-            return True
-        return False
-
-    def is_wine(self) -> bool:
-        """Checks if current object is a wine object"""
-        if self.is_container():
-            if self.os_wine:
+            if self.os_type in "win10, win11":
                 return True
         return False
 

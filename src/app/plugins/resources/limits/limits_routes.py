@@ -1,11 +1,7 @@
 """VM Blueprints"""
 
-import inspect
-
 from app.daas.common.enums import BackendName, LayerName
-from app.plugins.core.db.db_layer import DBObject
-from app.plugins.platform.vm.vm_tasks import VMTask
-from app.plugins.resources.limits.limits_layer import LimitObject, LimitObjectLayer
+from app.plugins.resources.limits.limits_layer import LimitObject
 from app.plugins.resources.limits.limits_tasks import LimitTask
 from app.qweb.blueprints.blueprint_info import (
     AuthenticationMode,
@@ -17,7 +13,6 @@ from quart import Blueprint
 from app.qweb.blueprints.blueprint_handler import BlueprintHandler
 from app.qweb.service.service_context import LayerObject
 
-
 perf_args = ["counter", "timestamp"]
 backends = [BackendName.LIMITS.value, BackendName.DB.value]
 
@@ -25,7 +20,8 @@ infos = [
     BlueprintInfo(
         endpoint_id=130000,
         name="limits_get",
-        url="/limits/get",
+        description="Returns specified limit",
+        url="/limits/get_limit",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
         conc_params=ConcurrencyMode.CTX_AND_AUTH,
@@ -38,15 +34,19 @@ infos = [
         request_args_common=perf_args,
         backends=backends,
         objects=[
-            LayerObject("entity", LimitObject.BYOWNER.value, LayerName.LIMIT.value)
+            LayerObject(
+                "entity", LimitObject.BYOWNER.value, LayerName.LIMIT.value
+            )
         ],
     ),
     BlueprintInfo(
         endpoint_id=130001,
         name="limits_put",
+        description="Stores specified limit",
         url="/limits/put_limit",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
+        admin_only=True,
         conc_params=ConcurrencyMode.CTX_AND_AUTH,
         processor=ProcessorType.API,
         processor_action=ApiProcessorAction.JSON,
@@ -65,15 +65,19 @@ infos = [
         request_args_common=perf_args,
         backends=backends,
         objects=[
-            LayerObject("entity", LimitObject.BYOWNER.value, LayerName.LIMIT.value)
+            LayerObject(
+                "entity", LimitObject.BYOWNER.value, LayerName.LIMIT.value
+            )
         ],
     ),
     BlueprintInfo(
         endpoint_id=130002,
         name="limits_remove",
+        description="Removes specified limit",
         url="/limits/remove_limit",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
+        admin_only=True,
         conc_params=ConcurrencyMode.CTX_AND_AUTH,
         processor=ProcessorType.API,
         processor_action=ApiProcessorAction.JSON,
@@ -84,15 +88,19 @@ infos = [
         request_args_common=perf_args,
         backends=backends,
         objects=[
-            LayerObject("entity", LimitObject.BYOWNER.value, LayerName.LIMIT.value)
+            LayerObject(
+                "entity", LimitObject.BYOWNER.value, LayerName.LIMIT.value
+            )
         ],
     ),
     BlueprintInfo(
         endpoint_id=130003,
         name="limits_list",
+        description="Lists specified limit",
         url="/limits/list_limits",
         methods=["POST"],
         auth_params=AuthenticationMode.ALL,
+        admin_only=True,
         conc_params=ConcurrencyMode.CTX_AND_AUTH,
         processor=ProcessorType.API,
         processor_action=ApiProcessorAction.JSON,
@@ -102,7 +110,9 @@ infos = [
         request_args_optional=[],
         request_args_common=perf_args,
         backends=backends,
-        objects=[LayerObject("entity", LimitObject.LIST.value, LayerName.LIMIT.value)],
+        objects=[
+            LayerObject("entity", LimitObject.LIST.value, LayerName.LIMIT.value)
+        ],
     ),
 ]
 
@@ -110,34 +120,4 @@ infos = [
 handler = BlueprintHandler(
     blueprints=Blueprint("routes_limits", __name__),
     infos=infos,
-    testing=True,
-    default_handler=None,
 )
-
-
-@handler.blueprints.post("/limits/get_limit")
-async def limits_get():
-    """Returns specified limit"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/limits/put_limit")
-async def limits_put():
-    """Stores specified limit"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/limits/remove_limit")
-async def limits_remove():
-    """Removes specified limit"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)
-
-
-@handler.blueprints.post("/limits/list_limits")
-async def limits_list():
-    """Lists specified limit"""
-    frame = inspect.currentframe()
-    return await handler.handle_frame(frame)

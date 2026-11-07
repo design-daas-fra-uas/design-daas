@@ -25,7 +25,7 @@ class QwebDummyAuthenticator(QwebAuthenticatorBase):
         """Verifies only user"""
         result = QwebUser(id_user=DUMMY_USER, name="dummy", authenticated=True)
         if self.config.enable_auth_user:
-            print(f"Dummy Auth for bearer {info.url}")
+            self._log_info(f"Dummy Auth for bearer {info.url}")
             await self._sleep(DELAY_AUTH)
         return result
 
@@ -34,7 +34,7 @@ class QwebDummyAuthenticator(QwebAuthenticatorBase):
     ) -> QwebUser:
         """Verifies only endpoint"""
         result = QwebUser(id_user=DUMMY_USER, name="dummy", authenticated=True)
-        print(f"Dummy Auth for endpoint {info.url}")
+        self._log_info(f"Dummy Auth for endpoint {info.url}")
         if self.config.enable_auth_endpoint:
             await self._sleep(DELAY_AUTH)
         return result

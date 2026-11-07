@@ -23,7 +23,8 @@ class ContainerBase(DaasBaseObject):
         keep_connections: bool = False,
     ) -> Optional[InstanceObject]:
         """Start the application."""
-        assert await self.verify_demand(userid)
+        if not await self.verify_demand(userid):
+            return None
         api = await get_backend_component(BackendName.CONTAINER, DockerRequest)
         tag = await self.get_container_tag()
         if await self.start_prepare(keep_connections):
@@ -31,7 +32,7 @@ class ContainerBase(DaasBaseObject):
                 self.id_docker, tag, self.hw_cpus, self.hw_memory * 1024, False, [], []
             )
             if code == 0:
-                if await self.start_finalize(userid, True, object_mode=object_mode):
+                if await self.start_finalize(userid, object_mode=object_mode):
                     return await self._return_connected_instance(connect)
         return None
 

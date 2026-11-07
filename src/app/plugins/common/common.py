@@ -25,10 +25,6 @@ class PluginCollection:
         for order in LoadOrder:
             await self._start_plugingroup(order)
 
-    async def stop_plugins(self):
-        for order in LoadOrder:
-            await self._stop_plugingroup(order)
-
     async def _register_plugingroup(self, order: LoadOrder):
         plugs = self._get_plugins(order)
         for plug in plugs:
@@ -44,14 +40,6 @@ class PluginCollection:
                 plug.testing is False
             ):
                 await plug.start()
-
-    async def _stop_plugingroup(self, order: LoadOrder):
-        plugs = self._get_plugins(order)
-        for plug in plugs:
-            if (plug.testing is True and self.testing_enabled is True) or (
-                plug.testing is False
-            ):
-                await plug.stop()
 
     def _init_plugins(self):
         for plug in self.plugins:

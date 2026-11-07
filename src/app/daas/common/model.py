@@ -501,8 +501,6 @@ class GuacamoleConnection(DaaSEntity):
     id: str
     """Unique ID"""
 
-    # instance: str
-    # """Unique ID for the app instance this connection relates to."""
 
     user: str
     """Username for the connection auth."""

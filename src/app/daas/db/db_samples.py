@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from app.daas.common.model import (
     DaasObject,
     Environment,
@@ -13,22 +14,17 @@ from app.daas.objects.object_application import ApplicationObject
 from app.daas.objects.object_machine import MachineObject
 from app.daas.objects.object_container import ContainerObject
 
+# src/data of this checkout, wherever the repo lives
+DATA_DIR = Path(__file__).resolve().parents[3] / "data"
+
 
 @dataclass
 class SampleRegistryConfig:
     """Config for SampleRegistry"""
 
     shared_owner: int
-    shared_owner_name: str
-    test_owner: int
-    test_owner_name: str
     default_owner: int
-    default_owner_name: str
     default_resolution: str
-    persist_files: bool
-    persist_apps: bool
-    persist_objects: bool
-    persist_session: bool
 
 
 class SampleRegistry:
@@ -56,34 +52,10 @@ class SampleRegistry:
     ):
         owner = self.config.default_owner
         return [
-            # InstanceObject(
-            #     id="randomkey",
-            #     id_owner=owner,
-            #     app=obj,
-            #     host="192.168.223.116",
-            #     container="daas.xxx",
-            #     created_at=datetime.now(),
-            #     connected_at=datetime.now(),
-            #     booted_at=datetime.now(),
-            #     id_con=con.id,
-            #     id_app=obj.id,
-            #     id_env=env.id,
-            #     env=env,
-            # )
         ]
 
     def create_demo_connection(self):
         return [
-            # GuacamoleConnection(
-            #     id="randomkey",
-            #     user="root",
-            #     password="root",
-            #     protocol="vnc",
-            #     hostname="192.168.223.116",
-            #     port=6016,
-            #     viewer_url="https://foo.bar.baz",
-            #     viewer_token="randomkey2",
-            # )
         ]
 
     def create_demo_environments(self):
@@ -93,17 +65,6 @@ class SampleRegistry:
         envapps = [{"args": "", "cmd": "/usr/bin/galculator", "name": "calc"}]
         envtarget = {"args": "", "cmd": "/usr/bin/galculator", "name": "testname"}
         return [
-            # Environment(
-            #     id="testenv",
-            #     id_object="vmDeb12",
-            #     name="envtest",
-            #     id_backend="foo",
-            #     env_tasks=envtasks,
-            #     env_apps=envapps,
-            #     env_target=envtarget,
-            #     state="environment-final",
-            #     created_at=datetime.now(),
-            # )
         ]
 
     def create_demo_objects(self) -> list:
@@ -123,7 +84,7 @@ class SampleRegistry:
                 os_type="win10",
                 name="",
                 version="1.2.3",
-                localpath=f"/home/design-daas/src/data/shared/{owner}/win10DummyFile.file",
+                localpath=f"{DATA_DIR}/shared/{owner}/win10DummyFile.file",
                 remotepath="C:/Users/root",
                 filesize=79,
                 created_at=datetime.now(),
@@ -134,7 +95,7 @@ class SampleRegistry:
                 os_type="win11",
                 name="",
                 version="1.2.3",
-                localpath=f"/home/design-daas/src/data/shared/{owner}/win11DummyFile.file",
+                localpath=f"{DATA_DIR}/shared/{owner}/win11DummyFile.file",
                 remotepath="C:/Users/root",
                 filesize=79,
                 created_at=datetime.now(),
@@ -145,7 +106,7 @@ class SampleRegistry:
                 os_type="l26",
                 name="testfile",
                 version="1.2.3",
-                localpath=f"/home/design-daas/src/data/shared/{owner}/deb12DummyFile.file",
+                localpath=f"{DATA_DIR}/shared/{owner}/deb12DummyFile.file",
                 remotepath="/root",
                 filesize=79,
                 created_at=datetime.now(),
@@ -156,7 +117,7 @@ class SampleRegistry:
                 os_type="l26",
                 name="thunderbird.exe",
                 version="1.2.3",
-                localpath=f"/home/design-daas/src/data/shared/{owner}/thunderbirdFile.file",
+                localpath=f"{DATA_DIR}/shared/{owner}/thunderbirdFile.file",
                 remotepath="/root/shared/.wine64/drive_c",
                 filesize=79,
                 created_at=datetime.now(),
@@ -645,7 +606,7 @@ class SampleRegistry:
                 hw_cpus=2,
                 hw_memory=4 * 1024**3,
                 hw_disksize=8 * 1024**3,
-                os_installer=f"/home/design-daas/src/data/docker/{owner}/contx11/Dockerfile",
+                os_installer=f"{DATA_DIR}/docker/{owner}/contx11/Dockerfile",
                 vnc_port_system=-1,
                 vnc_port_instance=5900,
                 viewer_contype="instvnc",
@@ -677,7 +638,7 @@ class SampleRegistry:
                 hw_cpus=2,
                 hw_memory=4 * 1024**3,
                 hw_disksize=8 * 1024**3,
-                os_installer=f"/home/design-daas/src/data/docker/{owner}/contwine/Dockerfile",
+                os_installer=f"{DATA_DIR}/docker/{owner}/contwine/Dockerfile",
                 vnc_port_system=-1,
                 vnc_port_instance=5900,
                 viewer_contype="instvnc",

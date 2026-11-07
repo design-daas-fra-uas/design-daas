@@ -4,3 +4,19 @@
 /site/
 /installer/**/id_rsa*
 __pycache__/
+
+# Stack settings with secrets
+/installer/daas.env
+/installer/auth/.env
+/installer/frontend/.env
+
+# Secrets written by the installer (installer/daas/configure.bash)
+/src/config/local/
+
+# Backups written by installer/use-hostnames.bash and manual edits (may hold
+# passwords)
+*.bak-*
+# Host-specific CA, lives in /etc/nginx/ssl/daas-ca.crt
+/installer/daas-ca.crt
+# IDE
+.idea/

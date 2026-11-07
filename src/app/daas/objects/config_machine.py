@@ -1,16 +1,13 @@
 """Configuration for objects"""
 
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from typing import Optional
 
-from nest_asyncio import asyncio
-from app.daas.common.enums import BackendName
 from app.daas.common.model import Environment, File
 from app.daas.objects.env_machine import MachineEnvironmentBase
 from app.daas.objects.object_instance import InstanceObject
-from app.daas.storage.filestore import Filestore
-from app.qweb.common.qweb_tools import get_backend_component, get_database
+from app.qweb.common.qweb_tools import get_database
 
 
 @dataclass(kw_only=True)
@@ -99,11 +96,6 @@ class MachineConfigBase(MachineEnvironmentBase):
         if env is not None and env.env_tasks != []:
             tasks = env.env_tasks
         if instance is not None:
-            # for installer in installers:
-            #     ret = await instance.inst_vminvoke_ssh(installer, "")
-            #     if ret is not None and ret.response_code == 200:
-            #         msg = f"Installer executed! CMD: '{installer}' {ret.sys_log}"
-            #         self._log_info(msg, ret.sys_exitcode)
 
             for task in tasks:
                 ttype = task["type"]
@@ -142,10 +134,7 @@ class MachineConfigBase(MachineEnvironmentBase):
             ret = await instance.inst_vminvoke_ospackage("uninstall", f"{cmd}")
         if ret is not None and ret.response_code == 200:
             return True
-        if ret is not None:
-            print(f"Execute TASK FAILED: {ret}")
-        else:
-            print(f"Execute TASK FAILED: {ret}")
+        self._log_error(f"Task {ttype} failed: {ret}", 1)
         return False
 
     async def _get_inst_by_env(

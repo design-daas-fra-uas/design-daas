@@ -2,7 +2,6 @@
 
 from app.daas.common.enums import ConfigFile, ConfigSections
 from app.daas.resources.limits.ressource_limits import RessourceLimitsConfig
-from app.plugins.core.db.db_layer import DatabaseObjectLayer
 from app.plugins.resources.limits.limits_backend import LimitBackend
 from app.plugins.resources.limits.limits_layer import LimitObjectLayer
 from app.plugins.resources.limits.limits_tasks import (

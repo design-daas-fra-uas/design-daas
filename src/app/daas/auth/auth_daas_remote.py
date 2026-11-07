@@ -48,6 +48,7 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
                         id_user=userdict["user_id"],
                         name=userdict["name"],
                         authenticated=True,
+                        role=userdict.get("role") or "",
                     )
                     self._log_request(
                         f"200 ->   HTTP Remote Auth success for user '{result.id_user}'"
@@ -62,7 +63,10 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
         """Verifies endpoint"""
         result = QwebUser()
         user = await self.verify_user(req, info)
-        if user.authenticated and self.config.enable_auth_endpoint:
+        # Endpoint permissions disabled: a verified user is enough
+        if not self.config.enable_auth_endpoint:
+            return user
+        if user.authenticated:
 
             response_remote = await self.get_endpoint_permission(
                 info.name, user.id_user
@@ -85,6 +89,9 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
 
     async def get_user_session(self, bearer: str) -> dict:
         """Verify bearer"""
+        # An empty bearer would fall back to the backend's own admin token
+        if not bearer:
+            return {}
         url = f"{self.cfg_auth.remote.url}/oauth2/user/session"
         response, data = await self.__request_api("get", url, access_token=bearer)
         if response is None or response.status != 200:
@@ -117,42 +124,12 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
 
     async def get_endpoint_permission(self, endpoint: str, userid: int) -> dict:
         """Get user details"""
-        endpoint = "debug"
         url = f"{self.cfg_auth.remote.url}/permissions/{endpoint}/{userid}"
         response, data = await self.__request_api("get", url)
         if response is None or response.status != 200:
             self._log_error(f"Backend-Auth error on {url}", response.status)
             return {}
         return data
-
-    async def get_endpoint_permission_by_viewer_token(
-        self, endpoint: str, token: str
-    ) -> dict:
-        return {}
-
-    async def get_endpoint_permission_by_bearer(
-        self, endpoint: str, bearer: str
-    ) -> dict:
-        """Get user details"""
-        url = f"{self.cfg_auth.remote.url}/permissions_info"
-        endpoint_name = endpoint
-        if endpoint_name.startswith("/"):
-            endpoint_name = endpoint_name[1:]
-
-        # data = {"token": bearer, "function_name": endpoint_name}
-        data = {"token": bearer, "function_name": "debug"}
-        response, resp_data = await self.__request_api(
-            "post", url, access_token=bearer, data=data
-        )
-        if response is None or response.status != 200:
-            if response is not None:
-                resp = await response.json()
-                self._log_error(f"Bearer: {bearer}")
-                self._log_error(f"Response: {resp}")
-            self._log_error(f"Backend-Auth error on {url}")
-            return {}
-        result = resp_data
-        return result
 
     async def refresh_session(self) -> tuple:
         """Obtaines new token from authentication service"""
@@ -167,7 +144,6 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
             if response is None or response.status != 200:
                 self._log_error("Error on token request")
                 return 1, "", "Authentication error"
-            # data = await response.json()
             self.__create_token(data)
 
         # Create response
@@ -178,8 +154,10 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
 
     # pylint: disable=dangerous-default-value
     async def __request_api(
-        self, method: str, url: str, *, access_token: str = "", data: dict = {}
+        self, method: str, url: str, *, access_token: str = "", data=None
     ) -> tuple[aiohttp.ClientResponse, dict]:
+        if data is None:
+            data = {}
         chosen = await self.__choose_bearer_token(access_token)
         header = {
             "Authorization": f"Bearer {chosen}",
@@ -199,7 +177,6 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
         return access_token
 
     async def __request_token(self):
-        # self.__log_request("Creating new token!")
         url = f"{self.cfg_auth.remote.url}/oauth2/user/token"
         response, data = await self.adapter.request(
             method="post",

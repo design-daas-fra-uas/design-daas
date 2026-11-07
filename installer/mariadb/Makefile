@@ -1,34 +1,25 @@
-.PHONY: all prepare build ensureKey start commit stop clean clean-all
+# MariaDB image for the DaaS backend, see README.md. Run as root (docker).
+# The DaaS backend starts the container; here it is only built and tested.
 
+.PHONY: all build check clean
+
+# Image name in src/config/container.toml
 TAG := daas-0-mariadb
-CMD := /bin/bash -i
-HOSTIP := 127.0.0.1
-BUILDOPT?=
+ENV_FILE ?= ../daas.env
+# Root password: DAAS_DB_PASSWORD from the env file
+ROOT_PASSWORD ?= $(shell sed -n 's/^DAAS_DB_PASSWORD=//p' "$(ENV_FILE)" 2>/dev/null | tail -n1)
+BUILDOPT ?=
 
-all: commit
+all: build
 
-# ensureKey:
-# 	if [ ! -f ./VNCService/id_rsa.pub ] ; then \
-# 		echo foo ; \
-# 		cp /root/.ssh/id_rsa.pub ./VNCService/id_rsa.pub ; \
-# 	else \
-# 		echo bar; \
-# 	fi
+build:
+	@[ -n "$(ROOT_PASSWORD)" ] || { echo "DAAS_DB_PASSWORD is not set in $(ENV_FILE)"; exit 1; }
+	docker build $(BUILDOPT) --build-arg ROOT_PASSWORD="$(ROOT_PASSWORD)" -t $(TAG) .
 
-build: | stop #ensureKey
-	docker build $(BUILDOPT) -t $(TAG) .
-start: build
-	sudo docker run -d \
-        -p "$(HOSTIP):3306:3306" \
-	--name $(TAG) --rm $(TAG)
-commit: start
-	docker commit $(TAG)
-	docker kill $(TAG)
+# Starts a test container with its own empty data folder and port (does not
+# touch daas-0-mariadb), checks it, removes it
+check:
+	./check.bash $(TAG)
 
-stop:
-	-docker kill $(TAG)
-
-clean: stop
-	-docker rmi $(TAG)
-
-
+clean:
+	-docker image rm $(TAG)

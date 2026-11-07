@@ -171,7 +171,6 @@ class DashboardInfoStore(Loggable):
         for obj in user_objects:
             envs = await self.dbase.get_environments_by_object(obj.id)
             for env in envs:
-                # obj = await dbase.get_daas_object(env.id_object)
                 if obj is not None:
 
                     apps = {}

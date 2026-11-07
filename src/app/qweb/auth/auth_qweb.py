@@ -19,6 +19,8 @@ class QwebUser:
     id_user: int = -1
     name: str = "Unknown"
     authenticated: bool = False
+    # Role from the auth service ("admin", "expert", "user"), empty if unknown
+    role: str = ""
 
 
 class QwebAuthenticatorBase(Loggable):
@@ -55,7 +57,9 @@ class QwebAuthenticatorBase(Loggable):
         return result
 
     @abstractmethod
-    async def verify_entity_ownership(self, entity: Optional[Any], owner: int) -> bool:
+    async def verify_entity_ownership(
+        self, entity: Optional[Any], owner: int, is_admin: bool = False
+    ) -> bool:
         raise NotImplementedError("Not implemented")
 
     @abstractmethod

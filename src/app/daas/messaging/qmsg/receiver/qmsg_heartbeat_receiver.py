@@ -97,11 +97,10 @@ class HeartbeatReceiver(Loggable):
                 self._log_error(f"StreamLostError: {exe}")
             except pika.exceptions.ChannelWrongStateError as exe:
                 self._log_error(f"ChannelError: {exe}")
-
-    def reset_heartbeat(self, ip_addr: str):
-        """Resets heartbeat for a given host"""
-        if ip_addr in self.hosts:
-            del self.hosts[ip_addr]
+            except pika.exceptions.AMQPError as exe:
+                # e.g. ConnectionWrongStateError: the broker (daas-0-rabbit)
+                # is stopped before the backend's messaging on shutdown
+                self._log_error(f"Error on disconnect: {exe}")
 
     def on_heartbeat(
         self,
@@ -179,11 +178,3 @@ class HeartbeatReceiver(Loggable):
                 return True
 
         return False
-
-    async def get_available_hosts(self) -> list:
-        """
-        Get a list of currently active hosts.
-
-        :return: A list of active host IDs.
-        """
-        return list(self.hosts.keys())

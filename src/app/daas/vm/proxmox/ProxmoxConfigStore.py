@@ -12,9 +12,8 @@ class ProxmoxConfigStoreConfig:
     storage_iso: str
     storage_img: str
     storage_ceph: str
-    bridge_name_daas: str
+    bridge_name_inst: str
     prefixmac: str
-
 
 class ProxmoxConfigStore(Loggable):
     """
@@ -48,6 +47,8 @@ class ProxmoxConfigStore(Loggable):
         # check for unsupported ostype
         if ostype in ("win10", "win11"):
 
+            # Both variants take both arguments: every call passes windows=
+            # and debian=, each variant returns its own one
             def select_for_os(*, windows, debian):
                 # pylint: disable=unused-argument
                 return windows
@@ -92,9 +93,10 @@ class ProxmoxConfigStore(Loggable):
             "cores": cores,
             "sockets": 1,
             "memory": memsize,
-            "ostype": ostype,
+            # Proxmox knows "l26" only; "l26vm" is the DaaS name for a debian vm
+            "ostype": "l26" if ostype == "l26vm" else ostype,
             "machine": "pc-q35-8.0",
-            "net0": f"virtio={mac},bridge={self.cfg.bridge_name_daas}",
+            "net0": f"virtio={mac},bridge={self.cfg.bridge_name_inst}",
             **select_for_os(windows=disk_windows, debian=disk_debian),
             "args": f"-k {keyboard_layout} -vnc 0.0.0.0:{vmid},password=on",
         }
@@ -109,21 +111,7 @@ class ProxmoxConfigStore(Loggable):
             "boot": "order=virtio0;",
             "ide2": "file=none",
             "sata2": "file=none",
-            # "net0": "",
             "delete": "net0",
-            "net1": f"virtio={mac},bridge={self.cfg.bridge_name_daas}",
-            "args": f"-k {keyboard} -vnc 0.0.0.0:{vmid},password=on",
-        }
-
-    def create_vmconf_template(self, vmid: int, name: str, keyboard: str) -> dict:
-        """
-        Provides a generic configuration preset to initialize object templates
-        """
-        return {
-            "name": name,
-            "boot": "order=virtio0;",
-            "ide2": "file=none",
-            "sata2": "file=none",
-            "delete": "net0,net1",
+            "net1": f"virtio={mac},bridge={self.cfg.bridge_name_inst}",
             "args": f"-k {keyboard} -vnc 0.0.0.0:{vmid},password=on",
         }

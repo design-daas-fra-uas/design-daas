@@ -2,8 +2,8 @@
 
 import os
 from dataclasses import dataclass
-import tomllib
 from typing import Any
+from app.qweb.common.tomlfile import read_toml_with_local
 
 DEFAULT_PORT = 5000
 DEFAULT_HOST = "0.0.0.0"
@@ -259,7 +259,4 @@ class ConfigReader:
 
     def _read_toml(self, file: str) -> dict[str, Any]:
         """Creates config from file"""
-        if os.path.exists(file):
-            with open(file=file, mode="rb") as pointer:
-                return tomllib.load(pointer)
-        return {}
+        return read_toml_with_local(file)

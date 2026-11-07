@@ -26,9 +26,12 @@ fi
 if lpstat -p "$NAME" > /dev/null 2>&1; then
   echo "Printer $NAME already exists."
 else
-    lpadmin -p "$NAME" -v "cups-pdf:/$NAME" -E -P /usr/share/ppd/cups-pdf/CUPS-PDF_opt.ppd
+    # The cups-pdf driver file is CUPS-PDF_opt.ppd (Ubuntu 22.04) or
+    # CUPS-PDF_noopt.ppd (24.04)
+    PPD="$(ls /usr/share/ppd/cups-pdf/CUPS-PDF_*.ppd | head -n1)"
+    lpadmin -p "$NAME" -v "cups-pdf:/$NAME" -E -P "$PPD"
     cupsaccept "$NAME"
     lpadmin -p "$NAME" -o printer-is-shared=true
 fi
 
-return 0
+exit 0

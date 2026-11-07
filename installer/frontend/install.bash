@@ -1,67 +1,121 @@
-#!/bin/bash
+#!/usr/bin/env bash
+#
+# Builds the frontend image and installs frontend.service
+# (docker-compose, published on 127.0.0.1:5001).
+#
+# With -e <env-file> the backend URLs are baked into the build
+# (REACT_APP_* build args, see installer/daas.env.example). Without it the
+# frontend falls back to its built-in defaults.
+#
+# The image is rebuilt from the current frontend code on every run; to
+# start from scratch use `make frontend-reinstall` (frontend/delete.bash).
 
-# Configurable variables
-SERVICE_NAME=frontend
-export DEBIAN_FRONTEND=noninteractive
+source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.bash"
 
-# help message
-usage() { echo "Usage: $0 [-r <folder>]" 1>&2; exit 1; }
+SERVICE_NAME="frontend"
+FRONTEND_DIR="$DAAS_INSTALLER_DIR/frontend"
+COMPOSE_FILE="$FRONTEND_DIR/docker-compose.yml"
+COMPOSE_ENV="$FRONTEND_DIR/.env"
 
-# Read options
-REPO_FOLDER=
-FRONTEND_FOLDER=
-while getopts ":r:f:" o; do
-    case "${o}" in
-        r)
-            REPO_FOLDER=${OPTARG}
-            ;;
-        f)
-            FRONTEND_FOLDER=${OPTARG}
-            ;;
-        *)
-            usage
-            ;;
+usage() {
+    cat <<EOF >&2
+Usage: $0 -f <frontend-folder> [-r <repo-folder>] [-e <env-file>]
+
+Options:
+    -f    Frontend repository folder
+    -r    Design DaaS repository folder (unused, accepted for symmetry)
+    -e    Stack env file (installer/daas.env) with the public URLs
+EOF
+    exit 1
+}
+
+FRONTEND_FOLDER=""
+ENV_FILE=""
+while getopts ":r:f:e:" o; do
+    case "$o" in
+        r) ;;
+        f) FRONTEND_FOLDER="$OPTARG" ;;
+        e) ENV_FILE="$OPTARG" ;;
+        :) die "Option -$OPTARG requires an argument." ;;
+        *) usage ;;
     esac
 done
-shift $((OPTIND-1))
+shift $((OPTIND - 1))
 
-# Bail if requirements are not met
-if [ ! -d "$FRONTEND_FOLDER" ] ; then
-    usage
+[[ -n "$FRONTEND_FOLDER" ]] || usage
+require_root
+require_cmds docker docker-compose systemctl
+require_dir "$FRONTEND_FOLDER"
+FRONTEND_FOLDER="$(realpath "$FRONTEND_FOLDER")"
+
+if [[ -n "$ENV_FILE" ]]; then
+    CLI_FRONTEND_FOLDER="$FRONTEND_FOLDER"
+    load_stack_env "$ENV_FILE"
+    FRONTEND_FOLDER="$CLI_FRONTEND_FOLDER"
+    # Without the patch the build ignores the URLs and the frontend talks to
+    # http://<host>:5000 / :8080 (dev defaults), so the login fails
+    if ! grep -q "REACT_APP_DAAS_API_URL" "$FRONTEND_FOLDER/Dockerfile"; then
+        error "The frontend does not take the backend URLs as build args yet. Apply the patch:"
+        error "  git -C $FRONTEND_FOLDER apply $FRONTEND_DIR/frontend-env-urls.patch"
+        die "Frontend repository not patched"
+    fi
+    info "DaaS API:   $DAAS_PUBLIC_URL"
+    info "Auth API:   $AUTH_PUBLIC_URL"
+    info "Client id:  $OAUTH_CLIENT_ID"
+else
+    info "No env file given (-e), building with the frontend's default URLs"
+    DAAS_PUBLIC_URL="" AUTH_PUBLIC_URL="" OAUTH_CLIENT_ID=""
 fi
-FRONTEND_FOLDER=${FRONTEND_FOLDER%/} # Remove trailing slash
-cd "$FRONTEND_FOLDER/" || exit 1
+export FRONTEND_FOLDER
 
-cat <<EOF > docker-compose-pve.yml
-version: "3.3"
-services:
-  web:
-    build:
-      context: "."
-      target: "server"
-    container_name: "daas-frontend"
-    restart: "always"
-    # volumes:
-    # - '/usr/src/app/node_modules'
-    ports:
-      - "127.0.0.1:5001:80"
-EOF
-docker-compose -f docker-compose-pve.yml build
+info "Frontend: $FRONTEND_FOLDER"
 
-# systemd unit
-cat <<EOF > /etc/systemd/system/$SERVICE_NAME.service
+# ============================================================
+step "Compose env ($COMPOSE_ENV)"
+# ============================================================
+
+write_compose_env "$COMPOSE_ENV" FRONTEND_FOLDER DAAS_PUBLIC_URL AUTH_PUBLIC_URL OAUTH_CLIENT_ID
+
+COMPOSE=(docker-compose --env-file "$COMPOSE_ENV" -f "$COMPOSE_FILE")
+run "${COMPOSE[@]}" config --quiet
+
+# ============================================================
+step "Build frontend image"
+# ============================================================
+
+run "${COMPOSE[@]}" build
+
+# ============================================================
+step "systemd unit: $SERVICE_NAME.service"
+# ============================================================
+
+write_file "/etc/systemd/system/$SERVICE_NAME.service" <<EOF
 [Unit]
-Description=$SERVICE_NAME starter
-Before=getty@tty1.service
+Description=Design DaaS Frontend
+After=docker.service
+Requires=docker.service
+
 [Service]
 Type=simple
-ExecStart=$REPO_FOLDER/backend/installer/$SERVICE_NAME/start.bash
-ExecStop=$REPO_FOLDER/backend/installer/$SERVICE_NAME/stop.bash
+WorkingDirectory=$FRONTEND_DIR
+ExecStart=/usr/bin/docker-compose --env-file $COMPOSE_ENV -f $COMPOSE_FILE up
+ExecStop=/usr/bin/docker-compose --env-file $COMPOSE_ENV -f $COMPOSE_FILE down
+Restart=always
+RestartSec=5
+
 [Install]
-WantedBy=getty.target
+WantedBy=multi-user.target
 EOF
 
-systemctl daemon-reload
-systemctl enable $SERVICE_NAME.service
-systemctl start $SERVICE_NAME.service
+run systemctl daemon-reload
+# A daas-frontend container from the old compose file in the frontend repo
+# would block the name
+old_project="$(docker inspect -f '{{index .Config.Labels "com.docker.compose.project"}}' daas-frontend 2>/dev/null || true)"
+if [[ -n "$old_project" && "$old_project" != daas-frontend ]]; then
+    warn "Removing daas-frontend from the old compose project '$old_project'"
+    run docker rm -f daas-frontend
+fi
+# restart: a running container is recreated from the new image
+enable_and_restart "$SERVICE_NAME.service"
 
+success "Frontend installed (logs: make frontend-logs)"

@@ -87,26 +87,10 @@ class QwebTaskManager(Loggable):
     async def stop_scheduled_task(self, name: str) -> bool:
         return await self._stop_scheduled_task(name)
 
-    async def get_tasks_by_taskid(self, id_task: str) -> list[ScheduledTask]:
-        return list(
-            filter(
-                lambda obj: obj.id_task == id_task,
-                self.scheduled_tasks.values(),
-            )
-        )
-
     async def get_tasks_by_object(self, id_object: str) -> list[ScheduledTask]:
         return list(
             filter(
                 lambda obj: obj.id_object == id_object,
-                self.scheduled_tasks.values(),
-            )
-        )
-
-    async def get_tasks_by_instance(self, id_instance: str) -> list[ScheduledTask]:
-        return list(
-            filter(
-                lambda obj: obj.id_instance == id_instance,
                 self.scheduled_tasks.values(),
             )
         )
@@ -122,13 +106,6 @@ class QwebTaskManager(Loggable):
         result = False
         if name in self.scheduled_tasks:
             self.scheduled_tasks.pop(name)
-            result = True
-        return result
-
-    async def _remove_stopped_task(self, name: str) -> bool:
-        result = False
-        if name in self.stopped_tasks:
-            self.stopped_tasks.pop(name)
             result = True
         return result
 
@@ -186,11 +163,6 @@ class QwebTaskManager(Loggable):
                 if instid == val.id_instance:
                     return val
         return result
-
-    async def get_stopped_task(self, name: str) -> Optional[ScheduledTask]:
-        if name in self.stopped_tasks:
-            return self.stopped_tasks[name]
-        return None
 
     async def filter_tasks(
         self,
@@ -254,19 +226,6 @@ class QwebTaskManager(Loggable):
         results = await asyncio.gather(*created_tasks)
         return results
 
-    async def run_apitasks_concurrently(self, tasks):
-        """
-        tasks: a list of tuples, where each tuple contains an instance, a method name, and its arguments.
-        Example: [(instance1, "method1", arg1, arg2), (instance2, "method2", arg1)]
-        """
-        coroutines = [
-            self.__run_apitask(method_name, *args, **kwargs)
-            for method_name, args, kwargs in tasks
-        ]
-        created_tasks = [asyncio.create_task(coro) for coro in coroutines]
-        results = await asyncio.gather(*created_tasks)
-        return results
-
     async def run_apitask_concurrently(self, task):
         """
         tasks: a list of tuples, where each tuple contains an instance, a method name, and its arguments.
@@ -278,19 +237,6 @@ class QwebTaskManager(Loggable):
         )
         result = await asyncio.gather(created_task)
         return result[0]
-
-    async def run_systasks_concurrently(self, tasks):
-        """
-        tasks: a list of tuples, where each tuple contains an instance, a method name, and its arguments.
-        Example: [(instance1, "method1", arg1, arg2), (instance2, "method2", arg1)]
-        """
-        coroutines = [
-            self.__run_systask(method_name, *args, **kwargs)
-            for method_name, args, kwargs in tasks
-        ]
-        created_tasks = [asyncio.create_task(coro) for coro in coroutines]
-        results = await asyncio.gather(*created_tasks)
-        return results
 
     async def start_systask(
         self,

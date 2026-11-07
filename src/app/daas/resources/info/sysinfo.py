@@ -20,15 +20,6 @@ from app.qweb.logging.logging import LogTarget, Loggable
 
 
 @dataclass
-class ObjectFilter:
-    """Filter object to specify entities"""
-
-    detailed: bool
-    daas: bool
-    user: int
-
-
-@dataclass
 class DaaSObjectResponse:
     """Daas Object response"""
 
@@ -63,21 +54,10 @@ class Systeminfo(Loggable):
         """Dashboard info"""
         return await self.boardtool.get_dashboard_info(userid)
 
-    async def synchronize_all_objects(self, detailed: bool) -> bool:
-        """Synchronizes database with system wide containers and proxmox-vms"""
-        self.current_hostinfo = await self.get_hostinfo()
-        self.current_objinfo = await self.get_objinfo(detailed)
-        return True
-
     async def get_hostinfo(self) -> Optional[HostRessources]:
         """Returns hostinfo"""
         self.current_hostinfo = await self.hosttool.read_host_ressources()
         return self.current_hostinfo
-
-    async def get_objinfo(self, detailed: bool) -> SystemInfoObjects:
-        """Returns objinfo"""
-        self.current_objinfo = await self.objtool.create_object_info(detailed)
-        return self.current_objinfo
 
     async def get_filtered_objectinfo(
         self,
@@ -149,30 +129,6 @@ class Systeminfo(Loggable):
                 result.append(single)
         return result
 
-    async def filter_docker_containers(
-        self,
-        detailed: bool = False,
-        only_daas: bool = False,
-        only_user: int = -1,
-    ) -> list[SystemInfoDockerContainer]:
-        """
-        Lists all docker containers
-        """
-        result: list[SystemInfoDockerContainer] = []
-        containerlist = await self.objtool.enumerate_container(detailed)
-        for single in containerlist:
-            obj = await self.dbase.get_daas_object_by_docker_id(single.name)
-            if obj is None:
-                env = await self.dbase.get_environment_by_backend_id(single.name)
-                if env is not None:
-                    obj = await self.dbase.get_daas_object(env.id_object)
-            resp = await self.create_daas_response(
-                single, obj, self.config.known_daas_containers
-            )
-            if await self.check_filter(resp, only_daas, only_user):
-                result.append(single)
-        return result
-
     # pylint: disable=import-outside-toplevel
     async def get_all_proxmox_vms(
         self,
@@ -210,30 +166,6 @@ class Systeminfo(Loggable):
             obj = await self.dbase.get_daas_object_by_docker_id(single.name)
             resp = await self.create_daas_response(
                 single, obj, self.config.known_daas_images
-            )
-            if await self.check_filter(resp, only_daas, only_user):
-                result.append(asdict(resp))
-        return result
-
-    async def get_all_docker_containers(
-        self,
-        detailed: bool = False,
-        only_daas: bool = False,
-        only_user: int = -1,
-    ) -> list[dict]:
-        """
-        Lists all docker containers
-        """
-        result: list[dict] = []
-        containerlist = await self.objtool.enumerate_container(detailed)
-        for single in containerlist:
-            obj = await self.dbase.get_daas_object_by_docker_id(single.name)
-            if obj is None:
-                env = await self.dbase.get_environment_by_backend_id(single.name)
-                if env is not None:
-                    obj = await self.dbase.get_daas_object(env.id_object)
-            resp = await self.create_daas_response(
-                single, obj, self.config.known_daas_containers
             )
             if await self.check_filter(resp, only_daas, only_user):
                 result.append(asdict(resp))
@@ -293,18 +225,3 @@ class Systeminfo(Loggable):
                 result = True
         return result
 
-    # async def synchronize_database_objects_proxmox(self, strategy: PersistanceStrategy):
-    #     """Synchronizes database with system wide vms"""
-    #     pass
-    #
-    # async def synchronize_system_objects_proxmox(self, strategy: PersistanceStrategy):
-    #     """Synchronizes system with database vms"""
-    #     pass
-    #
-    # async def synchronize_database_objects_docker(self, strategy: PersistanceStrategy):
-    #     """Synchronizes database with system wide containers"""
-    #     pass
-    #
-    # async def synchronize_system_objects_docker(self, strategy: PersistanceStrategy):
-    #     """Synchronizes system with database containers"""
-    #     pass

@@ -25,14 +25,6 @@ def get_backend_component(
     raise TypeError(f"Backend has invalid type: {name} -> {ret_type}")
 
 
-def get_request_backend(ctx: QwebProcessorContexts, name: str, ret_type: Type[T]) -> T:
-    node = ctx.backends.get(name)
-    if node is not None:
-        if isinstance(node, ret_type):
-            return node
-    raise TypeError(f"Backend has invalid type: {name} -> {ret_type}")
-
-
 def get_request_object(ctx: QwebProcessorContexts, name: str, ret_type: Type[T]) -> T:
     req_objects = ctx.objects.objects
     if name in req_objects:

@@ -5,6 +5,7 @@ from enum import Enum
 from app.daas.common.enums import BackendName
 from app.daas.common.model import Application, File
 from app.daas.db.database import Database
+from app.daas.objects.object_application import ApplicationObject
 from app.daas.storage.filestore import Filestore
 from app.qweb.common.common import TaskArgs
 from app.qweb.processing.processor import QwebResult
@@ -314,21 +315,23 @@ async def _make_file(
     )
 
 
-async def _make_app(userid: int, args: dict):
-    return Application(
-        args["id"],
-        userid,
-        args["name"],
-        args["version"],
-        args["id_file"],
-        args["id_template"],
-        args["os_type"],
-        args["installer"],
-        args["installer_args"],
-        args["installer_type"],
-        args["target"],
-        args["target_args"],
-        datetime.now(),
+async def _make_app(userid: int, args: dict) -> ApplicationObject:
+    # ApplicationObject is the persistable (ORM mapped) form of Application.
+    # Forms send "" for an unselected file/template, which must be NULL.
+    return ApplicationObject(
+        id=args["id"],
+        id_owner=userid,
+        name=args["name"],
+        version=args["version"],
+        id_file=args["id_file"] or None,
+        id_template=args["id_template"] or None,
+        os_type=args["os_type"],
+        installer=args["installer"],
+        installer_args=args["installer_args"],
+        installer_type=args["installer_type"],
+        target=args["target"],
+        target_args=args["target_args"],
+        created_at=datetime.now(),
     )
 
 

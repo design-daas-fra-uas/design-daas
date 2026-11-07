@@ -1,36 +1,33 @@
-FROM ubuntu:22.04
+# Extensions container: printing for the instances (see ../README.md).
+# The DaaS backend starts it as daas-0-extensions (src/config/container.toml)
+# and reaches it over ssh (create printers) and the websocket on :8010.
+FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install requirements
+# Node.js 24 LTS (nodesource), CUPS with the cups-pdf printer driver, ssh for
+# the backend, curl for scripts/postprocess.sh
 RUN apt-get update && \
-    apt-get install -y curl ssh openssh-server net-tools vim && \
-    curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
-    apt-get install -y nodejs && \
-    apt-get install -y cups cups-pdf dos2unix && \
-    apt-get clean
+    apt-get install -y curl openssh-server && \
+    curl -fsSL https://deb.nodesource.com/setup_24.x | bash - && \
+    apt-get install -y nodejs cups cups-pdf && \
+    rm -rf /var/lib/apt/lists/*
 
-# Set default root password
-RUN echo "root:root" | chpasswd
+# ssh: the backend logs in as root with the host's /root/.ssh/id_rsa
 COPY id_rsa.pub /root/.ssh/authorized_keys
 
-# Set working directory
 WORKDIR /usr/src/app
 
-# Copy and install express server
+# Printer server (server.js), dependencies from package-lock.json
 COPY package*.json ./
-RUN npm install
-COPY . .
+RUN npm ci
+COPY server.js ./
+COPY scripts/ ./scripts/
+RUN chmod 755 scripts/*.sh
 
-# Fix line endings if working on windows host
-RUN dos2unix ./scripts/create_printer.sh ./scripts/delete_printer.sh ./scripts/postprocess.sh
+# CUPS listens on all addresses so the instances can print over IPP
+COPY scripts/cupsd.conf /etc/cups/cupsd.conf
 
-COPY /scripts/cupsd.conf /etc/cups/cupsd.conf
+EXPOSE 22 631 8010
 
-RUN chmod -R 777 ./scripts/*.sh
-
-EXPOSE 8010
-EXPOSE 631
-EXPOSE 22
-
-CMD service dbus start && service ssh start && service cups start && node server.js
+CMD service dbus start && service ssh start && service cups start && exec node server.js

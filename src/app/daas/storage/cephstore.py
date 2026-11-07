@@ -1,10 +1,10 @@
 """Ceph-based Filestore to keep track of files"""
 
-from app.daas.storage.ceph.ceph_actions import CephstoreActions
+from app.daas.storage.ceph.ceph_base import CephstoreBase
 from app.daas.storage.ceph.ceph_config import CephstoreConfig
 
 
-class Cephstore(CephstoreActions):
+class Cephstore(CephstoreBase):
     """Ceph-based Filestore to keep track of files"""
 
     def __init__(self, config: CephstoreConfig):

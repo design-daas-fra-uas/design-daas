@@ -1,11 +1,11 @@
 """Baseclass for environment functionality"""
 
-import asyncio
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
+
 from app.daas.common.enums import BackendName
-from app.daas.common.model import Environment, File
+from app.daas.common.model import Environment
 from app.daas.container.docker.DockerRequest import DockerRequest
 from app.daas.objects.object_instance import InstanceObject
 from app.daas.objects.phase_container import ContainerPhase
@@ -23,9 +23,15 @@ class ContainerEnvironmentBase(ContainerPhase):
         Loggable.__init__(self, LogTarget.OBJECT)
 
     async def env_create(
-        self, files: list[File] = [], installers: list[str] = [], args: dict = {}
+        self, files=None, installers=None, args=None
     ) -> Optional[Environment]:
         """Derives new environment"""
+        if args is None:
+            args = {}
+        if installers is None:
+            installers = []
+        if files is None:
+            files = []
         from app.daas.db.database import Database
 
         dbase = await get_database(Database)
@@ -162,7 +168,6 @@ class ContainerEnvironmentBase(ContainerPhase):
             instance_env = await dbase.get_instance_by_envid(env.id)
             if instance_env is not None:
                 if keep_connections is True:
-                    # await asyncio.sleep(1)
                     oldtag = await self.get_container_tag()
                     await api.docker_container_stop(oldtag, True)
             code, container_id, _ = await api.docker_container_start(
@@ -198,13 +203,11 @@ class ContainerEnvironmentBase(ContainerPhase):
             instance = await self.insert_pending_instance(userid, env)
             await self.run_system_task_postboot(instance)
         else:
-            # await asyncio.sleep(1)
             if instance_env is not None:
                 api = await get_backend_component(BackendName.CONTAINER, DockerRequest)
                 environment_tag = await self.get_environment_tag(env.name)
                 instance_env.host = await api.docker_get_container_ip(environment_tag)
                 await instance_env.update()
-                # await asyncio.sleep(1)
         if object_mode != "":
             self.object_mode = object_mode
         await self.set_extended_mode("done")

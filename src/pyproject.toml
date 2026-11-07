@@ -3,9 +3,6 @@ name = "app"
 dependencies = [
   "quart",
   "quart-cors",
-  "nest_asyncio",
-  "pandas",
-  "matplotlib",
   "sqlalchemy",
   "pymysql",
   "docker",
@@ -16,7 +13,7 @@ dependencies = [
 ]
 description = "Design quart app"
 requires-python = ">=3.11"
-dynamic = ["version"]
+version = "2.0.0"
 
 [project.optional-dependencies]
 dev = [

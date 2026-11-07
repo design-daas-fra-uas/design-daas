@@ -150,15 +150,6 @@ async def perform_guacd_handshake(
     await socket.send("video", *client_conf.video_mimetypes)
     await socket.send("image", *client_conf.image_mimetypes)
     await socket.send("timezone", client_conf.timezone)
-    # await socket.send("dpi", str(client_conf.dpi))
-    # await socket.send("color-depth", str(client_conf.colors))
-    # await socket.send("server-layout", client_conf.keyboard)
-    # await socket.send("autoretry", str(client_conf.autoretry))
-    # await socket.send("force-lossless", str(client_conf.force_lossless))
-    # await socket.send("resize-method", client_conf.resize_method)
-    # await socket.send("initial-program", client_conf.initial_program)
-    # user name, relevant for connection sharing scenarios.
-    # Not going to do that in the demo, so just hardcode anything.
     if protocol_features.supports_name:
         await socket.send("name", "DESIGN-DaaS")
 

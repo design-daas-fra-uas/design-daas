@@ -34,6 +34,7 @@ class BlueprintInfo:
     """Blueprint info"""
 
     endpoint_id: int
+    # Endpoint name of the route (unique per blueprint, used by url_for)
     name: str
     url: str
     methods: list[str]
@@ -48,6 +49,8 @@ class BlueprintInfo:
     processor: ProcessorType
     processor_task: str = ""
     content_type: str = "text/html"
+    # What the route does (the docstring of the route)
+    description: str = ""
     override_target: str = ""
     websocket_request: bool = False
     static_args: dict = field(default_factory=lambda: {})
@@ -58,6 +61,11 @@ class BlueprintInfo:
     request_args_file: list = field(default_factory=lambda: [])
     backends: list = field(default_factory=lambda: [])
     objects: list = field(default_factory=lambda: [])
+    # Only users with the role "admin" (from the auth service) may call it
+    admin_only: bool = False
+    # Changes or deletes the objects it loads: on system objects (owner 0,
+    # shared by all users, e.g. templates) only admins may call it
+    protect_system_objects: bool = False
 
     def __repr__(self):
         return (

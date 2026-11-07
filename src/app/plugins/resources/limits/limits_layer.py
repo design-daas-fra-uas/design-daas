@@ -7,7 +7,6 @@ from app.daas.common.enums import BackendName
 from app.daas.common.model import DaaSEntity
 from app.daas.db.database import Database
 from app.daas.resources.limits.ressource_limits import RessourceLimits
-from app.plugins.resources.limits.limits_tasks import LimitTask
 from app.qweb.service.service_context import LayerObject, QwebObjectLayer
 from app.qweb.common.qweb_tools import get_backend_component
 
@@ -34,10 +33,8 @@ class LimitObjectLayer(QwebObjectLayer):
         if obj.objtype == LimitObject.BYOWNER.value:
             ownerid = args["id_owner"]
             result = await limiter.get_user_limit(ownerid)
-            # self._log_info(f"fetched limit: {result}")
         elif obj.objtype == LimitObject.LIST.value:
             result = await limiter.list_user_limits()
-            # self._log_info(f"fetched limits: {result}")
             return [asdict(x) for x in result]
         if result is not None:
             self.objects_returned += 1

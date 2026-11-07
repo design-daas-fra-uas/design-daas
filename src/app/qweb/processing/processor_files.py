@@ -2,7 +2,6 @@
 
 import os
 from quart import Response, send_from_directory
-from app.qweb.common.config import QuartProcessorConfig
 from app.qweb.processing.processor import (
     FileProcessorAction,
     ProcessorBase,
@@ -34,7 +33,7 @@ class FileProcessor(ProcessorBase):
                 ),
                 code,
             )
-        result = self.create_async_response(send_from_directory(path, file))
+        result = await send_from_directory(path, file)
         if isinstance(result, Response):
             return (
                 Response(

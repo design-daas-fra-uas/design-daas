@@ -5,8 +5,6 @@ from dataclasses import dataclass
 from app.daas.common.enums import BackendName
 from app.daas.objects.base_instance import InstanceObjectBase
 
-# from app.daas.objects.object_container import ContainerObject
-# from app.daas.objects.object_machine import MachineObject
 from app.daas.storage.filestore import Filestore
 from app.qweb.common.qweb_tools import get_backend_component
 from app.qweb.processing.processor import QwebResult
@@ -119,12 +117,3 @@ class InstancePhase(InstanceObjectBase):
     async def inst_vmversion(self, adr: str):
         """Invoke a version action via client api"""
         return await self._invoke_instance(adr, "version", "", False)
-
-    async def inst_vminvoke_fs(
-        self, adr: str, cmd: str, args: list[str], pstools: bool
-    ) -> tuple[int, str, str]:
-        """Filesystem command"""
-        code, str_out, str_err = await self._invoke_filesystem_cmd(
-            adr, cmd, args, pstools
-        )
-        return code, str_out, str_err

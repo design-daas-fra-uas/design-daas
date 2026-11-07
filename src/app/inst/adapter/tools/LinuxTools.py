@@ -228,7 +228,6 @@ def extract_current_resolution(screen: str) -> tuple:
         if pattern_match:
             if pattern_match.group(0) == screen:
                 # Found correct screen
-                # print(pattern_match.group(0))
                 extracting = True
                 continue
         if extracting:
@@ -268,7 +267,6 @@ def choose_valid_resolution_linux(
     resolutions = extract_resolutions(screen)
     if len(resolutions) > 0:
         for single in resolutions:
-            # print(single)
             if width >= single[0] and height >= single[1]:
                 return single[0], single[1]
     msg = f"No reasonable resolution! Using defaults {width}x{height}"

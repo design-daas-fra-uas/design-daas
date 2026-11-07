@@ -44,9 +44,9 @@ class ApplicationObject(Application):
         return True
 
     async def get_installer(self) -> str:
-        if self.installer_type in ("os_install"):
+        if self.installer_type in "os_install":
             installer = f"apt install -y {self.installer} {self.installer_args}"
-        elif self.installer_type in ("os_uninstall"):
+        elif self.installer_type in "os_uninstall":
             installer = f"apt remove -y {self.installer} {self.installer_args}"
         elif self.installer_type in ("exec_cmd", "exec_app", "exec_ssh"):
 

@@ -12,7 +12,6 @@ import psutil
 from app.daas.common.enums import BackendName
 from app.daas.storage.cephstore import Cephstore
 from app.daas.storage.filestore import Filestore
-from app.daas.vm.proxmox.ProxmoxApi import ApiProxmox
 from app.plugins.platform.vm.vm_backend import VmBackend
 from app.plugins.storage.ceph.ceph_backend import CephBackend
 from app.plugins.storage.files.file_backend import FileBackend
@@ -106,7 +105,6 @@ class Hostinfo:
 
         filestore = await self._get_backend_ceph()
         fs_config = filestore.config
-        # mnt = fs_config.daasfs.folder_mount
         mnt = fs_config.daasfs["folder_mount"]
         folder_pub = f"{mnt}/daasfs/"
         return await self.__get_diskinfo(folder_pub)

@@ -10,13 +10,6 @@ from app.daas.vm.proxmox.ProxmoxApi import ApiProxmox
 from app.qweb.common.qweb_tools import get_backend_component
 
 
-class PersistanceStrategy(Enum):
-    """Strategy for object persistance"""
-
-    IGNORE = 1
-    PERSIST = 2
-
-
 class StatisticType(Enum):
     """Object statistics type"""
 
@@ -98,7 +91,6 @@ class SystemInfoDockerImage:
 class SystemInfoObjectUtilization:
     """Statistics Object for object monitoring"""
 
-    # statistics_type: StatisticType
     amount: int
     cpus: int
     mem_use: int
@@ -164,20 +156,7 @@ class SystemInfoObjects:
         self.all_usage_total = self.__sum_all(StatisticType.ALL_BOTH)
         self.all_usage_online = self.__sum_all(StatisticType.ALL_ON)
         self.all_usage_offline = self.__sum_all(StatisticType.ALL_OFF)
-        # for vm in self.vms_list:
-        #     print(f"VMS: {vm.name} {vm.running}")
-        # for img in self.image_list:
-        #     print(f"IMG: {img.name} {img.running}")
 
-        # print(f"VMS-OFF: {self.vms_usage_offline.tostring()}")
-        # print(f"VMS-ON : {self.vms_usage_online.tostring()}")
-        # print(f"VMS-TOT: {self.vms_usage_total.tostring()}")
-        # print(f"IMG-OFF: {self.images_usage_offline.tostring()}")
-        # print(f"IMG-ON : {self.images_usage_online.tostring()}")
-        # print(f"IMG-TOT: {self.images_usage_total.tostring()}")
-        # print(f"ALL-OFF: {self.all_usage_offline.tostring()}")
-        # print(f"ALL-ON : {self.all_usage_online.tostring()}")
-        # print(f"ALL-TOT: {self.all_usage_total.tostring()}")
 
     def tojson(self):
         """Converts to json object"""
@@ -321,13 +300,6 @@ class ObjectStats:
         self.logger = logging.getLogger("")
         self.last_info: Optional[SystemInfoObjects] = None
 
-    async def create_object_info(self, detailed: bool) -> SystemInfoObjects:
-        """Enumerates obejcts"""
-        vms = await self.enumerate_vms(detailed)
-        images = await self.enumerate_docker_objects(detailed)
-        self.last_info = SystemInfoObjects(vms, images)
-        return self.last_info
-
     async def enumerate_vms(
         self,
         detailed: bool,
@@ -346,18 +318,18 @@ class ObjectStats:
                 if "vmid" in sysobject and "name" in sysobject:
                     vmid: str = sysobject["vmid"]
                     name: str = sysobject["name"]
-                    running: bool = sysobject["status"] != "stopped"
-                    template: bool = False
-                    if "template" in sysobject:
-                        template = True
-                    cpus = int(sysobject["cpus"])
-                    mem_use = int(sysobject["maxmem"])
-                    mem_max = int(sysobject["maxmem"])
-                    disk_size = int(sysobject["maxdisk"])
-                    disk_in = int(sysobject["diskread"])
-                    disk_out = int(sysobject["diskwrite"])
-                    net_in = int(sysobject["netin"])
-                    net_out = int(sysobject["netout"])
+                    running: bool = sysobject.get("status") != "stopped"
+                    template: bool = bool(sysobject.get("template"))
+                    # Proxmox leaves out counters it has no value for (e.g.
+                    # diskread/diskwrite of a stopped VM), so default them to 0
+                    cpus = int(sysobject.get("cpus") or 0)
+                    mem_use = int(sysobject.get("mem") or 0)
+                    mem_max = int(sysobject.get("maxmem") or 0)
+                    disk_size = int(sysobject.get("maxdisk") or 0)
+                    disk_in = int(sysobject.get("diskread") or 0)
+                    disk_out = int(sysobject.get("diskwrite") or 0)
+                    net_in = int(sysobject.get("netin") or 0)
+                    net_out = int(sysobject.get("netout") or 0)
                     info = SystemInfoProxmoxMachine(
                         sysobject,
                         name,
@@ -375,14 +347,6 @@ class ObjectStats:
                     )
                     result.append(info)
         return result
-
-    async def enumerate_docker_objects(
-        self, detailed: bool
-    ) -> list[SystemInfoDockerImage]:
-        """Enumerates all docker objects"""
-
-        container = await self.enumerate_container(detailed)
-        return await self.enumerate_images(container, detailed)
 
     # pylint: disable=too-many-locals
     async def enumerate_container(
@@ -460,9 +424,6 @@ class ObjectStats:
                 for cont in container:
                     if cont.name == name:
                         matched.append(cont)
-                        # print(f"Matched: {cont.name} - {name}")
-                    # else:
-                    #     print(f"Unmatched: {cont.name} - {name}")
                 running: bool = len(matched) > 0
                 if running is True:
                     cont = container[0]
@@ -497,6 +458,3 @@ class ObjectStats:
                 result.append(info)
 
         return result
-
-    def __log_info(self, msg: str):
-        self.logger.info("%s", msg)

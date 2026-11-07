@@ -1,7 +1,6 @@
 """Baseclass for filestore"""
 
 import os
-import uuid
 from app.daas.storage.local.fs_config import FilestoreConfig
 from app.qweb.common.qweb_tools import get_database
 from app.qweb.logging.logging import LogTarget, Loggable
@@ -39,38 +38,6 @@ class FilestoreBase(Loggable):
         """Returns size of file in bytes"""
         file_stats = os.stat(file)
         return file_stats.st_size
-
-    async def get_base_randfile_tmp(self) -> str:
-        """Creates unique filename in tmp folder"""
-        unique_name = uuid.uuid4().hex
-        folder = await self.get_base_folder_tmp()
-        absfile = f"{folder}/{unique_name}"
-        assert os.path.exists(absfile) is False
-        return absfile
-
-    async def get_base_randfile_upload(self) -> str:
-        """Creates unique filename in upload folder"""
-        unique_name = uuid.uuid4().hex
-        folder = await self.get_base_folder_upload()
-        absfile = f"{folder}/{unique_name}"
-        assert os.path.exists(absfile) is False
-        return absfile
-
-    async def get_user_randfile_tmp(self, userid: int) -> str:
-        """Creates unique filename in tmp folder"""
-        unique_name = uuid.uuid4().hex
-        folder = await self.get_user_folder_tmp(userid)
-        absfile = f"{folder}/{unique_name}"
-        assert os.path.exists(absfile) is False
-        return absfile
-
-    async def get_user_randfile_upload(self, userid: int) -> str:
-        """Creates unique filename in upload folder"""
-        unique_name = uuid.uuid4().hex
-        folder = await self.get_user_folder_upload(userid)
-        absfile = f"{folder}/{unique_name}"
-        assert os.path.exists(absfile) is False
-        return absfile
 
     async def get_user_file_tmp(self, name: str, userid: int) -> str:
         """Returns absolute filename in tmp folder"""

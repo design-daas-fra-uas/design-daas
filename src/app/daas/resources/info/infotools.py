@@ -24,23 +24,6 @@ class TaskType(Enum):
     PREPARED = 2
 
 
-class PreparedTaskType(Enum):
-    """Specifies a prepared task type"""
-
-    UNKNOWN = 0
-    WAIT_FOR_BOOT = 1
-    REBOOT = 2
-    WAIT_FOR_POSTBOOT = 3
-    CONFIGURE_CONNECT = 4
-    RUN_ENVTARGET = 5
-    FINALIZE_OBJECT = 6
-    FINALIZE_ENV = 7
-    FINALIZE_ALL = 8
-    DBPING_INSTANCE = 9
-    FETCH_OBJINFO = 10
-    TESTING_WAIT = 11
-
-
 class TaskState(Enum):
     """Specifies a tasks state"""
 
@@ -241,7 +224,6 @@ class TaskObject:
     def tojson(self) -> dict:
         """Converts object to json representation"""
         info = self.info.tojson()
-        print(f"TOOLS_INFO: {info}")
         return {
             "info": info,
             "args": self.args.tojson(),
@@ -280,26 +262,15 @@ class TaskCollection:
     watchdog_task: Optional[asyncio.Task] = None
     watchdog_enabled: bool = False
 
-    def get_task(self, taskid: str) -> Optional[ScheduledTask]:
-        """Returns list of current tasks"""
-        result = None
-
-        if taskid in self.tasks_current:
-            result = self.tasks_current[taskid]
-        elif taskid in self.tasks_finalized:
-            result = self.tasks_finalized[taskid]
-
-        return result
-
     def tostring(self):
         """Converts object to string representation"""
 
         cur = []
         for _, val in self.tasks_current.items():
-            cur.append(create_taskinfo_result(val).to_json())
+            cur.append(create_taskinfo_result(val).tojson())
         fin = []
         for _, val in self.tasks_finalized.items():
-            fin.append(create_taskinfo_result(val).to_json())
+            fin.append(create_taskinfo_result(val).tojson())
 
         return (
             f"TaskCollection(current={cur}, "

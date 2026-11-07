@@ -61,23 +61,24 @@ copybase(){
     sudo rm -rf "$MNTFOLDER"
 }
 
-# Ensure ssh key
-ensurekey(){
-    if [[ ! -f "$INCFOLDER"/ssh/id_rsa.pub ]] ; then
-        mkdir -p "$INCFOLDER"/ssh
-        if [[ -r /root/.ssh/id_rsa ]] ; then
-            cp /root/.ssh/id_rsa* "$INCFOLDER"/ssh
-        else
-            ssh-keygen -t rsa -N '' -f "$INCFOLDER"/ssh/id_rsa
-        fi
+# Only the host's PUBLIC key goes into the ISO (as authorized_keys, so the
+# backend can log in to the VM). The private key must never leave the host:
+# anyone with a VM could otherwise log in to the host as root.
+copykeys(){
+    if [[ ! -r /root/.ssh/id_rsa.pub ]] ; then
+        echo "Missing /root/.ssh/id_rsa.pub: run 'make deps' in installer/" 1>&2
+        exit 1
     fi
+    mkdir -p "$INFOLDER"/postinstall/ssh
+    cp "$INCFOLDER"/ssh/sshd_config "$INFOLDER"/postinstall/ssh/
+    cp /root/.ssh/id_rsa.pub "$INFOLDER"/postinstall/ssh/id_rsa.pub
+    cp /root/.ssh/id_rsa.pub "$INFOLDER"/postinstall/ssh/authorized_keys
 }
 
 # Copy addons
 copyaddons(){
-    ensurekey
+    copykeys
     mkdir -p "$INFOLDER"/postinstall/
-    cp -r "$INCFOLDER"/ssh -t "$INFOLDER"/postinstall/
     cp -r "$INCFOLDER"/postinstall/*.bash -t "$INFOLDER"/postinstall/
     cp -r "$INCFOLDER"/postinstall/*.sh -t "$INFOLDER"/postinstall/
     cp -r "$INCFOLDER"/postinstall/daas.jpg -t "$INFOLDER"/postinstall/
@@ -97,7 +98,6 @@ copyaddons(){
     mkdir -p "$INFOLDER"/postinstall/daas/env
     cp -r "$QMSGFOLDER"/* "$INFOLDER"/postinstall/daas
     cp -r "$QINSTFOLDER"/* "$INFOLDER"/postinstall/daas/env
-    cp /root/.ssh/id_rsa.pub "$INFOLDER"/postinstall/ssh/authorized_keys 
 }
 
 # Generate iso
