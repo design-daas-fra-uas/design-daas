@@ -19,19 +19,11 @@ class DatabaseConfig:
 
 
 @dataclass
-# pylint: disable=too-many-instance-attributes
 class InstanceControllerConfig:
     """
-    Config object for InstanceController
+    Config object for InstanceController. The SSH settings for instances
+    are in [inst_ssh] (SshAdapterConfig).
     """
 
-    sshuser: str
-    sshport: int
-    sshopt_timeout: int
-    sshopt_strictcheck: str
-    sshopt_nohostauth: str
-    prefixip: str
-    logcmd: bool
-    logresult: bool
     enable_message_queue: bool
     test_method_online_state: str

@@ -1,6 +1,7 @@
 """
 LinuxAdapter
 """
+
 from dataclasses import dataclass
 
 from .tools.LinuxTools import (
@@ -110,9 +111,7 @@ class LinuxAdapter(AdapterBase):
             default_width,
             default_height,
         )
-        code, str_out, str_err = resolution_set(
-            width, height, self.cfg.default_monitor
-        )
+        code, str_out, str_err = resolution_set(width, height, self.cfg.default_monitor)
         if code == 0:
             return code, f"{width}x{height}", ""
         return code, str_out, str_err

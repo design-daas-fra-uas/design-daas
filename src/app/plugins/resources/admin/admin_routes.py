@@ -241,9 +241,7 @@ infos = [
         request_args_common=perf_args,
         backends=backends,
         objects=[
-            LayerObject(
-                "entity", ServiceObject.TASKLIST.value, LayerName.TASK.value
-            )
+            LayerObject("entity", ServiceObject.TASKLIST.value, LayerName.TASK.value)
         ],
     ),
     BlueprintInfo(
@@ -268,11 +266,7 @@ infos = [
         request_args_optional=[],
         request_args_common=perf_args,
         backends=backends,
-        objects=[
-            LayerObject(
-                "entity", ServiceObject.TASK.value, LayerName.TASK.value
-            )
-        ],
+        objects=[LayerObject("entity", ServiceObject.TASK.value, LayerName.TASK.value)],
     ),
 ]
 

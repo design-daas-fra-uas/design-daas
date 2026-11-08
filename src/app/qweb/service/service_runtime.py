@@ -270,7 +270,7 @@ class QwebServiceRuntime(Loggable):
                     await backend.disconnect()
                 except Exception as exe:
                     t = type(exe)
-                    self._log_info(
+                    self._log_warn(
                         f"Error stopping backend {name}: {t.__module__}.{t.__qualname__}: {exe}"
                     )
 

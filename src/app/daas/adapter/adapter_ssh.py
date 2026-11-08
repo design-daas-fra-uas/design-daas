@@ -113,7 +113,9 @@ class SshAdapter(Loggable):
             "&",
         ]
 
-    def _run_ssh_command(self, args: str, full_command: list[str]) -> tuple[int, str, str]:
+    def _run_ssh_command(
+        self, args: str, full_command: list[str]
+    ) -> tuple[int, str, str]:
         # pylint: disable=broad-exception-caught
         try:
             process = subprocess.run(

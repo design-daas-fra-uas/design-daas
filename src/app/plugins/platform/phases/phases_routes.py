@@ -136,9 +136,7 @@ infos = [
         request_args_optional=["force"],
         request_args_common=perf_args,
         backends=backends,
-        objects=[
-            LayerObject("entity", DBObject.INST.value, LayerName.DB.value)
-        ],
+        objects=[LayerObject("entity", DBObject.INST.value, LayerName.DB.value)],
     ),
     BlueprintInfo(
         endpoint_id=110005,
@@ -492,9 +490,7 @@ infos = [
             LayerObject("old", DBObject.OBJ.value, LayerName.DB.value),
             LayerObject("new", DBObject.NEWOBJ.value, LayerName.DB.value),
             LayerObject("app", DBObject.APP.value, LayerName.DB.value),
-            LayerObject(
-                "template", DBObject.OBJBYAPP.value, LayerName.DB.value
-            ),
+            LayerObject("template", DBObject.OBJBYAPP.value, LayerName.DB.value),
         ],
     ),
 ]

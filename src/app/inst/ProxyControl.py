@@ -268,6 +268,8 @@ class ProxyControl:
             nixcfg = LinuxAdapterConfig(isvm, mon, NIXCFG_OSPACKAGE_TOOL)
             return LinuxAdapter(baseconf, nixcfg)
         if os.name == "nt":
+            # Imported above only on Windows (os.name == "nt")
+            # pylint: disable-next=possibly-used-before-assignment
             wincfg = WindowsAdapterConfig(
                 True,
                 WINCFG_USER,
@@ -277,6 +279,7 @@ class ProxyControl:
                 WINCFG_FILENAME_TIGHTVNC,
                 WINCFG_OSPACKAGE_TOOL,
             )
+            # pylint: disable-next=possibly-used-before-assignment
             return WindowsAdapter(baseconf, wincfg)
         raise NotImplementedError()
 

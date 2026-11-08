@@ -53,9 +53,7 @@ infos = [
         request_args_optional=[],
         request_args_common=perf_args,
         backends=backends,
-        objects=[
-            LayerObject("entity", DBObject.FILE.value, LayerName.DB.value)
-        ],
+        objects=[LayerObject("entity", DBObject.FILE.value, LayerName.DB.value)],
     ),
     BlueprintInfo(
         endpoint_id=80001,
@@ -74,9 +72,7 @@ infos = [
         request_args_optional=[],
         request_args_common=perf_args,
         backends=backends,
-        objects=[
-            LayerObject("entity", DBObject.FILE.value, LayerName.DB.value)
-        ],
+        objects=[LayerObject("entity", DBObject.FILE.value, LayerName.DB.value)],
     ),
     BlueprintInfo(
         endpoint_id=80002,
@@ -95,9 +91,7 @@ infos = [
         request_args_optional=[],
         request_args_common=perf_args,
         backends=backends,
-        objects=[
-            LayerObject("entity", DBObject.FILE.value, LayerName.DB.value)
-        ],
+        objects=[LayerObject("entity", DBObject.FILE.value, LayerName.DB.value)],
     ),
     BlueprintInfo(
         endpoint_id=80003,
@@ -132,9 +126,7 @@ infos = [
         request_args_optional=[],
         request_args_file=["file"],
         request_args_common=perf_args,
-        objects=[
-            LayerObject("entity", DBObject.FILE.value, LayerName.DB.value)
-        ],
+        objects=[LayerObject("entity", DBObject.FILE.value, LayerName.DB.value)],
         backends=backends,
     ),
     BlueprintInfo(
@@ -154,9 +146,7 @@ infos = [
         request_args_file=["file"],
         request_args_optional=[],
         request_args_common=perf_args,
-        objects=[
-            LayerObject("entity", DBObject.FILE.value, LayerName.DB.value)
-        ],
+        objects=[LayerObject("entity", DBObject.FILE.value, LayerName.DB.value)],
         backends=backends,
     ),
     BlueprintInfo(
@@ -175,9 +165,7 @@ infos = [
         request_args_optional=[],
         request_args_file=["file"],
         request_args_common=perf_args,
-        objects=[
-            LayerObject("entity", DBObject.FILE.value, LayerName.DB.value)
-        ],
+        objects=[LayerObject("entity", DBObject.FILE.value, LayerName.DB.value)],
         backends=backends,
     ),
     BlueprintInfo(
@@ -197,9 +185,7 @@ infos = [
         request_args_file=["file"],
         request_args_optional=[],
         request_args_common=perf_args,
-        objects=[
-            LayerObject("entity", DBObject.FILE.value, LayerName.DB.value)
-        ],
+        objects=[LayerObject("entity", DBObject.FILE.value, LayerName.DB.value)],
         backends=backends,
     ),
     BlueprintInfo(

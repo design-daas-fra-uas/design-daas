@@ -34,9 +34,7 @@ infos = [
         request_args_common=perf_args,
         backends=backends,
         objects=[
-            LayerObject(
-                "entity", LimitObject.BYOWNER.value, LayerName.LIMIT.value
-            )
+            LayerObject("entity", LimitObject.BYOWNER.value, LayerName.LIMIT.value)
         ],
     ),
     BlueprintInfo(
@@ -65,9 +63,7 @@ infos = [
         request_args_common=perf_args,
         backends=backends,
         objects=[
-            LayerObject(
-                "entity", LimitObject.BYOWNER.value, LayerName.LIMIT.value
-            )
+            LayerObject("entity", LimitObject.BYOWNER.value, LayerName.LIMIT.value)
         ],
     ),
     BlueprintInfo(
@@ -88,9 +84,7 @@ infos = [
         request_args_common=perf_args,
         backends=backends,
         objects=[
-            LayerObject(
-                "entity", LimitObject.BYOWNER.value, LayerName.LIMIT.value
-            )
+            LayerObject("entity", LimitObject.BYOWNER.value, LayerName.LIMIT.value)
         ],
     ),
     BlueprintInfo(
@@ -110,9 +104,7 @@ infos = [
         request_args_optional=[],
         request_args_common=perf_args,
         backends=backends,
-        objects=[
-            LayerObject("entity", LimitObject.LIST.value, LayerName.LIMIT.value)
-        ],
+        objects=[LayerObject("entity", LimitObject.LIST.value, LayerName.LIMIT.value)],
     ),
 ]
 

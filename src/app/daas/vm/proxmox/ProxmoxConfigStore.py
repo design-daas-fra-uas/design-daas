@@ -15,6 +15,7 @@ class ProxmoxConfigStoreConfig:
     bridge_name_inst: str
     prefixmac: str
 
+
 class ProxmoxConfigStore(Loggable):
     """
     Provides configuration presets for proxmox vms

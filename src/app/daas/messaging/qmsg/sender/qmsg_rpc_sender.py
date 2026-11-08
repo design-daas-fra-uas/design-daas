@@ -109,7 +109,9 @@ class RpcSender:
         self.thread.start()
         return self.thread
 
-    def __call_rpc_method(self, queue_name: str, msg: RpcRequest) -> Optional[RpcResponse]:
+    def __call_rpc_method(
+        self, queue_name: str, msg: RpcRequest
+    ) -> Optional[RpcResponse]:
         try:
             return self.call(queue_name, msg)
         finally:

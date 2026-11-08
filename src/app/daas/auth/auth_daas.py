@@ -76,7 +76,9 @@ class DaasAuthenticatorBase(QwebAuthenticatorBase):
             )
         return result
 
-    async def verify_list(self, entity: list, owner: int, is_admin: bool = False) -> bool:
+    async def verify_list(
+        self, entity: list, owner: int, is_admin: bool = False
+    ) -> bool:
         # Admins may list every user's entries (admin dashboard, e.g. limits)
         if is_admin:
             return True

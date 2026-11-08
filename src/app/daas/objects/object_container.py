@@ -82,7 +82,7 @@ class ContainerObject(ContainerConfigBase):
         userid: int,
         connect: bool,
         object_mode: str = "",
-            args=None,
+        args=None,
     ) -> Optional[InstanceObject]:
         """Starts environment instance"""
         if args is None:
@@ -100,7 +100,7 @@ class ContainerObject(ContainerConfigBase):
         userid: int,
         connect: bool,
         object_mode: str = "",
-            args=None,
+        args=None,
     ) -> Optional[InstanceObject]:
         """Runs environment instance"""
         if args is None:

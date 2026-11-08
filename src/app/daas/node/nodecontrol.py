@@ -8,10 +8,9 @@ from app.qweb.logging.logging import LogTarget, Loggable
 
 @dataclass
 class NodeControllerConfig:
-    """Config for node requests"""
+    """Config for node requests (prefixmac comes from vm.toml [vm_api])"""
 
     prefixmac: str
-    prefixip: str
     dnsmasqhosts: str
 
 
@@ -29,10 +28,7 @@ class NodeController(Loggable):
         return "Config: " + str(self.config)
 
     def __repr__(self):
-        return (
-            f"{self.__class__.__qualname__}"
-            f"(prefixmac={self.config.prefixmac})"
-        )
+        return f"{self.__class__.__qualname__}" f"(prefixmac={self.config.prefixmac})"
 
     def connect(self):
         """Connects the component"""

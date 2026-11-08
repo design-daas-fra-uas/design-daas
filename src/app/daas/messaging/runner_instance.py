@@ -1,15 +1,12 @@
 """
-This module serves as the entry point for running the ClientHub.
-It initializes the ClientHub with the necessary configuration and runs it asynchronously.
+Entry point of the agent inside an instance: runs the ClientHub (heartbeat
+sender + RPC receiver) until the process is stopped. Started as a script
+from the agent folder, so its imports are resolved relative to it.
 """
 
 
 async def run_client_hub():
-    """
-    Initialize and run the ClientHub. This function sets up the hub configuration,
-    starts the hub, and manages its lifecycle.
-    """
-    rabbit_ip = "172.17.0.1"
+    """Starts the ClientHub and keeps it running until cancelled"""
     cfg_hub = QHubConfigInstance(
         rabbitmq_host=rabbit_ip,
         reconnect_time_client=5,

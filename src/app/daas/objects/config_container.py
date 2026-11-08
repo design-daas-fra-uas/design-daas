@@ -58,7 +58,9 @@ class ContainerConfigBase(ContainerEnvironmentBase):
             env.env_tasks.extend(jsonargs)
         return await dbase.update_environment(env)
 
-    async def configure_target(self, obj: str, env: Optional[Environment]) -> bool:
+    async def configure_target(
+        self, obj: str, env: Optional[Environment], args: Optional[dict] = None
+    ) -> bool:
         from app.daas.db.database import Database
 
         dbase = await get_database(Database)

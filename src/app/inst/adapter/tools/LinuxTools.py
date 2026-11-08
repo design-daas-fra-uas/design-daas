@@ -1,6 +1,7 @@
 """
 Linux helpers
 """
+
 from dataclasses import dataclass
 import subprocess
 import logging
@@ -140,9 +141,9 @@ def extract_resolutions(screen: str) -> list:
     Extract all native resolutions
     """
     xrandr_output = subprocess.check_output("/usr/bin/xrandr").decode("utf-8")
-    screen_pattern_open = re.compile(r'\b([\w-]+)\b(?=\s+connected\b)')
-    screen_pattern_close = re.compile(r'\sdisconnected')
-    resolution_pattern = re.compile(r'\s+(\d+)x(\d+)')
+    screen_pattern_open = re.compile(r"\b([\w-]+)\b(?=\s+connected\b)")
+    screen_pattern_close = re.compile(r"\sdisconnected")
+    resolution_pattern = re.compile(r"\s+(\d+)x(\d+)")
 
     result = []
     number = 0
@@ -215,9 +216,9 @@ def extract_current_resolution(screen: str) -> tuple:
     Extract current resolution
     """
     xrandr_output = subprocess.check_output("/usr/bin/xrandr").decode("utf-8")
-    screen_pattern_open = re.compile(r'\b([\w-]+)\b(?=\s+connected\b)')
-    screen_pattern_close = re.compile(r'\sdisconnected')
-    resolution_pattern = re.compile(r'\s+(\d+)x(\d+)')
+    screen_pattern_open = re.compile(r"\b([\w-]+)\b(?=\s+connected\b)")
+    screen_pattern_close = re.compile(r"\sdisconnected")
+    resolution_pattern = re.compile(r"\s+(\d+)x(\d+)")
 
     number = 0
     extracting = False

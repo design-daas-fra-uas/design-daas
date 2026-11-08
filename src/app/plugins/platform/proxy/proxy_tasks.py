@@ -338,5 +338,3 @@ async def proxy_ws(args: TaskArgs):
         )
 
     raise TypeError(f"no HTTP proxy support for {type(instance.app)=}")
-
-

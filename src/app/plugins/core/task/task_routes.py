@@ -35,11 +35,7 @@ infos = [
         request_args_optional=[],
         request_args_common=perf_args,
         backends=backends,
-        objects=[
-            LayerObject(
-                "entity", ServiceObject.TASK.value, LayerName.TASK.value
-            )
-        ],
+        objects=[LayerObject("entity", ServiceObject.TASK.value, LayerName.TASK.value)],
     ),
     BlueprintInfo(
         endpoint_id=100001,
@@ -58,9 +54,7 @@ infos = [
         request_args_common=perf_args,
         backends=backends,
         objects=[
-            LayerObject(
-                "entity", ServiceObject.TASKFILTER.value, LayerName.TASK.value
-            )
+            LayerObject("entity", ServiceObject.TASKFILTER.value, LayerName.TASK.value)
         ],
     ),
     BlueprintInfo(
@@ -80,9 +74,7 @@ infos = [
         request_args_common=perf_args,
         backends=backends,
         objects=[
-            LayerObject(
-                "entity", ServiceObject.TASKLIST.value, LayerName.TASK.value
-            )
+            LayerObject("entity", ServiceObject.TASKLIST.value, LayerName.TASK.value)
         ],
     ),
     BlueprintInfo(
@@ -102,9 +94,7 @@ infos = [
         request_args_common=perf_args,
         backends=backends,
         objects=[
-            LayerObject(
-                "entity", ServiceObject.TASKSTATUS.value, LayerName.TASK.value
-            )
+            LayerObject("entity", ServiceObject.TASKSTATUS.value, LayerName.TASK.value)
         ],
     ),
 ]

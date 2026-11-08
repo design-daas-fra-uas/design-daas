@@ -1,6 +1,7 @@
 """
 Windows helpers
 """
+
 import logging
 
 import time

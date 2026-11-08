@@ -155,9 +155,7 @@ class DaasBaseObject(DaasObject):
             await self.stop(instance, True)
         return True
 
-    async def start_finalize(
-        self, userid: int, object_mode: str = ""
-    ) -> bool:
+    async def start_finalize(self, userid: int, object_mode: str = "") -> bool:
         """Finalize instance start"""
         from app.daas.db.database import Database
 

@@ -22,13 +22,11 @@ def messages(draw) -> tuple[str, ...]:
 
 
 @overload
-def _make_chunks(source: str, division_points: list[int]) -> list[str]:
-    ...
+def _make_chunks(source: str, division_points: list[int]) -> list[str]: ...
 
 
 @overload
-def _make_chunks(source: bytes, division_points: list[int]) -> list[bytes]:
-    ...
+def _make_chunks(source: bytes, division_points: list[int]) -> list[bytes]: ...
 
 
 def _make_chunks(source, division_points: list[int]):
@@ -58,18 +56,14 @@ def _make_chunks(source, division_points: list[int]):
 @st.composite
 def string_chunks(draw, source: str) -> list[str]:
     """Divide the source string into multiple chunks."""
-    division_points = draw(
-        st.lists(st.integers(min_value=0, max_value=len(source)))
-    )
+    division_points = draw(st.lists(st.integers(min_value=0, max_value=len(source))))
     return _make_chunks(source, sorted(division_points))
 
 
 @st.composite
 def bytes_chunks(draw, source: bytes) -> list[bytes]:
     """Divide the source bytes into multiple chunks."""
-    division_points = draw(
-        st.lists(st.integers(min_value=0, max_value=len(source)))
-    )
+    division_points = draw(st.lists(st.integers(min_value=0, max_value=len(source))))
     return _make_chunks(source, sorted(division_points))
 
 
@@ -93,15 +87,13 @@ def test_can_parse_all_message(msg: tuple[str, ...]):
 @overload
 def _drive_incremental_parser(
     p: IncrementalGuacamoleParser, chunks: list[str]
-) -> Iterable[tuple[str, ...]]:
-    ...
+) -> Iterable[tuple[str, ...]]: ...
 
 
 @overload
 def _drive_incremental_parser(
     p: IncrementalBinaryGuacamoleParser, chunks: list[bytes]
-) -> Iterable[tuple[str, ...]]:
-    ...
+) -> Iterable[tuple[str, ...]]: ...
 
 
 def _drive_incremental_parser(p, chunks: list) -> Iterable[tuple]:
@@ -136,9 +128,7 @@ def test_can_drive_incremental_binary_parser(data, msgs: list[tuple[str, ...]]):
     """
     The incremental parser can handle chunked input.
     """
-    formatted_msgs = "".join(format_message(*msg) for msg in msgs).encode(
-        "utf-8"
-    )
+    formatted_msgs = "".join(format_message(*msg) for msg in msgs).encode("utf-8")
     chunks = data.draw(bytes_chunks(formatted_msgs))
 
     retrieved_msgs = list(
