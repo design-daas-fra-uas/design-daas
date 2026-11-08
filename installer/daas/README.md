@@ -21,7 +21,7 @@ From `installer/`, as root:
 | Command | What it does |
 |---|---|
 | `make daas-install` | Python venv + backend TLS key (`src/Makefile install`, only if there is no venv yet) and the `daas.service` unit. Starts nothing |
-| `make daas-configure` | `daas.env` → `src/config/*.toml`, certificate, nginx (reload only), dnsmasq, `src/data` |
+| `make daas-configure` | `daas.env` → `src/config/local/*.toml`, certificate, nginx (reload only), dnsmasq, `src/data` |
 | `make daas-start` / `daas-stop` / `daas-restart` | The backend; it starts/stops the service containers itself |
 | `make daas-status` / `daas-logs` | State / follow the log (`journalctl -u daas -f`) |
 | `make daas-check` | Tests the running backend (changes nothing): service and its process, public address through nginx with a valid certificate, backend reachable only through nginx, the 4 service containers, TLS 1.2/1.3 only, nginx restarts cannot stop the backend |
@@ -36,13 +36,13 @@ restart the backend (nginx is only reloaded).
 
 | Target | From |
 |---|---|
-| `src/config/qweb.toml` | listen `127.0.0.1:5000`; public address (`hostproto/hostip/hostport`) from `DAAS_PUBLIC_URL` |
-| `src/config/proxy.toml` | viewer address from `DAAS_PUBLIC_URL` |
-| `src/config/vm.toml` | node `HOST_NAME`, bridge addresses `192.168.{123,223,100,200}.HOST_NUMBER`, uplink `NET_DEVICE` (not with `STANDALONE`) |
-| `src/config/container.toml` | host address for the containers |
-| `src/config/auth.toml` | login through the auth service (`DAAS_AUTH_MODE`, `ADMIN_EMAIL`, `OAUTH_CLIENT_ID`) |
+| `src/config/local/qweb.toml` | public address (`hostproto/hostip/hostport`) from `DAAS_PUBLIC_URL` |
+| `src/config/local/proxy.toml` | viewer address from `DAAS_PUBLIC_URL` |
+| `src/config/local/vm.toml` | node `HOST_NAME`, bridge addresses `192.168.{123,223,100,200}.HOST_NUMBER`, uplink `NET_DEVICE` (not with `STANDALONE`), `PVE_API_PASSWORD` |
+| `src/config/local/container.toml` | host address for the containers |
+| `src/config/local/auth.toml` | login through the auth service (`DAAS_AUTH_MODE`, `DAAS_AUTH_CHECK_ENDPOINTS`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `OAUTH_CLIENT_ID`) |
+| `src/config/local/db.toml` | `DAAS_DB_PASSWORD` |
 | Proxmox user `daas@pve` | created with the Administrator role when missing; its password is set to `PVE_API_PASSWORD` when that does not log in |
-| `src/config/local/vm.toml`, `local/auth.toml`, `local/db.toml` | **the secrets** (`PVE_API_PASSWORD`, `ADMIN_PASSWORD`, `DAAS_DB_PASSWORD`), root-only and not in git; the backend merges them over the tracked files (see `src/config/README.md`) |
 | `/etc/nginx/ssl/` | local CA `daas-ca.crt` (once) + certificate for every public name (`DAAS_PUBLIC_URL`, `FRONTEND_PUBLIC_URL`, `AUTH_PUBLIC_URL`), see `mkcert.bash` |
 | `/etc/nginx/nginx.conf`, `sites-enabled/daas.conf` | from `nginx.conf` / `daas.conf` here; server name = host of `DAAS_PUBLIC_URL` |
 | `/etc/dnsmasq.conf` | DHCP on vmbr1 (`.50`–`.75`), gateway `192.168.223.HOST_NUMBER` |
@@ -74,14 +74,14 @@ can be repeated with other values.
 | `mkcert.bash` | Local CA + server certificate |
 | `nginx.conf`, `daas.conf` | nginx main config and the DaaS site |
 | `check.bash` | The test behind `make daas-check` |
-| `migrate-sqlite-to-mariadb.py` | One-time copy of the backend's data from SQLite into MariaDB (see `mariadb/README.md`) |
 
 ## Things to know
 
 - Import `/etc/nginx/ssl/daas-ca.crt` into the browser once; the
   certificate is renewed automatically when names change or it expires
   within 30 days (on the next `daas-configure`).
-- `src/config/qweb.toml` has `debug = true`; consider turning it off for
-  production.
+- The tracked `src/config/*.toml` are never changed by the installer: all
+  host values and passwords go to `src/config/local/` (root only, not in
+  git), which the backend merges over them. `git status` stays clean.
 - During development the backend can also run by hand
   (`cd src && make local-start`); stop `daas.service` first.

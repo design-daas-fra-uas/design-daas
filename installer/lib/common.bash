@@ -187,52 +187,6 @@ toml_string() {
     printf '"%s"' "$value"
 }
 
-# is_secret_key KEY: true for keys whose values must not be logged
-is_secret_key() {
-    [[ "${1,,}" == *pass* || "${1,,}" == *secret* || "${1,,}" == *token* ]]
-}
-
-# set_toml_value FILE KEY VALUE [raw]: set `KEY = "VALUE"` in FILE
-# (with "raw": `KEY = VALUE`, for booleans and numbers).
-# The first line starting with KEY is replaced, so this works whatever the
-# current value is and can be re-run with different values. VALUE may hold
-# any character; it is escaped for TOML. Values of secret keys
-# (is_secret_key: *pass*, *secret*, *token*) are not printed in the log.
-set_toml_value() {
-    local file="$1" key="$2" value="$3" mode="${4:-string}" current new shown tmp
-    require_file "$file"
-    if ! current="$(grep -m1 -E "^[[:space:]]*${key}[[:space:]]*=" "$file")"; then
-        warn "Key '$key' not found in $file, skipping"
-        return 0
-    fi
-    if [[ "$mode" == raw ]]; then
-        new="${key} = ${value}"
-    else
-        new="${key} = $(toml_string "$value")"
-    fi
-    shown="$new"
-    if is_secret_key "$key"; then
-        shown="${key} = <hidden>"
-    fi
-    if [[ "$current" == "$new" ]]; then
-        info "$(basename "$file"): $shown (unchanged)"
-        return 0
-    fi
-    tmp="$(mktemp)"
-    # Replacement via ENVIRON: awk -v would interpret backslashes
-    NEW_LINE="$new" awk -v key="$key" '
-        !done && $0 ~ "^[[:space:]]*" key "[[:space:]]*=" { print ENVIRON["NEW_LINE"]; done = 1; next }
-        { print }
-    ' "$file" > "$tmp"
-    cat "$tmp" > "$file"
-    rm -f "$tmp"
-    if is_secret_key "$key"; then
-        success "$(basename "$file"): $shown"
-    else
-        success "$(basename "$file"): ${current} -> ${new}"
-    fi
-}
-
 # load_env_file FILE: export KEY=value lines from FILE.
 # Values are taken literally (no $ expansion, unlike `source`), so passwords
 # may contain any character. Surrounding single/double quotes are removed.
@@ -406,7 +360,7 @@ reload_nginx() {
 wait_http() {
     local url="$1" tries="${2:-60}" i code
     for (( i = 1; i <= tries; i++ )); do
-        code="$(curl -s -o /dev/null -w '%{http_code}' -X POST "$url" || true)"
+        code="$(curl -s -o /dev/null -w '%{http_code}' "$url" || true)"
         if [[ "$code" != 000 ]]; then
             success "$url answers (HTTP $code after $(( (i - 1) * 5 ))s)"
             return 0

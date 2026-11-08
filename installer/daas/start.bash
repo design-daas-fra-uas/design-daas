@@ -3,8 +3,10 @@
 # ExecStart of daas.service: runs the backend (src/main.py) in the foreground
 # with the venv's Python. exec: the backend is the service's main process,
 # so systemd sends it the stop signal directly (no ExecStop needed).
-# Output goes to the journal: journalctl -u daas -f
+# Output goes to the journal: journalctl -u daas -f (not to the installer
+# log: this runs on every service start)
 
+DAAS_LOG_FILE=""
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.bash"
 
 DAAS_DIR="$(cd "$DAAS_INSTALLER_DIR/../src" && pwd)"
