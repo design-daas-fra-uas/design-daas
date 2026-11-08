@@ -34,22 +34,10 @@ class LimitPlugin(PluginBase):
         ]
         self.handlers = [handler]
         super().__init__(
-            self.__class__.__qualname__,
             LoadOrder.Late,
-            False,
             backends=[self.backend],
             layers=[self.objlayer],
             handlers=self.handlers,
             systasks=self.systasks,
             apitasks=self.apitasks,
-            authenticator=None,
-            taskmanager=None,
         )
-
-    async def plugin_start(self) -> bool:
-        """Starts plugin"""
-        return await self.backend.connect()
-
-    async def plugin_stop(self) -> bool:
-        """Stops plugin"""
-        return await self.backend.disconnect()

@@ -37,7 +37,6 @@ class VmPlugin(PluginBase):
         self.cfg_rest = ProxmoxRestConfig(**cfgfile_db[ConfigSections.VM_REST.value])
         self.cfg_http = HttpAdapterConfig(**cfgfile_db[ConfigSections.VM_HTTP.value])
         self.backend = VmBackend(self.cfg_api, self.cfg_rest, self.cfg_http)
-        self.objlayer = None
         self.systasks = []
         self.apitasks = [
             (VMTask.VM_LIST.value, vmlist),
@@ -57,22 +56,9 @@ class VmPlugin(PluginBase):
         ]
         self.handlers = [handler]
         super().__init__(
-            self.__class__.__qualname__,
             LoadOrder.Platform,
-            False,
             backends=[self.backend],
-            layers=[],
             handlers=self.handlers,
             apitasks=self.apitasks,
             systasks=self.systasks,
-            authenticator=None,
-            taskmanager=None,
         )
-
-    async def plugin_start(self) -> bool:
-        """Starts plugin"""
-        return await self.backend.connect()
-
-    async def plugin_stop(self) -> bool:
-        """Stops plugin"""
-        return await self.backend.disconnect()

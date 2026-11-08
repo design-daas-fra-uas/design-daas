@@ -16,6 +16,8 @@ from app.plugins.resources.info.info_tasks import (
     monitoring_info_sockets,
     monitoring_info_tasks,
     monitoring_info_utilization,
+    quota_info,
+    system_status,
 )
 from app.plugins.resources.info.info_routes import handler
 
@@ -27,7 +29,6 @@ class InfoPlugin(PluginBase):
         cfgfile_db = self.read_toml_file(ConfigFile.INFO)
         self.cfg = SysteminfoConfig(**cfgfile_db[ConfigSections.INFO_SYS.value])
         self.backend = InfoBackend(self.cfg)
-        self.objlayer = None
         self.systasks = []
         self.apitasks = [
             (InfoTask.INFO_DASHBOARD.value, dashboard_info),
@@ -40,25 +41,14 @@ class InfoPlugin(PluginBase):
             (InfoTask.INFO_MONITORING_OBJECTS.value, monitoring_info_objects),
             (InfoTask.INFO_MONITORING_UTILIZATION.value, monitoring_info_utilization),
             (InfoTask.INFO_MONITORING_LIMITS.value, monitoring_info_limits),
+            (InfoTask.INFO_QUOTA.value, quota_info),
+            (InfoTask.INFO_SYSTEM_STATUS.value, system_status),
         ]
         self.handlers = [handler]
         super().__init__(
-            self.__class__.__qualname__,
             LoadOrder.Late,
-            False,
             backends=[self.backend],
-            layers=[],
             handlers=self.handlers,
             systasks=self.systasks,
             apitasks=self.apitasks,
-            authenticator=None,
-            taskmanager=None,
         )
-
-    async def plugin_start(self) -> bool:
-        """Starts plugin"""
-        return await self.backend.connect()
-
-    async def plugin_stop(self) -> bool:
-        """Stops plugin"""
-        return await self.backend.disconnect()

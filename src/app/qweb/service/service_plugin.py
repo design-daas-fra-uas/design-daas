@@ -1,6 +1,5 @@
 """Plugin definitions"""
 
-from abc import abstractmethod
 from enum import Enum
 from typing import Any, Optional
 from app.daas.common.enums import ConfigFile
@@ -37,27 +36,26 @@ class PluginBase(Loggable):
 
     def __init__(
         self,
-        name: str,
         order: LoadOrder,
-        testing: bool,
-        backends: list[QwebBackend],
-        layers: list[QwebObjectLayer],
-        handlers: list[BlueprintHandler],
-        apitasks: list[tuple[str, Any]],
-        systasks: list[tuple[str, Any]],
-        taskmanager: Optional[QwebTaskManager],
-        authenticator: Optional[QwebAuthenticatorBase],
+        backends: Optional[list[QwebBackend]] = None,
+        layers: Optional[list[QwebObjectLayer]] = None,
+        handlers: Optional[list[BlueprintHandler]] = None,
+        apitasks: Optional[list[tuple[str, Any]]] = None,
+        systasks: Optional[list[tuple[str, Any]]] = None,
+        authenticator: Optional[QwebAuthenticatorBase] = None,
+        taskmanager: Optional[QwebTaskManager] = None,
+        testing: bool = False,
     ):
-        self.name = name
+        self.name = self.__class__.__qualname__
         self.load_order = order
         self.testing = testing
         self.taskmanager = taskmanager
         self.authenticator = authenticator
-        self.backends = backends
-        self.layers = layers
-        self.handlers = handlers
-        self.apitasks = apitasks
-        self.systasks = systasks
+        self.backends = backends or []
+        self.layers = layers or []
+        self.handlers = handlers or []
+        self.apitasks = apitasks or []
+        self.systasks = systasks or []
         self.registered = False
         self.started = False
         Loggable.__init__(self, LogTarget.PLUGIN)
@@ -93,15 +91,15 @@ class PluginBase(Loggable):
             )
         return state
 
-    @abstractmethod
     async def plugin_start(self) -> bool:
-        """Starts plugin"""
-        raise NotImplementedError("Not implemented")
+        """Starts plugin: connects its backends (override for more)"""
+        results = [await backend.connect() for backend in self.backends]
+        return all(results)
 
-    @abstractmethod
     async def plugin_stop(self) -> bool:
-        """Stops plugin"""
-        raise NotImplementedError("Not implemented")
+        """Stops plugin: disconnects its backends (override for more)"""
+        results = [await backend.disconnect() for backend in self.backends]
+        return all(results)
 
     async def start(self) -> bool:
         """Starts plugin"""

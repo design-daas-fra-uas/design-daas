@@ -22,9 +22,14 @@ class NodePlugin(PluginBase):
     ):
         cfgfile_db = self.read_toml_file(ConfigFile.NODE)
         self.cfg_ssh = SshAdapterConfig(**cfgfile_db[ConfigSections.HOST_SSH.value])
-        self.cfg_dns = NodeControllerConfig(**cfgfile_db[ConfigSections.HOST_DNS.value])
+        # One MAC prefix for Proxmox and dnsmasq: both must match
+        prefixmac = self.read_toml_file(ConfigFile.VM)[ConfigSections.VM_API.value][
+            "prefixmac"
+        ]
+        self.cfg_dns = NodeControllerConfig(
+            prefixmac=prefixmac, **cfgfile_db[ConfigSections.HOST_DNS.value]
+        )
         self.backend = NodeBackend(self.cfg_dns, self.cfg_ssh)
-        self.objlayer = None
         self.systasks = []
         self.apitasks = [
             (NodeTask.NODE_CONFIGURE_DHCP.value, configure_dhcp),
@@ -33,22 +38,9 @@ class NodePlugin(PluginBase):
         ]
         self.handlers = [handler]
         super().__init__(
-            self.__class__.__qualname__,
             LoadOrder.Platform,
-            False,
             backends=[self.backend],
-            layers=[],
             handlers=self.handlers,
             systasks=self.systasks,
             apitasks=self.apitasks,
-            authenticator=None,
-            taskmanager=None,
         )
-
-    async def plugin_start(self) -> bool:
-        """Starts plugin"""
-        return await self.backend.connect()
-
-    async def plugin_stop(self) -> bool:
-        """Stops plugin"""
-        return await self.backend.disconnect()

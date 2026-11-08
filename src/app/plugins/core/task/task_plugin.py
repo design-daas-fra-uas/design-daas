@@ -33,16 +33,12 @@ class TaskPlugin(PluginBase):
         ]
         self.handlers = [handler]
         super().__init__(
-            self.__class__.__qualname__,
             LoadOrder.Core,
-            False,
             backends=[self.backend],
             layers=[self.obj_layer],
             handlers=self.handlers,
             systasks=self.systasks,
             apitasks=self.apitasks,
-            authenticator=None,
-            taskmanager=None,
         )
 
     async def plugin_start(self) -> bool:

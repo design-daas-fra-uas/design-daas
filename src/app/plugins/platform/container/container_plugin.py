@@ -39,7 +39,6 @@ class ContainerPlugin(PluginBase):
             **cfgfile_db[ConfigSections.CONTAINER_SERVICES.value]
         )
         self.backend = ContainerBackend(self.cfg_request, self.cfg_services)
-        self.objlayer = None
         self.systasks = []
         self.apitasks = [
             (ContainerTask.CONT_DAEMON_INFO.value, daemon_info),
@@ -57,22 +56,9 @@ class ContainerPlugin(PluginBase):
         ]
         self.handlers = [handler]
         super().__init__(
-            self.__class__.__qualname__,
             LoadOrder.Early,
-            False,
             backends=[self.backend],
-            layers=[],
             handlers=self.handlers,
             systasks=self.systasks,
             apitasks=self.apitasks,
-            authenticator=None,
-            taskmanager=None,
         )
-
-    async def plugin_start(self) -> bool:
-        """Starts plugin"""
-        return await self.backend.connect()
-
-    async def plugin_stop(self) -> bool:
-        """Stops plugin"""
-        return await self.backend.disconnect()
