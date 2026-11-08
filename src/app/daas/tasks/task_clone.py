@@ -1,43 +1,16 @@
 """Task to clone objects within a background task"""
 
-from typing import Optional
 import asyncio
-from app.daas.objects.object_container import ContainerObject
-from app.daas.objects.object_instance import InstanceObject
-from app.daas.objects.object_machine import MachineObject
-from app.qweb.common.qweb_tools import get_database
-from app.qweb.processing.processor import QwebResult
-from app.daas.tasks.base_clonetask import CloneTaskBase, CloneTaskConfig
+from app.daas.tasks.base_clonetask import CloneTaskBase
 
 
 class CloneTask(CloneTaskBase):
-    """Task to clone objects within a background task"""
+    """Builds an application on a clone of a base image (see CloneTaskBase)"""
 
-    def __init__(self, cfg: CloneTaskConfig):
-        super().__init__(cfg)
+    kind = "Clone"
 
-    async def run(self) -> QwebResult:
-        args = self.args
-        ok = await self._run_steps(
-            "Clone",
-            [
-                ("boot and finalize base image", self._handle_state_baseimage),
-                ("create environment", lambda: self._create_env(args)),
-                ("configure connection", self._configure_connection),
-                ("configure environment", lambda: self._configure_env(args)),
-                ("install app", lambda: self._install_env(args)),
-                ("finalize environment", lambda: self._finalize_env(args)),
-                ("start app", lambda: self._run_env(args)),
-            ],
-        )
-        if ok:
-            return QwebResult(200, {})
-        return QwebResult(
-            400, {}, 1, f"Clone failed: {self.obj.object_mode_extended}"
-        )
-
-    async def _handle_state_baseimage(self) -> bool:
-        await self._update_state("Wait for instance boot (baseimage)")
+    async def _wait_for_baseimage_boot(self):
+        """The clone is polled directly until its agent answers"""
         online = await self.inst.check_online_state()
         waited = 0
         while not online:
@@ -49,92 +22,3 @@ class CloneTask(CloneTaskBase):
                     f"Still waiting for {self.inst.host or self.inst.id} to boot: "
                     f"{waited // 60} min"
                 )
-        self._log_info("Finalize baseimage")
-        await self._update_state("Finalize baseimage")
-        finalized = await self.obj.baseimage_finalize()
-        if finalized is None or finalized.response_code != 200:
-            await self._update_state("Error on Finalize")
-            return False
-        await self._update_state("Finalized baseimage")
-        return True
-
-    async def _create_env(self, args: dict) -> bool:
-        await self._wait_for_inst_env()
-        await self._update_state(f"Create environment: {args['env']}")
-        envargs = await self._create_envargs(args)
-        self.env = await self.obj.env_create([], [], envargs)
-        if self.env is None:
-            await self._update_error(f"Environment not created: {args['env']}")
-            return False
-        await asyncio.sleep(3)
-        await self._wait_for_inst_env()
-        await self._update_state(f"Created environment: {args['env']}")
-        return True
-
-    async def _configure_connection(self) -> bool:
-        await self._update_state("Configure connections")
-        await self._run_task_configure_connection()
-        await self._upgrade_to_env_connection()
-        await self._update_state("Configured connection")
-        await asyncio.sleep(2)
-        return True
-
-    async def _configure_env(self, args: dict) -> bool:
-        await self._update_state(f"Configure environment: {args['env']}")
-        tasklist = await self._get_object_tasklist()
-        applist = await self._get_object_applist()
-        target = await self._get_object_target()
-        await self.obj.cfg_tasklist(tasklist, self.env, args)
-        await self.obj.cfg_applist(applist, self.env, args)
-        await self.obj.cfg_set_target(target, self.env, args)
-        return await self.obj.update()
-
-    async def _install_env(self, args: dict) -> bool:
-        await self._update_state(f"Install environment: {args['env']}")
-        files = await self._get_files(self.app)
-        installers = await self._get_installers(self.app)
-        installed = await self.obj.cfg_install(
-            files, installers, args["id_owner"], self.env, args
-        )
-        if installed is None or installed.response_code != 200:
-            await self._update_error(
-                f"Error in Configure environment: {args['env']}", 1
-            )
-            return False
-        return True
-
-    async def _finalize_env(self, args: dict) -> bool:
-        from app.daas.db.database import Database
-
-        dbase = await get_database(Database)
-        assert self.env is not None
-        await self._update_state(f"Finalize environment: {args['env']}")
-        await self.obj.env_finalize(self.env, args)
-        await dbase.update_environment(self.env)
-        await self._run_task_configure_connection()
-        return True
-
-    async def _run_env(self, args: dict) -> Optional[InstanceObject]:
-        assert self.env is not None
-        await self._update_state(f"Run environment: {args['env']}")
-        return await self.obj.environment_run(
-            self.env, args["id_owner"], True, "run-app", args
-        )
-
-    async def _upgrade_to_env_connection(self) -> bool:
-        from app.daas.db.database import Database
-
-        await self._update_state("Upgrade to env connection")
-        dbase = await get_database(Database)
-        assert self.env is not None
-        obj = await dbase.get_daas_object(self.obj.id)
-        inst = await dbase.get_instance_by_id(self.inst.id)
-        assert inst is not None
-        inst.id_env = self.env.id
-        updated = await dbase.update_instance(inst)
-        assert updated
-        assert isinstance(obj, MachineObject | ContainerObject)
-        self.obj = obj
-        self.inst = inst
-        await self._update_state("Upgraded to env connection")
-        return updated

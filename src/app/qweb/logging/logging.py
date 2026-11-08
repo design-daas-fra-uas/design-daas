@@ -98,6 +98,9 @@ class Loggable:
         return exitcode
 
 
+# Filter that adds the request id to every record (request_id.py)
+REQUEST_ID_FILTER = "request_id"
+
 # logging.toml switch -> log target (file data/logs/<target>.log)
 LOG_SWITCHES = {
     "log_any": LogTarget.ANY,
@@ -177,7 +180,7 @@ class LoggerConfig:
     log_console_exclude: list
     log_dir: str = "logs"
     log_level: str = "DEBUG"
-    log_prefix: str = "[%(asctime)s][API][%(levelname)-5.5s]:"
+    log_prefix: str = "[%(asctime)s][API][%(levelname)-5.5s][%(request_id)s]:"
     log_message: str = "%(message)s"
     log_details: str = "[%(name)s:%(lineno)d]"
     log_date: str = "%Y-%m-%d %H:%M:%S"
@@ -257,6 +260,9 @@ class QwebLogManager:
         )
         self.loggers = self._initialize_loggers(targets)
         result["version"] = self.version
+        result["filters"] = {
+            REQUEST_ID_FILTER: {"()": "app.qweb.logging.request_id.RequestIdLogFilter"}
+        }
         result["formatters"] = self.formatters
         result["handlers"] = self.handlers
         result["loggers"] = self.loggers
@@ -344,6 +350,8 @@ class QwebLogManager:
             "level": level,
             "class": handler_cls,
             "formatter": formatter,
+            # Sets %(request_id)s for the log format
+            "filters": [REQUEST_ID_FILTER],
         }
         if is_file:
             obj["filename"] = f"{self.cfg.log_dir}/{name}.log"

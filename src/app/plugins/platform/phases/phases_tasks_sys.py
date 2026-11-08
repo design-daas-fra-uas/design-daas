@@ -1,7 +1,8 @@
 """Phases Tasks"""
 
-from app.daas.tasks.task_clone import CloneTaskConfig, CloneTask
-from app.daas.tasks.task_create import CreateTask, CreateTaskConfig
+from app.daas.tasks.task_clone import CloneTask
+from app.daas.tasks.task_config import CloneTaskConfig
+from app.daas.tasks.task_create import CreateTask
 from app.daas.tasks.task_postboot import PostbootConfig, PostbootTask
 from app.qweb.common.common import SystemTaskArgs
 from app.qweb.processing.processor import QwebResult
@@ -27,7 +28,7 @@ async def run_task_wait_for_inst(args: SystemTaskArgs) -> QwebResult:
 
 async def run_task_app_create(args: SystemTaskArgs) -> QwebResult:
     """Creates new object from app"""
-    task = CreateTask(CreateTaskConfig(args))
+    task = CreateTask(CloneTaskConfig(args))
     return await task.run()
 
 

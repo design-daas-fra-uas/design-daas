@@ -4,6 +4,7 @@ from dataclasses import asdict
 from enum import Enum
 from app.daas.common.enums import BackendName
 from app.daas.resources.info.monitoring import MonitoringInfo, MonitoringInfoTool
+from app.daas.resources.info.status import SystemStatusTool
 from app.daas.resources.info.sysinfo import Systeminfo
 from app.qweb.common.common import TaskArgs
 from app.qweb.processing.processor import QwebResult
@@ -26,6 +27,8 @@ class InfoTask(Enum):
     INFO_MONITORING_OBJECTS = "INFO_MONITORING_OBEJCTS"
     INFO_MONITORING_UTILIZATION = "INFO_MONITORING_UTILIZATION"
     INFO_MONITORING_LIMITS = "INFO_MONITORING_LIMITS"
+    INFO_QUOTA = "INFO_QUOTA"
+    INFO_SYSTEM_STATUS = "INFO_SYSTEM_STATUS"
 
 
 async def dashboard_info(args: TaskArgs) -> QwebResult:
@@ -130,3 +133,19 @@ async def monitoring_info_limits(args: TaskArgs) -> QwebResult:
     userid = args.user.id_user
     taskinfo = await mon.create_monitoring_info_limit(userid)
     return QwebResult(200, taskinfo.tojson())
+
+
+async def quota_info(args: TaskArgs) -> QwebResult:
+    """Returns the caller's limits next to their current usage"""
+    log_task_arguments(args.ctx, args.req, args.info, args.user)
+    mon = MonitoringInfoTool()
+    return QwebResult(200, await mon.create_quota_info(args.user.id_user))
+
+
+async def system_status(args: TaskArgs) -> QwebResult:
+    """Returns the health of every part of the stack"""
+    from app.qweb.service.service_runtime import get_qweb_runtime
+
+    log_task_arguments(args.ctx, args.req, args.info, args.user)
+    config_folder = get_qweb_runtime().cfg_qweb.quart.config_folder
+    return QwebResult(200, await SystemStatusTool(config_folder).collect())

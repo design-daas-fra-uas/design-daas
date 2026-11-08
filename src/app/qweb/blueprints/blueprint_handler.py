@@ -103,12 +103,7 @@ class BlueprintHandler(BlueprintHandlerBase):
             )
 
         # Check concurrency mode
-        mode = info.conc_params
-        # Protected routes must not start processing before the role is checked
-        if (
-            info.admin_only or info.protect_system_objects
-        ) and mode == ConcurrencyMode.AUTH_AND_PROC:
-            mode = ConcurrencyMode.NONE
+        mode = self.effective_concurrency_mode(info)
         if mode == ConcurrencyMode.NONE:
             result = await self.sequential_stages(req, info, timing)
         elif mode == ConcurrencyMode.CTX_AND_AUTH:
@@ -118,6 +113,23 @@ class BlueprintHandler(BlueprintHandlerBase):
 
         self._log_request(info=info, req=req, timing=timing)
         return result
+
+    @staticmethod
+    def effective_concurrency_mode(info: BlueprintInfo) -> ConcurrencyMode:
+        """
+        AUTH_AND_PROC runs the task while the login is still being checked, so
+        a request with a bad token or for another user's object would already
+        have done its work (e.g. stopped a VM) when it is answered with 401/403.
+        It is therefore only used for routes without authentication; all other
+        routes check login and ownership first (CTX_AND_AUTH).
+        """
+        mode = info.conc_params
+        if (
+            mode == ConcurrencyMode.AUTH_AND_PROC
+            and info.auth_params != AuthenticationMode.NONE
+        ):
+            return ConcurrencyMode.CTX_AND_AUTH
+        return mode
 
     async def sequential_stages(
         self,

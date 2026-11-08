@@ -10,7 +10,7 @@ import functools
 from typing import Optional, Protocol, TypeAlias
 from collections.abc import Awaitable, Callable
 from quart import Websocket
-from websockets import WebSocketClientProtocol
+from websockets.asyncio.client import ClientConnection
 from app.daas.common.enums import BackendName
 from app.daas.common.model import GuacamoleConnection, Instance
 from app.daas.proxy.streams import (
@@ -165,7 +165,7 @@ class SocketTuple:
     id: str
     id_instance: str
     id_owner: int
-    server_socket: GuacamoleSocketStream | WebSocketClientProtocol | subprocess.Popen
+    server_socket: GuacamoleSocketStream | ClientConnection | subprocess.Popen
     client_socket: GuacamoleSocketWs | Websocket
     connection: GuacamoleConnection
     last_seen_guacd: datetime

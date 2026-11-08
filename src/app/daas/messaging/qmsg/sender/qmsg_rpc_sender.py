@@ -166,7 +166,7 @@ class RpcSender:
         a while. Only publishing is retried, never waiting for the answer, so
         a command never runs twice.
         """
-        for attempt in (1, 2):
+        for _ in range(2):
             if self.connection is None or not self.connection.is_open:
                 self.connect()
             try:

@@ -2,11 +2,11 @@
 
 import subprocess
 import asyncio
-import websockets
+from websockets.asyncio.client import ClientConnection
 from datetime import datetime
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from quart import Websocket
-from app.daas.adapter.adapter_ssh import SshAdapter, SshAdapterConfig
+from app.daas.adapter.adapter_ssh import SshAdapter
 from app.daas.common.enums import BackendName
 from app.daas.container.docker.DockerRequest import DockerRequest
 from app.daas.proxy.proxy_registry import ProxyRegistry
@@ -108,7 +108,7 @@ class ProxyExtensions(Loggable):
         inst: InstanceObject,
         con: GuacamoleConnection,
         client_ws: Websocket,
-        backend_ws: websockets.WebSocketClientProtocol,
+        backend_ws: ClientConnection,
     ):
         """Proxifies client_ws and backend_ws"""
         reg = await get_backend_component(BackendName.PROXY, ProxyRegistry)
@@ -271,16 +271,7 @@ class ProxyExtensions(Loggable):
         if serviceip == "":
             serviceip = await self._get_service_ip(self.config.update_service_ip)
         hub = await get_backend(BackendName.MESSAGING, MessagingBackend)
-        cfg = SshAdapterConfig(
-            hub.cfg_main.sshuser,
-            serviceip,
-            hub.cfg_main.sshport,
-            hub.cfg_main.sshopt_timeout,
-            hub.cfg_main.sshopt_strictcheck,
-            hub.cfg_main.sshopt_nohostauth,
-            hub.cfg_main.logcmd,
-            hub.cfg_main.logresult,
-        )
+        cfg = replace(hub.cfg_ssh, sshhost=serviceip)
         return SshAdapter(cfg)
 
     async def _get_service_ip(self, update: bool) -> str:
