@@ -27,7 +27,7 @@ ______________________________________________________________________
 - Enables deployment of unmodified Linux and Windows applications
 - Integration of Virtual Machines and Containers (by using Proxmox and Docker)
 - Browser-based user interaction (by using Guacamole as a Desktop Gateway)
-- Dedicated user frontend [Repo: Frontend](https://github.com/nuromedia/design-daas-application-frontend)
+- Dedicated user frontend [Repo: Frontend](https://github.com/design-daas-fra-uas/design-daas-application-frontend)
 - Dedicated authentication backend [Repo: Backend](https://github.com/design-daas-fra-uas/design-daas-backend-java)
 
 ## Installation
@@ -55,7 +55,7 @@ Use it to install all components seperately.
 #### Clone the repository
 
 ```bash
-git clone git@github.com:nuromedia/design-daas.git
+git clone git@github.com:design-daas-fra-uas/design-daas.git
 ```
 
 #### Install everything
@@ -92,6 +92,14 @@ make -C installer restart   # auth, daas, frontend
 make -C installer logs
 ```
 
+- **API reference** of the DaaS backend: [docs/api.md](docs/api.md), generated from the route
+  definitions (`make -C src api-docs`); the running backend serves it at `/api/docs`.
+- **Status**: admins see the health of every part (backend, auth service, containers, frontend)
+  on the frontend's *System status* page; users see their limits and usage on *My resources*.
+- **Logs**: every request carries an `X-Request-ID`, written into the logs of the frontend, the
+  DaaS backend (`journalctl -u daas`, `src/data/logs/`) and the auth service. Search for that id
+  to follow one action through all three.
+
 ## Acknowledgments
 
 This work was funded by the Federal Ministry
@@ -107,5 +115,5 @@ Innovationsprogramm Mittelstand (ZIM)").
 - [Video: Usage](https://www.youtube.com/watch?v=nZoH-ngyu9E)
 - [Paper: Open Journal of Cloud Computing (OJCC)](https://www.ronpub.com/ojcc/OJCC_2023v8i1n01_Baun.html)
 - [Paper: MobileWeb and Intelligent Information Systems (MobiWIS 2024)](https://link.springer.com/chapter/10.1007/978-3-031-68005-2_1)
-- [Repo: Frontend](https://github.com/nuromedia/design-daas-application-frontend)
+- [Repo: Frontend](https://github.com/design-daas-fra-uas/design-daas-application-frontend)
 - [Repo: Backend](https://github.com/design-daas-fra-uas/design-daas-backend-java)
