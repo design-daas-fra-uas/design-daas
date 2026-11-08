@@ -2,7 +2,7 @@
 # ProxmoxApiConfig (app/daas/vm/proxmox/, app/daas/adapter/adapter_http.py).
 
 [vm_rest]
-# WARNING: prototype credentials; use a dedicated Proxmox user for real setups
+# Proxmox API account of the backend, created by installer/daas/configure.bash
 apiuser = "daas@pve"
 apipass = ""  # set by the installer in config/local/vm.toml (not in git)
 apiurl = "https://127.0.0.1:8006/api2/json"
@@ -18,9 +18,9 @@ logrequests = true
 logresults = false
 
 [vm_api]
-# Set by installer/daas/configure.bash
+# Default only: the installer writes the host value to config/local/ (see README.md)
 node = "pve"
-# Set by installer/daas/configure.bash
+# Default only: the installer writes the host value to config/local/ (see README.md)
 hostIp = "192.168.123.11"
 # Instance network (vmbr1); dnsmasq hands out these addresses
 prefixip = "192.168.223"

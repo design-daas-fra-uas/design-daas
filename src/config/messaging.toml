@@ -3,17 +3,8 @@
 # (app/daas/messaging/qmsg/hub_backend.py) and SshAdapterConfig.
 
 [instances]
-# SSH into instances (fallback to the message queue)
-sshuser = "root"
-sshport = 22
-# Seconds
-sshopt_timeout = 1
-sshopt_strictcheck = "no"
-sshopt_nohostauth = "yes"
-# Instance network, same as vm.toml prefixip
-prefixip = "192.168.223"
-logcmd = true
-logresult = false
+# Run commands through the agent's message queue (true) or over SSH
+# (inst_ssh below)
 enable_message_queue = true
 # How to detect that an instance is online: "queue" (RabbitMQ heartbeat)
 # or "icmp" (ping)
@@ -36,11 +27,15 @@ log_heartbeats = false
 log_topic = "qmsg"
 
 [inst_ssh]
+# SSH into instances and service containers (fallback to the message queue).
+# sshhost is replaced by the instance address; "localhost" is used for
+# commands on this host.
 sshuser = "root"
 sshhost = "localhost"
+sshport = 22
+# Seconds
 sshopt_timeout = 1
 sshopt_strictcheck = "no"
 sshopt_nohostauth = "yes"
-sshport = 22
-logcmd = false
+logcmd = true
 logresult = false

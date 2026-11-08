@@ -6,7 +6,7 @@
 guacd = "127.0.0.1:4822"
 # Public URL of the viewer (behind nginx)
 viewer_protocol = "https"
-# Set by installer/daas/configure.bash
+# Default only: the installer writes the host value to config/local/ (see README.md)
 viewer_host = "pve.cluster.local"
 viewer_port = 443
 # Length of the random connection tokens (secrets.token_urlsafe)

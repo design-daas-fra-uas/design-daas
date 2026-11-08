@@ -2,10 +2,9 @@
 # NodeControllerConfig (app/daas/node/nodecontrol.py) / SshAdapterConfig.
 
 [host_dns]
-# MAC prefix of the VMs; the VM id is appended (de:ad:be:ef:00:<vmid hex>)
-prefixmac = "de:ad:be:ef:00"
-prefixip = "192.168.123"
-# Written by the backend, read by dnsmasq (see installer/proxmox/install.bash)
+# The MAC prefix of the VMs is vm.toml [vm_api] prefixmac.
+# Fixed DHCP entries per VM: created by installer/daas/configure.bash,
+# one line added by the backend for every VM it starts, read by dnsmasq
 dnsmasqhosts = "/etc/dnsmasq.d/pve-hosts.conf"
 
 [host_ssh]

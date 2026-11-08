@@ -21,7 +21,6 @@ default_userid = 5
 default_username = "default_user"
 
 [auth.remote]
-# WARNING: real-looking account in git; replace for a real deployment
 url = "http://127.0.0.1:8080"
 clientid = "test-client"
 scope = "admin"
