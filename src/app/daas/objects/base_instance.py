@@ -1,11 +1,11 @@
 """Baseclass for ObjectInstance"""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Optional
 import asyncio
 from quart.utils import run_sync
-from app.daas.adapter.adapter_ssh import SshAdapter, SshAdapterConfig
+from app.daas.adapter.adapter_ssh import SshAdapter
 from app.daas.common.enums import BackendName
 from app.daas.common.model import GuacamoleConnection, Instance
 from app.daas.messaging.qmsg.common.qmsg_model import RpcRequest, RpcResponse
@@ -31,16 +31,7 @@ class InstanceObjectBase(Instance):
     async def create_adapter(self, adr: str) -> SshAdapter:
         """Create Adapter for a specific instance"""
         hub = await get_backend(BackendName.MESSAGING, MessagingBackend)
-        cfg = SshAdapterConfig(
-            hub.cfg_main.sshuser,
-            adr,
-            hub.cfg_main.sshport,
-            hub.cfg_main.sshopt_timeout,
-            hub.cfg_main.sshopt_strictcheck,
-            hub.cfg_main.sshopt_nohostauth,
-            hub.cfg_main.logcmd,
-            hub.cfg_main.logresult,
-        )
+        cfg = replace(hub.cfg_ssh, sshhost=adr)
         return SshAdapter(cfg)
 
     async def needs_pstools(self):
@@ -301,7 +292,7 @@ class InstanceObjectBase(Instance):
         if hub.cfg_main.enable_message_queue:
             header = "INST-R:"
         msg = f"{header} {code:3} -> {diff_s*1000:7.1f}ms CMD={cmd},ARGS={args}"
-        if hub.cfg_main.logresult:
+        if hub.cfg_ssh.logresult:
             if str_out.endswith("\n"):
                 str_out = str_out[:-1]
             if str_err.endswith("\n"):

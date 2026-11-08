@@ -81,6 +81,7 @@ class ContainerConfigBase(ContainerEnvironmentBase):
         installers: list[str],
         userid: int,
         env: Optional[Environment],
+        args: Optional[dict] = None,
     ) -> bool:
         store = await get_backend_component(BackendName.FILE, Filestore)
         instance = await self._get_inst_by_env(env)

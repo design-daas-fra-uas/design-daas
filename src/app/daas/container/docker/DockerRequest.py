@@ -367,6 +367,10 @@ class DockerRequest(Loggable):
             result = None
         return result
 
+    def service_container_names(self) -> list[str]:
+        """Names of the service containers of container.toml (guacd, ...)"""
+        return [cfg.name for cfg in self._read_service_config()]
+
     def _read_service_config(self) -> list[ContainerConfigDocker]:
         result = []
         for service in self.config_services.service_containers:
