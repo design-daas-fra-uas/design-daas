@@ -43,7 +43,7 @@ class FilestoreUploads(FilestoreInstances):
                 self._log_info(f"  0 -> Persisted {name} to {fullname}")
                 result = True
             else:
-                self._log_info(f" -1 -> Failed to persist {name} to {fullname}")
+                self._log_error(f" -1 -> Failed to persist {name} to {fullname}")
 
         return result
 

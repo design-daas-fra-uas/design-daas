@@ -217,7 +217,9 @@ class DaasBaseObject(DaasObject):
         resp_list, vms = await api.prox_vmlist(node)
         if resp_list is not None and resp_list.status == 200:
             if all(int(vm["vmid"]) != self.id_proxmox for vm in vms.get("data", [])):
-                self._log_info(f"VM {self.id_proxmox} does not exist, removing {self.id}")
+                self._log_info(
+                    f"VM {self.id_proxmox} does not exist, removing {self.id}"
+                )
                 return True
         self._log_error(f"Deleting VM {self.id_proxmox} failed: {data}")
         return False

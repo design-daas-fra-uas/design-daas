@@ -121,7 +121,7 @@ class ContainerConfigBase(ContainerEnvironmentBase):
                 await self.set_extended_mode(f"Task executed: {ttype}")
             await self.set_extended_mode("Installation finished")
         else:
-            self._log_info("Skipping task execution (instance=None)")
+            self._log_warn("Skipping task execution (instance=None)")
         return True
 
     async def execute_task(

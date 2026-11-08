@@ -129,6 +129,10 @@ class QHubInstance:
             return self.proxy.execute_ospackage(request.request_cmd, args)
         if rtype == "filesystem":
             return self.proxy.execute_filesystem(request.request_cmd, args)
+        # Unknown types must still be answered, or the caller waits until its
+        # timeout and the agent thread dies on the unpacking below
+        self.logger.warning("Unknown request type: %s", rtype)
+        return 1, "", f"Unknown request type: {rtype}"
 
     def handle_request(self, request: RpcRequest) -> RpcResponse:
         """called on rpc request"""

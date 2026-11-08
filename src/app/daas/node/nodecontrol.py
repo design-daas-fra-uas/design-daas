@@ -31,8 +31,7 @@ class NodeController(Loggable):
     def __repr__(self):
         return (
             f"{self.__class__.__qualname__}"
-            f"(prefixip={self.config.prefixip},"
-            f"prefixmac={self.config.prefixmac})"
+            f"(prefixmac={self.config.prefixmac})"
         )
 
     def connect(self):

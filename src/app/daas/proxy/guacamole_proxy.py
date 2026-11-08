@@ -277,7 +277,7 @@ async def proxy_guacamole_ws(
             await client_socket.send(opcode, *args)
             info.last_seen_guacd = datetime.now()
             if opcode == "error":
-                _log_info(f" PROXY:   0 -> guacd sent error on {connid}: {args}")
+                _log_warn(f" PROXY:   0 -> guacd sent error on {connid}: {args}")
 
     dbase = await get_database(Database)
     task_client = asyncio.create_task(forward_client_to_guacd())

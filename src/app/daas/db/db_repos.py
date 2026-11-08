@@ -433,10 +433,10 @@ class ObjectRepository(RepositoryBase):
             return 100
         model = await self._to_model(orm, DaasObject)
         if model is None:
-            self._log_info(f"Error converting orm to model: {orm}")
+            self._log_error(f"Error converting orm to model: {orm}")
             return -1
         if model.id_proxmox < 100:
-            self._log_info(f"Error invalid vmid found: {model.id_proxmox}")
+            self._log_error(f"Error invalid vmid found: {model.id_proxmox}")
             return -1
         if model.id_proxmox >= 100 and model.id_proxmox < 254:
             return model.id_proxmox + 1

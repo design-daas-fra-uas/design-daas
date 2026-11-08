@@ -78,7 +78,9 @@ class Loggable:
         if exception is not None:
             error_msg = f" {type(exception).__qualname__}! {exception}"
             if runtime.cfg_qweb.handler.enable_debugging:
-                error_trace = f"\n{traceback.format_exc()}"
+                # The exception's own traceback: format_exc() only works
+                # inside the except block
+                error_trace = "\n" + "".join(traceback.format_exception(exception))
         self._get_logger().error(f"{msg}{error_msg}{error_trace}")
 
     def _prefix_code(self, msg: str, code: Optional[int | bool] = None) -> str:
@@ -94,6 +96,37 @@ class Loggable:
         elif isinstance(code, int):
             exitcode = code
         return exitcode
+
+
+# logging.toml switch -> log target (file data/logs/<target>.log)
+LOG_SWITCHES = {
+    "log_any": LogTarget.ANY,
+    "log_node": LogTarget.NODE,
+    "log_db": LogTarget.DB,
+    "log_qweb": LogTarget.QWEB,
+    "log_runtime": LogTarget.RUNTIME,
+    "log_proc": LogTarget.PROC,
+    "log_layers": LogTarget.LAYERS,
+    "log_sys": LogTarget.SYS,
+    "log_plugin": LogTarget.PLUGIN,
+    "log_auth": LogTarget.AUTH,
+    "log_proxy": LogTarget.PROXY,
+    "log_websocket": LogTarget.WEBSOCKET,
+    "log_inst": LogTarget.INST,
+    "log_tasks": LogTarget.TASK,
+    "log_files_local": LogTarget.FILES_LOCAL,
+    "log_files_ceph": LogTarget.FILES_CEPH,
+    "log_frontend": LogTarget.FRONTEND,
+    "log_backend": LogTarget.BACKEND,
+    "log_container": LogTarget.CONTAINER,
+    "log_vm": LogTarget.VM,
+    "log_automation": LogTarget.AUTOMATION,
+    "log_objects": LogTarget.OBJECT,
+    "log_limits": LogTarget.LIMIT,
+    "log_adapter_qmsg": LogTarget.QMSG,
+    "log_adapter_http": LogTarget.HTTP,
+    "log_adapter_ssh": LogTarget.SSH,
+}
 
 
 @dataclass(kw_only=True)
@@ -195,60 +228,11 @@ class QwebLogManager:
         return result
 
     def _create_target_list(self) -> list[str]:
-        result = []
-        if self.cfg.log_any:
-            result.append(LogTarget.ANY.value)
-        if self.cfg.log_node:
-            result.append(LogTarget.NODE.value)
-        if self.cfg.log_db:
-            result.append(LogTarget.DB.value)
-        if self.cfg.log_qweb:
-            result.append(LogTarget.QWEB.value)
-        if self.cfg.log_runtime:
-            result.append(LogTarget.RUNTIME.value)
-        if self.cfg.log_proc:
-            result.append(LogTarget.PROC.value)
-        if self.cfg.log_layers:
-            result.append(LogTarget.LAYERS.value)
-        if self.cfg.log_sys:
-            result.append(LogTarget.SYS.value)
-        if self.cfg.log_plugin:
-            result.append(LogTarget.PLUGIN.value)
-        if self.cfg.log_auth:
-            result.append(LogTarget.AUTH.value)
-        if self.cfg.log_proxy:
-            result.append(LogTarget.PROXY.value)
-        if self.cfg.log_websocket:
-            result.append(LogTarget.WEBSOCKET.value)
-        if self.cfg.log_inst:
-            result.append(LogTarget.INST.value)
-        if self.cfg.log_tasks:
-            result.append(LogTarget.TASK.value)
-        if self.cfg.log_files_local:
-            result.append(LogTarget.FILES_LOCAL.value)
-        if self.cfg.log_files_ceph:
-            result.append(LogTarget.FILES_CEPH.value)
-        if self.cfg.log_frontend:
-            result.append(LogTarget.FRONTEND.value)
-        if self.cfg.log_backend:
-            result.append(LogTarget.BACKEND.value)
-        if self.cfg.log_container:
-            result.append(LogTarget.CONTAINER.value)
-        if self.cfg.log_vm:
-            result.append(LogTarget.VM.value)
-        if self.cfg.log_automation:
-            result.append(LogTarget.AUTOMATION.value)
-        if self.cfg.log_objects:
-            result.append(LogTarget.OBJECT.value)
-        if self.cfg.log_limits:
-            result.append(LogTarget.LIMIT.value)
-        if self.cfg.log_adapter_qmsg:
-            result.append(LogTarget.QMSG.value)
-        if self.cfg.log_adapter_http:
-            result.append(LogTarget.HTTP.value)
-        if self.cfg.log_adapter_ssh:
-            result.append(LogTarget.SSH.value)
-        return result
+        return [
+            target.value
+            for switch, target in LOG_SWITCHES.items()
+            if getattr(self.cfg, switch)
+        ]
 
     def _ensure_folders(self):
         if os.path.exists(self.cfg.log_dir) is False:

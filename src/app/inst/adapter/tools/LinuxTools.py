@@ -132,7 +132,7 @@ def process_kill(killterm: int):
         UnicodeEncodeError,
         UnicodeDecodeError,
     ) as err:
-        print(f"Exception during process kill: {err}")
+        logging.getLogger(__name__).warning("Exception during process kill: %s", err)
 
 
 def extract_resolutions(screen: str) -> list:
