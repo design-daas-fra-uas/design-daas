@@ -7,6 +7,8 @@ from typing import Any
 import urllib3
 import ssl
 from app.qweb.logging.logging import LogTarget, Loggable
+from app.qweb.logging.request_id import HEADER as REQUEST_ID_HEADER
+from app.qweb.logging.request_id import NO_REQUEST, get_request_id
 
 
 @dataclass
@@ -51,8 +53,12 @@ class HttpAdapter(Loggable):
             data = {}
         if params is None:
             params = {}
-        if header is None:
-            header = {}
+        header = dict(header) if header is not None else {}
+        # Lets the auth service log this call with the id of the request
+        # that caused it (request_id.py)
+        request_id = get_request_id()
+        if request_id != NO_REQUEST:
+            header.setdefault(REQUEST_ID_HEADER, request_id)
         if cookies is None:
             cookies = {}
         encoded_data: dict[str, Any] | str = data

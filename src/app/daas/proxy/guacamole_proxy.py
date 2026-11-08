@@ -421,6 +421,10 @@ def _log_info(msg: str) -> None:
     logger._log_info(msg)
 
 
+def _log_warn(msg: str) -> None:
+    logger._log_warn(msg)
+
+
 def _log_debug(msg: str) -> None:
     logger._log_debug(msg)
 
