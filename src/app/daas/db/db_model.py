@@ -305,6 +305,7 @@ def create_model(orm: ORMEntity) -> Optional[DaaSEntity]:
             obj = mapped_cls(**data)
             if isinstance(obj, DaaSEntity):
                 return obj
+    return None
 
 
 def check_data(orm: ORMEntity, data: dict) -> dict:
@@ -342,8 +343,8 @@ def create_orm(model: DaaSEntity) -> Optional[ORMEntity]:
             obj = mapped_cls(**data)
             if isinstance(obj, ORMEntity):
                 return obj
-    else:
-        raise ValueError("Object is not persistable")
+        return None
+    raise ValueError("Object is not persistable")
 
 
 def check_orm_childs(orm: dict) -> dict:
