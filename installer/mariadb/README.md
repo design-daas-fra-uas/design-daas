@@ -63,8 +63,7 @@ system, change it in MariaDB too
 ## History
 
 Until 2026-11-05 the backend used SQLite (`src/data/db/sqlite/mergedb.sqlite3`)
-and this container ran unused, with a public root password. The data was
-copied with `installer/daas/migrate-sqlite-to-mariadb.py`; the SQLite file
+and this container ran unused, with a public root password. the SQLite file
 is kept unchanged as a fallback (switch back: `db_type = "sqlite"` in
 `src/config/db.toml`, `make daas-restart`).
 

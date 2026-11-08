@@ -294,15 +294,15 @@ class QwebTaskManager(Loggable):
             except TaskExecutionError as exe:
                 info.result = None
                 info.success = False
-                info.reason = f"TaskExecutionError: {exe.args[0]}"
+                info.reason = f"TaskExecutionError: {exe}"
                 msg = f"{typename} ({id_task}) Reason={info.reason}"
-                self._log_error(f"Task error     : {msg}", 2)
+                self._log_error(f"Task error     : {msg}", 2, exe)
             except Exception as exe:
                 info.result = None
                 info.success = False
-                info.reason = f"Unknown task error: {exe.args[0]}"
+                info.reason = f"Unknown task error: {exe!r}"
                 msg = f"{typename} ({id_task}) Reason={info.reason}"
-                self._log_error(f"Task error     : {msg}", 3)
+                self._log_error(f"Task error     : {msg}", 3, exe)
             finally:
                 info.running = False
                 info.stopped_at = datetime.now()

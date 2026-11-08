@@ -90,7 +90,7 @@ class MachinePhase(MachineBase):
         api = await get_backend_component(BackendName.VM, ApiProxmox)
         resp, data = await api.prox_vmlist(api.config_prox.node)
         if resp is None or resp.status != 200:
-            self._log_info("Could not list Proxmox VMs for a free VMID")
+            self._log_warn("Could not list Proxmox VMs for a free VMID")
             return -1
         used = {int(vm["vmid"]) for vm in data.get("data", [])}
         while vmid in used:

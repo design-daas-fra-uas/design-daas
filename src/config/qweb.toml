@@ -43,6 +43,6 @@ keyfile = "keys/key.pem"
 [template_args]
 # Public URL used in the viewer templates
 hostproto = "https"
-# Set by installer/daas/configure.bash
+# Default only: the installer writes the host value to config/local/ (see README.md)
 hostip = "pve.cluster.local"
 hostport = 443

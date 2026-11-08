@@ -37,7 +37,6 @@ class FilePlugin(PluginBase):
             **cfgfile_db[ConfigSections.FILES_STORE.value]
         )
         self.backend = FileBackend(self.cfg_storage)
-        self.objlayer = None
         self.systasks = []
         self.apitasks = [
             (FileTask.FILE_GET.value, files_get),
@@ -59,22 +58,9 @@ class FilePlugin(PluginBase):
         ]
         self.handlers = [handler]
         super().__init__(
-            self.__class__.__qualname__,
             LoadOrder.Storage,
-            False,
             backends=[self.backend],
-            layers=[],
             handlers=self.handlers,
             systasks=self.systasks,
             apitasks=self.apitasks,
-            authenticator=None,
-            taskmanager=None,
         )
-
-    async def plugin_start(self) -> bool:
-        """Starts plugin"""
-        return await self.backend.connect()
-
-    async def plugin_stop(self) -> bool:
-        """Stops plugin"""
-        return await self.backend.disconnect()

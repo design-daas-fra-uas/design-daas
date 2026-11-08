@@ -1,4 +1,4 @@
-""" Plugin collection """
+"""Plugin collection"""
 
 from app.qweb.service.service_plugin import LoadOrder, PluginBase
 

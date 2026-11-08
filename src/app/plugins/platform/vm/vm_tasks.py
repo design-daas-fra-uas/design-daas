@@ -80,7 +80,7 @@ async def vmstart(args: TaskArgs) -> QwebResult:
     log_task_arguments(args.ctx, args.req, args.info, args.user)
     entity = get_request_object(args.ctx, "entity", MachineObject)
     reqargs = args.req.request_context.request_args
-    connect = "connect" in reqargs
+    connect = reqargs.get("connect", "") != ""
     inst = await entity.start(args.user.id_user, connect, "run-debug")
     if inst is not None:
         return await create_response_url_start(connect, inst.id)

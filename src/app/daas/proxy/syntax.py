@@ -51,7 +51,6 @@ from typing import TypeAlias, Optional
 from collections import deque
 import codecs
 
-
 MAXIMUM_ARG_LEN = 8 * 1024
 """
 Limit the maximum argument length to a reasonable value.
@@ -159,9 +158,7 @@ class IncrementalGuacamoleParser:
 
             # potential problem: the buffer still has input
             if not self._buf.is_empty():
-                raise ValueError(
-                    "requested final message, but buffered input remains"
-                )
+                raise ValueError("requested final message, but buffered input remains")
 
         return result
 
@@ -412,9 +409,7 @@ class _ParserStateWantSep:
             case ";":
                 return _ParserStateDone(args=self.args)
             case other:
-                raise ValueError(
-                    f"cannot have character {other!r} in state WantSep"
-                )
+                raise ValueError(f"cannot have character {other!r} in state WantSep")
 
 
 @dataclass(kw_only=True, slots=True)

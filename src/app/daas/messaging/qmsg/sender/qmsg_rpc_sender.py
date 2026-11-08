@@ -109,7 +109,9 @@ class RpcSender:
         self.thread.start()
         return self.thread
 
-    def __call_rpc_method(self, queue_name: str, msg: RpcRequest) -> Optional[RpcResponse]:
+    def __call_rpc_method(
+        self, queue_name: str, msg: RpcRequest
+    ) -> Optional[RpcResponse]:
         try:
             return self.call(queue_name, msg)
         finally:
@@ -164,7 +166,7 @@ class RpcSender:
         a while. Only publishing is retried, never waiting for the answer, so
         a command never runs twice.
         """
-        for attempt in (1, 2):
+        for _ in range(2):
             if self.connection is None or not self.connection.is_open:
                 self.connect()
             try:

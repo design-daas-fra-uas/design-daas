@@ -82,8 +82,8 @@ class BlueprintHandler(BlueprintHandlerBase):
                 hdr_accept = request.headers.get("Accept")
                 if hdr_accept is not None:
                     result = hdr_accept
-            except Exception:
-                pass
+            except RuntimeError:
+                pass  # called outside of a request context
 
         return result
 
@@ -103,12 +103,7 @@ class BlueprintHandler(BlueprintHandlerBase):
             )
 
         # Check concurrency mode
-        mode = info.conc_params
-        # Protected routes must not start processing before the role is checked
-        if (
-            info.admin_only or info.protect_system_objects
-        ) and mode == ConcurrencyMode.AUTH_AND_PROC:
-            mode = ConcurrencyMode.NONE
+        mode = self.effective_concurrency_mode(info)
         if mode == ConcurrencyMode.NONE:
             result = await self.sequential_stages(req, info, timing)
         elif mode == ConcurrencyMode.CTX_AND_AUTH:
@@ -118,6 +113,23 @@ class BlueprintHandler(BlueprintHandlerBase):
 
         self._log_request(info=info, req=req, timing=timing)
         return result
+
+    @staticmethod
+    def effective_concurrency_mode(info: BlueprintInfo) -> ConcurrencyMode:
+        """
+        AUTH_AND_PROC runs the task while the login is still being checked, so
+        a request with a bad token or for another user's object would already
+        have done its work (e.g. stopped a VM) when it is answered with 401/403.
+        It is therefore only used for routes without authentication; all other
+        routes check login and ownership first (CTX_AND_AUTH).
+        """
+        mode = info.conc_params
+        if (
+            mode == ConcurrencyMode.AUTH_AND_PROC
+            and info.auth_params != AuthenticationMode.NONE
+        ):
+            return ConcurrencyMode.CTX_AND_AUTH
+        return mode
 
     async def sequential_stages(
         self,
@@ -135,7 +147,7 @@ class BlueprintHandler(BlueprintHandlerBase):
             self._log_error("Sequential stage error during task_context()", 1)
             ctype = await self.get_requested_content_type(info)
             return await self._create_error_response(
-                "ServiceContext unavailble", 500, content_type=ctype
+                "ServiceContext unavailable", 500, content_type=ctype
             )
 
         # Auth
@@ -146,10 +158,10 @@ class BlueprintHandler(BlueprintHandlerBase):
             self._log_error("Sequential stage error during task_authentication()", 1)
             ctype = await self.get_requested_content_type(info)
             return await self._create_error_response(
-                "Authentication error", 403, content_type=ctype
+                "Authentication error", 401, content_type=ctype
             )
 
-        # Onership
+        # Ownership
         if await self.__system_object_denied(ctx.objects.objects, authres, info):
             ctype = await self.get_requested_content_type(info)
             return await self._create_error_response(
@@ -162,7 +174,7 @@ class BlueprintHandler(BlueprintHandlerBase):
             self._log_error("Error during ownership_verify (seq)", 2)
             ctype = await self.get_requested_content_type(info)
             return await self._create_error_response(
-                f"Invalid owner: {authres.id_user}", 500, content_type=ctype
+                f"Invalid owner: {authres.id_user}", 403, content_type=ctype
             )
 
         # Processing
@@ -203,7 +215,7 @@ class BlueprintHandler(BlueprintHandlerBase):
             self._log_error("ctx-auth error during task_authentication()", 1)
             ctype = await self.get_requested_content_type(info)
             return await self._create_error_response(
-                "Authentication error", 403, content_type=ctype
+                "Authentication error", 401, content_type=ctype
             )
 
         # Prepare tasks
@@ -212,7 +224,7 @@ class BlueprintHandler(BlueprintHandlerBase):
             ctype = await self.get_requested_content_type(info)
             return await self._create_error_response("ServiceContext unavailable", 500)
 
-        # Onership
+        # Ownership
         if await self.__system_object_denied(ctxres.objects.objects, authres, info):
             ctype = await self.get_requested_content_type(info)
             return await self._create_error_response(
@@ -225,7 +237,7 @@ class BlueprintHandler(BlueprintHandlerBase):
             self._log_error("Error during ownership_verify (ctx-auth)", 2)
             ctype = await self.get_requested_content_type(info)
             return await self._create_error_response(
-                f"Invalid owner: {authres.id_user}", 500, content_type=ctype
+                f"Invalid owner: {authres.id_user}", 403, content_type=ctype
             )
 
         # Processing
@@ -280,10 +292,10 @@ class BlueprintHandler(BlueprintHandlerBase):
             self._log_error("auth-proc error during task_authentication()", 1)
             ctype = await self.get_requested_content_type(info)
             return await self._create_error_response(
-                f"Procargs not created {authres} {procres}", 500, content_type=ctype
+                "Authentication error", 401, content_type=ctype
             )
 
-        # Onership
+        # Ownership
         if await self.__system_object_denied(ctx.objects.objects, authres, info):
             ctype = await self.get_requested_content_type(info)
             return await self._create_error_response(
@@ -296,7 +308,7 @@ class BlueprintHandler(BlueprintHandlerBase):
             self._log_error("Error during ownership_verify (auth-proc)", 2)
             ctype = await self.get_requested_content_type(info)
             return await self._create_error_response(
-                f"Invalid owner: {authres.id_user}", 500, content_type=ctype
+                f"Invalid owner: {authres.id_user}", 403, content_type=ctype
             )
 
         ctype = await self.get_requested_content_type(info)

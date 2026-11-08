@@ -419,7 +419,11 @@ class ApiProxmox(Loggable):
         The backend runs as root and on the proxmox node (single node setup).
         """
         proc = await asyncio.create_subprocess_exec(
-            "qm", "set", str(vmid), "--args", args,
+            "qm",
+            "set",
+            str(vmid),
+            "--args",
+            args,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )

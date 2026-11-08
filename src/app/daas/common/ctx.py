@@ -7,9 +7,12 @@ from app.qweb.auth.auth_qweb import QwebUser
 from app.qweb.blueprints.blueprint_info import BlueprintInfo
 from app.qweb.common.qweb_tools import get_database
 from app.qweb.logging.logging import LogTarget, Loggable
-from app.qweb.processing.processor import ProcessorRequest, QwebResult
+from app.qweb.processing.processor import (
+    ObjectNotFoundError,
+    ProcessorRequest,
+    QwebResult,
+)
 from app.qweb.service.service_context import QwebProcessorContexts
-
 
 T = TypeVar("T")
 log = Loggable(LogTarget.ANY)
@@ -32,7 +35,7 @@ def get_request_object(ctx: QwebProcessorContexts, name: str, ret_type: Type[T])
         if isinstance(entity, ret_type):
             return entity
         raise TypeError(f"LayerObject has invalid type: {name} {type(entity)}")
-    raise TypeError(f"LayerObject is not available: {name} {ret_type}")
+    raise ObjectNotFoundError(f"{ret_type.__name__} '{name}' not found")
 
 
 def get_request_object_optional(

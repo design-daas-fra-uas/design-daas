@@ -204,6 +204,13 @@ do_stop() {
     success "Stopped $c"
 }
 
+# auth_health: status of the auth service's actuator (UP, DOWN, ...)
+auth_health() {
+    local body
+    body="$(curl -s --max-time 3 "http://127.0.0.1:${AUTH_PORT:-8080}/actuator/health" || true)"
+    [[ "$body" =~ \"status\":\"([A-Z_]+)\" ]] && echo "${BASH_REMATCH[1]}" || echo "unreachable"
+}
+
 do_status() {
     local c="$1" kind state detail unit n total
     kind="$(kind_of "$c")"
@@ -213,6 +220,11 @@ do_status() {
             if [[ -f "/etc/systemd/system/$unit" ]]; then
                 state="$(systemctl is-active "$unit" || true)"
                 detail="$unit, $(systemctl is-enabled "$unit" || true)"
+                # The auth service reports its own health (Spring actuator,
+                # the same check as the admin status page of the frontend)
+                if [[ "$c" == auth && "$state" == active ]]; then
+                    detail+=", health $(auth_health)"
+                fi
             else
                 state="not installed"
                 detail="make $c-install"

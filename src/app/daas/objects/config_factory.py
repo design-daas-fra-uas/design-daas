@@ -191,5 +191,3 @@ async def generate_connection_url(id_instance: str):
         + f"/viewer/template/{id_instance}"
     )
     return full_url
-
-

@@ -21,22 +21,11 @@ class TestPlugin(PluginBase):
         self.systasks = []
         self.apitasks = [(TestTask.TEST_GET_ENTITY.value, test_get_layer_entity)]
         super().__init__(
-            self.__class__.__qualname__,
             LoadOrder.Storage,
-            True,
             backends=[self.backend],
             layers=[self.objlayer],
             handlers=[handler],
             systasks=self.systasks,
             apitasks=self.apitasks,
-            authenticator=None,
-            taskmanager=None,
+            testing=True,
         )
-
-    async def plugin_start(self) -> bool:
-        """Starts plugin"""
-        return await self.backend.connect()
-
-    async def plugin_stop(self) -> bool:
-        """Stops plugin"""
-        return await self.backend.disconnect()

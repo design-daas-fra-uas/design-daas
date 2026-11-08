@@ -81,7 +81,8 @@ class ORMEntity(Base, Loggable):
             return self.metadata.tables[self.__tablename__]
         return None
 
-    def get_data(self, logme: bool = False):
+    def get_data(self):
+        """Returns the mapped columns as dict"""
         result = {k: v for k, v in self.__dict__.items() if k not in ORMEntity.__dict__}
         return self.clean_dict(result)
 
@@ -117,7 +118,6 @@ class ORMEntity(Base, Loggable):
 @ORMModelPersistance(ORMMappingType.Object)
 class ORMObject(ORMEntity):
     __tablename__ = "daas_objects"
-
 
     instances: Mapped[List["ORMInstance"]] = relationship(
         back_populates="app", cascade="all, delete-orphan"
@@ -305,15 +305,17 @@ def create_model(orm: ORMEntity) -> Optional[DaaSEntity]:
             obj = mapped_cls(**data)
             if isinstance(obj, DaaSEntity):
                 return obj
+    return None
 
 
 def check_data(orm: ORMEntity, data: dict) -> dict:
+    """Replaces the related orm objects of an instance by model objects"""
     from app.daas.objects.object_container import ContainerObject
     from app.daas.objects.object_machine import MachineObject
 
     if isinstance(orm, ORMInstance):
-        testapp = getattr(orm, "app")
-        testenv = getattr(orm, "env")
+        # Touch the lazy relationships so that vars(orm) contains them
+        _ = orm.app, orm.env
         for attr in vars(orm):
             val = getattr(orm, attr)
             if isinstance(val, ORMEntity):
@@ -341,8 +343,8 @@ def create_orm(model: DaaSEntity) -> Optional[ORMEntity]:
             obj = mapped_cls(**data)
             if isinstance(obj, ORMEntity):
                 return obj
-    else:
-        raise ValueError("Object is not persistable")
+        return None
+    raise ValueError("Object is not persistable")
 
 
 def check_orm_childs(orm: dict) -> dict:

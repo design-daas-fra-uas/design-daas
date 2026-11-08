@@ -1,10 +1,8 @@
 """DB Tasks"""
 
 from dataclasses import asdict, is_dataclass
-from quart import Response
-from app.qweb.processing.processor import ProcessorRequest
-from app.qweb.service.service_context import QwebProcessorContexts
 from enum import Enum
+from app.qweb.common.common import TaskArgs
 
 
 class TestTask(Enum):
@@ -13,11 +11,9 @@ class TestTask(Enum):
     TEST_GET_ENTITY = "TEST_GET_ENTITY"
 
 
-async def test_get_layer_entity(
-    ctx: QwebProcessorContexts, proc_request: ProcessorRequest
-) -> Response | dict | str:
-    """Test task api"""
-    req_objects = ctx.objects.objects
+async def test_get_layer_entity(args: TaskArgs) -> dict:
+    """Returns the requested layer object as dict"""
+    req_objects = args.ctx.objects.objects
     if "entity" in req_objects:
         entity = req_objects["entity"]
         if isinstance(entity, dict):

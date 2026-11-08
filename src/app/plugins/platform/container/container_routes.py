@@ -142,9 +142,7 @@ infos = [
         request_args_optional=[],
         request_args_common=perf_args,
         backends=backends,
-        objects=[
-            LayerObject("entity", DBObject.INST.value, LayerName.DB.value)
-        ],
+        objects=[LayerObject("entity", DBObject.INST.value, LayerName.DB.value)],
     ),
     BlueprintInfo(
         endpoint_id=70007,

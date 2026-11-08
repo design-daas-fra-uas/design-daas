@@ -27,7 +27,6 @@ class InstancePlugin(PluginBase):
         self,
     ):
         self.backend = InstanceBackend()
-        self.objlayer = None
         self.systasks = []
         self.apitasks = [
             (InstanceTask.INST_VMINVOKE_APP.value, vminvoke_app),
@@ -45,22 +44,9 @@ class InstancePlugin(PluginBase):
         ]
         self.handlers = [handler]
         super().__init__(
-            self.__class__.__qualname__,
             LoadOrder.Platform,
-            False,
             backends=[self.backend],
-            layers=[],
             handlers=self.handlers,
             apitasks=self.apitasks,
             systasks=self.systasks,
-            authenticator=None,
-            taskmanager=None,
         )
-
-    async def plugin_start(self) -> bool:
-        """Starts plugin"""
-        return await self.backend.connect()
-
-    async def plugin_stop(self) -> bool:
-        """Stops plugin"""
-        return await self.backend.disconnect()

@@ -8,10 +8,9 @@ from app.qweb.logging.logging import LogTarget, Loggable
 
 @dataclass
 class NodeControllerConfig:
-    """Config for node requests"""
+    """Config for node requests (prefixmac comes from vm.toml [vm_api])"""
 
     prefixmac: str
-    prefixip: str
     dnsmasqhosts: str
 
 
@@ -29,11 +28,7 @@ class NodeController(Loggable):
         return "Config: " + str(self.config)
 
     def __repr__(self):
-        return (
-            f"{self.__class__.__qualname__}"
-            f"(prefixip={self.config.prefixip},"
-            f"prefixmac={self.config.prefixmac})"
-        )
+        return f"{self.__class__.__qualname__}" f"(prefixmac={self.config.prefixmac})"
 
     def connect(self):
         """Connects the component"""
@@ -47,19 +42,25 @@ class NodeController(Loggable):
 
     async def node_vmconfigure_dhcp(self, vmid: int, adr: str) -> tuple:
         """Configures dhcp for the vmid (dnsmasq)"""
-        result, out, err = await self.__delete_dhcphost(vmid)
+        await self.__delete_dhcphost(vmid)
         result, out, err = await self.__add_dhcphost(vmid, adr)
-        self._log_info(f"dhcp configured for {adr}")
         if result == 0:
             result, out, err = await self.__restart_dnsmasq()
+        self.__log_result(f"dhcp for vm {vmid} -> {adr}", result, err)
         return result, out, err
 
     async def node_vmconfigure_iptables(self, adr: str):
-        """ "Configures iptables for the vmid"""
-        result, out, err = await self.__del_hostforward(adr)
+        """Configures the iptables host forwarding for adr"""
+        await self.__del_hostforward(adr)
         result, out, err = await self.__add_hostforward(adr)
-        self._log_info(f"iptables configured for {adr}")
+        self.__log_result(f"iptables for {adr}", result, err)
         return result, out, err
+
+    def __log_result(self, what: str, result: int, err: str) -> None:
+        if result == 0:
+            self._log_info(f"Configured {what}")
+        else:
+            self._log_error(f"Configuring {what} failed ({result}): {err}")
 
     async def __restart_dnsmasq(self):
         """Restarts the dnsmasq service"""
@@ -115,7 +116,8 @@ class NodeController(Loggable):
         file = f"{self.config.dnsmasqhosts}"
         line = (
             # id:* = match by mac only; clones send the client-id of their template
-            f"dhcp-host={self.config.prefixmac}:{vmid:x},id:*" f",daas-{vmid},{adr},1m"
+            f"dhcp-host={self.config.prefixmac}:{vmid:x},id:*"
+            f",daas-{vmid},{adr},1m"
         )
         cmd = f"echo {line} | tee -a {file} > /dev/null"
         return self.adapter.ssh_call(cmd)

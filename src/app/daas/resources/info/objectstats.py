@@ -157,7 +157,6 @@ class SystemInfoObjects:
         self.all_usage_online = self.__sum_all(StatisticType.ALL_ON)
         self.all_usage_offline = self.__sum_all(StatisticType.ALL_OFF)
 
-
     def tojson(self):
         """Converts to json object"""
         return {

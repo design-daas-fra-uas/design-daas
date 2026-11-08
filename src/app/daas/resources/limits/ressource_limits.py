@@ -83,9 +83,9 @@ class RessourceLimits(Loggable):
             self._log_info(f"Userlimit found for {userid}")
             return limit
         if self.config.enable_fallback_userlimit:
-            self._log_info(f"Userlimit not found for {userid}. Using fallback")
+            self._log_warn(f"Userlimit not found for {userid}. Using fallback")
             return self.limit_fallback
-        self._log_info(f"Userlimit not found for {userid}")
+        self._log_warn(f"Userlimit not found for {userid}")
         return None
 
     async def remove_user_limit(self, userid: int) -> Optional[RessourceInfo]:
@@ -140,7 +140,7 @@ class RessourceLimits(Loggable):
         """Verfies demand against system limits"""
         if self.limit_system is None:
             if self.config.log_verification:
-                self._log_info("Systemlimit not available")
+                self._log_warn("Systemlimit not available")
             return False
 
         objres = await self.objtool.get_objectinfo_system()
@@ -154,9 +154,9 @@ class RessourceLimits(Loggable):
             objres.utilized_diskspace,
         )
         sys_res.add(demand)
-        self._log_info(f"Verify objres: {objres}")
-        self._log_info(f"Verify sysres: {sys_res}")
-        self._log_info(f"Verify demand: {demand}")
+        self._log_debug(f"Verify objres: {objres}")
+        self._log_debug(f"Verify sysres: {sys_res}")
+        self._log_debug(f"Verify demand: {demand}")
         return await self.__verify_limits(sys_res, self.limit_system)
 
     async def verify_configured_limit(self) -> bool:

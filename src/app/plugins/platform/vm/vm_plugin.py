@@ -22,7 +22,6 @@ from app.plugins.platform.vm.vm_tasks import (
     vmstop,
     vmtemplate_convert,
 )
-from app.plugins.platform.vm.vm_tasks_sys import VMSystemTask, vmconfigure_proxmox_vnc
 from app.qweb.service.service_plugin import LoadOrder, PluginBase
 from app.plugins.platform.vm.vm_routes import handler
 
@@ -38,10 +37,7 @@ class VmPlugin(PluginBase):
         self.cfg_rest = ProxmoxRestConfig(**cfgfile_db[ConfigSections.VM_REST.value])
         self.cfg_http = HttpAdapterConfig(**cfgfile_db[ConfigSections.VM_HTTP.value])
         self.backend = VmBackend(self.cfg_api, self.cfg_rest, self.cfg_http)
-        self.objlayer = None
-        self.systasks = [
-            (VMSystemTask.VM_CONFIGURE_PROXMOX_VNC.value, vmconfigure_proxmox_vnc),
-        ]
+        self.systasks = []
         self.apitasks = [
             (VMTask.VM_LIST.value, vmlist),
             (VMTask.VM_STATUS.value, vmstatus),
@@ -60,22 +56,9 @@ class VmPlugin(PluginBase):
         ]
         self.handlers = [handler]
         super().__init__(
-            self.__class__.__qualname__,
             LoadOrder.Platform,
-            False,
             backends=[self.backend],
-            layers=[],
             handlers=self.handlers,
             apitasks=self.apitasks,
             systasks=self.systasks,
-            authenticator=None,
-            taskmanager=None,
         )
-
-    async def plugin_start(self) -> bool:
-        """Starts plugin"""
-        return await self.backend.connect()
-
-    async def plugin_stop(self) -> bool:
-        """Stops plugin"""
-        return await self.backend.disconnect()

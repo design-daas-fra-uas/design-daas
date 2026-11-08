@@ -108,7 +108,7 @@ usage:
 	@echo "    proxmox-install         [1/7] Proxmox VE (two runs, reboot in between)"
 	@echo "    deps                    [2/7] All host packages, docker-compose, root SSH key"
 	@echo "    daas-install            [3/7] DaaS backend: Python venv, daas.service"
-	@echo "    daas-configure                $(notdir $(ENV_FILE)) -> src/config/*.toml, nginx, TLS, dnsmasq"
+	@echo "    daas-configure                $(notdir $(ENV_FILE)) -> src/config/local/*.toml, nginx, TLS, dnsmasq"
 	@echo "    images                  [4/7] Docker images: containers-install + images-install"
 	@echo "    auth-install            [5/7] auth service (users, login) + its MariaDB"
 	@echo "    frontend-all            [6/7] Frontend: nginx site :8443 + build + frontend.service"
@@ -368,7 +368,7 @@ daas-all: daas-install daas-configure images daas-restart
 daas-install: require-pve
 	./daas/install.bash -r "$(DESIGN_FOLDER)"
 
-daas-configure:
+daas-configure: require-env
 	./daas/configure.bash \
 		-r "$(DESIGN_FOLDER)" \
 		-h "$(HOST_NAME)" \
@@ -376,7 +376,7 @@ daas-configure:
 		-i "$(HOST_NUMBER)" \
 		-n "$(NET_DEVICE)" \
 		-s "$(STANDALONE)" \
-		$(ENV_OPT)
+		-e "$(ENV_FILE)"
 
 # Checks the running backend (changes nothing)
 daas-check: require-env

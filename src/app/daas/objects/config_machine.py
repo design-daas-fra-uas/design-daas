@@ -82,9 +82,7 @@ class MachineConfigBase(MachineEnvironmentBase):
         if len(files) > 0 and instance is not None:
             for file in files:
                 self._log_info(f"Filecopy: {file.id}")
-                await instance.inst_vminvoke_upload(
-                    file.localpath, self.is_windows(), False, file.name
-                )
+                await instance.inst_vminvoke_upload(file.localpath, False, file.name)
         await self.set_extended_mode("Installers uploaded")
         return True
 
@@ -107,7 +105,7 @@ class MachineConfigBase(MachineEnvironmentBase):
                 await self.set_extended_mode(f"Task executed: {ttype}")
             await self.set_extended_mode("Installation finished")
         else:
-            self._log_info("Skipping task execution (instance=None)")
+            self._log_warn("Skipping task execution (instance=None)")
         return True
 
     async def execute_task(

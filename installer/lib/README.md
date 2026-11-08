@@ -28,7 +28,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.bash"
 | `require_root` `require_cmds` `require_dir` `require_file` | Stop early with a clear message (missing command: "run make deps") |
 | `apt_install PKG...` | `apt-get install -y` |
 | `write_file PATH [MODE]` | Write stdin to PATH (mode 644 or MODE) only if the content changed; logs "Wrote"/"Unchanged" and sets `WRITE_FILE_CHANGED`. The file has its final mode from the start, so a secret file is never readable by others |
-| `set_toml_value FILE KEY VALUE [raw]` | Set `KEY = "VALUE"` (raw: `KEY = VALUE`) in a TOML file, whatever its old value; values of secret keys (`*pass*`, `*secret*`, `*token*`) are never logged |
+| `toml_string VALUE` | VALUE as a quoted TOML string (backslashes and quotes escaped) |
 | `load_env_file FILE` | Export `KEY=value` lines literally (no `$` expansion, quotes removed) |
 | `load_stack_env FILE` | `load_env_file` for `installer/daas.env` plus the derived defaults (folders, public URLs, `FQDN`) and checks |
 | `url_host URL`, `url_port URL` | Host / port of a URL (default port from the scheme) |

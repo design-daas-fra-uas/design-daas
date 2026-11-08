@@ -2,6 +2,8 @@
 Windowsbase
 """
 
+import logging
+
 from dataclasses import dataclass
 from adapter.AdapterBase import AdapterBase, AdapterBaseConfig
 
@@ -75,7 +77,7 @@ class WindowsAdapter(AdapterBase):
                 persist_pid(pid, self.cfg.user)
                 tightvnc_update(pid, self.cfg.filename_tightvnc, self.cfg.codepage)
                 maximize_windows_by_pid(pid, terms)
-        print(f"Spawned pid: {pid}")
+        logging.getLogger(__name__).info("Spawned pid: %s", pid)
         return code, f"{pid}", ""
 
     def spawn_process(self, prog: str, args: list) -> tuple[int, str, str]:

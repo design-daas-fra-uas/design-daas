@@ -4,11 +4,8 @@ from app.qweb.common.common import SystemTaskArgs
 
 @dataclass
 class CloneTaskConfig:
-    args: SystemTaskArgs
+    """Config of CreateTask and CloneTask"""
 
-
-@dataclass
-class CreateTaskConfig:
     args: SystemTaskArgs
 
 

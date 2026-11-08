@@ -100,7 +100,7 @@ async def image_list(args: TaskArgs) -> QwebResult:
     log_task_arguments(args.ctx, args.req, args.info, args.user)
     api = get_backend_component(args.ctx, BackendName.CONTAINER.value, DockerRequest)
     reqargs = args.req.request_context.request_args.copy()
-    detailed = True if "detailed" in reqargs else False
+    detailed = reqargs.get("detailed", "") != ""
     infolist = await api.docker_image_list(detailed)
     dictlist = [asdict(x) for x in infolist]
     return QwebResult(200, dictlist)
@@ -111,7 +111,7 @@ async def container_start(args: TaskArgs) -> QwebResult:
     log_task_arguments(args.ctx, args.req, args.info, args.user)
     entity = get_request_object(args.ctx, "entity", ContainerObject)
     reqargs = args.req.request_context.request_args
-    connect = "connect" in reqargs
+    connect = reqargs.get("connect", "") != ""
     inst = await entity.start(args.user.id_user, connect, "run-debug")
     if inst is not None:
         return await create_response_url_start(connect, inst.id)
@@ -134,7 +134,7 @@ async def container_list(args: TaskArgs) -> QwebResult:
     log_task_arguments(args.ctx, args.req, args.info, args.user)
     api = get_backend_component(args.ctx, BackendName.CONTAINER.value, DockerRequest)
     reqargs = args.req.request_context.request_args.copy()
-    detailed = True if "detailed" in reqargs else False
+    detailed = reqargs.get("detailed", "") != ""
     infolist = await api.docker_container_list(detailed)
     dictlist = [asdict(x) for x in infolist]
     return QwebResult(200, dictlist)

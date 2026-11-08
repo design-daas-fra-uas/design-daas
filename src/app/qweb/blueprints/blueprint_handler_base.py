@@ -16,7 +16,11 @@ from app.qweb.processing.processor_files import FileProcessor
 from app.qweb.processing.processor_templates import TemplateProcessor
 from app.qweb.processing.processor_api import ApiProcessor
 from app.qweb.processing.processor_websockets import WebsocketProcessor
-from app.qweb.service.service_context import CoreContext, BackendContext, ObjectContext
+from app.qweb.service.service_context import (
+    CoreContext,
+    BackendContext,
+    ObjectContext,
+)
 from app.qweb.service.service_runtime import QwebProcessorContexts
 from app.qweb.common.timings import Measurement
 from app.qweb.processing.processor import (
@@ -138,8 +142,8 @@ class BlueprintHandlerBase(Loggable):
                 bearer = (await request.form)["bearer"]
         json_req = await request.get_json()
         if json_req is not None and "bearer" in json_req:
-            if str((await request.form)["bearer"]) != "":
-                bearer = (await request.form)["bearer"]
+            if str(json_req["bearer"]) != "":
+                bearer = json_req["bearer"]
 
         if bearer != "":
             bearer = str(bearer)
@@ -217,7 +221,9 @@ class BlueprintHandlerBase(Loggable):
             args_query = await self._read_socketargs(query)
             args = {**args_query}
             return ProcessorRequestContext(
-                request_quart=None, request_websocket=websocket, request_args=args
+                request_quart=None,
+                request_websocket=websocket,
+                request_args=args,
             )
         else:
             args_mandatory = await self._read_formargs(mandatory)
@@ -347,10 +353,11 @@ class BlueprintHandlerBase(Loggable):
         msg: str,
         status_http: int = 500,
         status_sys: int = 1,
-        data: dict = {},
+        data: Optional[dict] = None,
         exception: Optional[Exception] = None,
     ) -> tuple[dict, int]:
         """Create error dict"""
+        data = data if data is not None else {}
         conf = self.cfg_handler
         error_msg = ""
         if exception is not None:

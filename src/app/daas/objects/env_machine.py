@@ -22,9 +22,15 @@ class MachineEnvironmentBase(MachinePhase):
         Loggable.__init__(self, LogTarget.OBJECT)
 
     async def env_create(
-        self, files: list[File] = [], installers: list[str] = [], args: dict = {}
+        self,
+        files: Optional[list[File]] = None,
+        installers: Optional[list[str]] = None,
+        args: Optional[dict] = None,
     ) -> Optional[Environment]:
         """Derives new environment"""
+        files = files if files is not None else []
+        installers = installers if installers is not None else []
+        args = args if args is not None else {}
         from app.daas.db.database import Database
 
         dbase = await get_database(Database)
@@ -62,8 +68,11 @@ class MachineEnvironmentBase(MachinePhase):
             return await dbase.update_environment(env)
         return False
 
-    async def env_get(self, name: str, args: dict = {}) -> Optional[Environment]:
+    async def env_get(
+        self, name: str, args: Optional[dict] = None
+    ) -> Optional[Environment]:
         """Returns specified environment"""
+        args = args if args is not None else {}
         from app.daas.db.database import Database
 
         dbase = await get_database(Database)
@@ -75,8 +84,9 @@ class MachineEnvironmentBase(MachinePhase):
         dbase = await get_database(Database)
         return await dbase.get_environments_by_object(self.id)
 
-    async def env_delete(self, env: Environment, args: dict = {}) -> bool:
+    async def env_delete(self, env: Environment, args: Optional[dict] = None) -> bool:
         """Deletesspecified environment"""
+        args = args if args is not None else {}
         from app.daas.db.database import Database
 
         dbase = await get_database(Database)
@@ -90,8 +100,11 @@ class MachineEnvironmentBase(MachinePhase):
         self._log_info(f"Environment {self.id_docker} ({env.name}) not deleted")
         return False
 
-    async def env_stop(self, env: Environment, force: bool, args: dict = {}) -> bool:
+    async def env_stop(
+        self, env: Environment, force: bool, args: Optional[dict] = None
+    ) -> bool:
         """Stops environment instance"""
+        args = args if args is not None else {}
         from app.daas.db.database import Database
 
         dbase = await get_database(Database)
@@ -123,10 +136,11 @@ class MachineEnvironmentBase(MachinePhase):
         userid: int,
         connect: bool,
         object_mode: str = "",
-        args: dict = {},
+        args: Optional[dict] = None,
         keep_connections: bool = False,
     ) -> Optional[InstanceObject]:
         """Starts environment instance"""
+        args = args if args is not None else {}
         from app.daas.db.database import Database
 
         dbase = await get_database(Database)

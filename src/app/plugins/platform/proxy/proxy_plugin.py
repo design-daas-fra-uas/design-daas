@@ -26,7 +26,6 @@ class ProxyPlugin(PluginBase):
         cfgfile_db = self.read_toml_file(ConfigFile.PROXY)
         self.cfg_proxy = ViewerConfig(**cfgfile_db[ConfigSections.PROXY_VIEWER.value])
         self.backend = ProxyBackend(self.cfg_proxy)
-        self.objlayer = None
         self.systasks = []
         self.apitasks = [
             (ProxyTask.VIEWER_TEMPLATE.value, viewer_template),
@@ -39,22 +38,9 @@ class ProxyPlugin(PluginBase):
         ]
         self.handlers = [handler]
         super().__init__(
-            self.__class__.__qualname__,
             LoadOrder.Platform,
-            False,
             backends=[self.backend],
-            layers=[],
             handlers=self.handlers,
             systasks=self.systasks,
             apitasks=self.apitasks,
-            authenticator=None,
-            taskmanager=None,
         )
-
-    async def plugin_start(self) -> bool:
-        """Starts plugin"""
-        return await self.backend.connect()
-
-    async def plugin_stop(self) -> bool:
-        """Stops plugin"""
-        return await self.backend.disconnect()

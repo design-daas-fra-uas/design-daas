@@ -6,6 +6,8 @@ from dataclasses import asdict
 from typing import Any, Optional
 from quart import Quart
 from quart_cors import cors
+from app.qweb.logging.request_id import install_request_id
+from app.qweb.blueprints.api_docs import install_api_docs
 from app.qweb.logging.logging import Loggable, QwebLogManager, LogTarget, LoggerConfig
 from app.qweb.auth.auth_dummy import QwebDummyAuthenticator
 from app.qweb.blueprints.blueprint_info import BlueprintInfo
@@ -242,6 +244,8 @@ class QwebServiceRuntime(Loggable):
         quartargs.pop("webroot_folder")
         quartargs.pop("config_folder")
         self.app = Quart(__name__, **quartargs)
+        install_request_id(self.app)
+        install_api_docs(self.app)
 
         # Cors
         if self.cfg_qweb.cors.enabled:
@@ -270,7 +274,7 @@ class QwebServiceRuntime(Loggable):
                     await backend.disconnect()
                 except Exception as exe:
                     t = type(exe)
-                    self._log_info(
+                    self._log_warn(
                         f"Error stopping backend {name}: {t.__module__}.{t.__qualname__}: {exe}"
                     )
 

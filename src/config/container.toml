@@ -3,7 +3,7 @@
 
 [container_request]
 # Address of the host on vmbr0 as seen by containers.
-# Set by installer/daas/configure.bash
+# Default only: the installer writes the host value to config/local/ (see README.md)
 host = "192.168.123.11"
 # Wait after starting the service containers (ms, 0 = no wait)
 wait_services_ms = 0
@@ -14,7 +14,7 @@ logrequest = true
 # Each entry: [IMAGE, CONTAINER_NAME, [OPTIONS], CPUS, MEMORY_BYTES]
 # OPTIONS understood: "-p HOST:PORT:PORT", "-v HOSTPATH:PATH:MODE"
 # (relative HOSTPATH = src/data/...), "--privileged".
-# The images are built by `make daas-services` in installer/.
+# The images are built by `make containers-install` in installer/.
 service_containers = [
   # Guacamole daemon (VNC/RDP -> browser)
   [

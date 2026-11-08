@@ -2,11 +2,11 @@
 
 import subprocess
 import asyncio
-import websockets
+from websockets.asyncio.client import ClientConnection
 from datetime import datetime
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from quart import Websocket
-from app.daas.adapter.adapter_ssh import SshAdapter, SshAdapterConfig
+from app.daas.adapter.adapter_ssh import SshAdapter
 from app.daas.common.enums import BackendName
 from app.daas.container.docker.DockerRequest import DockerRequest
 from app.daas.proxy.proxy_registry import ProxyRegistry
@@ -80,26 +80,27 @@ class ProxyExtensions(Loggable):
         reg.add_connection(new_tuple)
 
         try:
-            while True:
-                await asyncio.sleep(0)
-                if audio_proc is not None and audio_proc.stdin:
-                    data = await asyncio.wait_for(client_ws.receive(), timeout=3.0)
-                    if isinstance(data, str):
-                        if data == "close":
-                            self._log_info("Closing audio connection")
-                            break
-                    else:
-                        audio_proc.stdin.write(data)
-                        audio_proc.stdin.flush()
-                else:
-                    self._log_info("The pipe is not ready")
+            while audio_proc.stdin is not None:
+                data = await asyncio.wait_for(client_ws.receive(), timeout=3.0)
+                if isinstance(data, str):
+                    if data == "close":
+                        self._log_info(f"Closing audio connection {conid}")
+                        break
+                    continue
+                audio_proc.stdin.write(data)
+                audio_proc.stdin.flush()
+        except Exception as exe:  # pylint: disable=broad-exception-caught
+            self._log_warn(f"Audio connection {conid} ended: {exe!r}")
+        finally:
+            # Also runs when the client disconnects (CancelledError)
             if audio_proc.stdin:
-                audio_proc.stdin.close()
+                try:
+                    audio_proc.stdin.close()
+                except OSError:
+                    pass
             audio_proc.terminate()
-            self._log_info("Exit audio socket loop")
-        except Exception as exe:
-            self._log_info(f"error on audio pipe: {exe}")
-        reg.disconnect_connection(conid)
+            reg.disconnect_connection(conid)
+            self._log_info(f"Exit audio socket loop {conid}")
 
     async def proxy_printer_sockets(
         self,
@@ -107,7 +108,7 @@ class ProxyExtensions(Loggable):
         inst: InstanceObject,
         con: GuacamoleConnection,
         client_ws: Websocket,
-        backend_ws: websockets.WebSocketClientProtocol,
+        backend_ws: ClientConnection,
     ):
         """Proxifies client_ws and backend_ws"""
         reg = await get_backend_component(BackendName.PROXY, ProxyRegistry)
@@ -118,37 +119,40 @@ class ProxyExtensions(Loggable):
 
         async def from_browser_to_service():
             """Receive messages from client and send them to backend WebSocket."""
-            try:
-                while True:
-                    message = await client_ws.receive()
-                    if isinstance(message, str):
-                        if message == "close":
-                            self._log_info("Closing printer connection")
-                            raise asyncio.CancelledError("Close received")
-                    await backend_ws.send(message)
-            except Exception as exe:
-                self._log_info(f"Error in client-to-backend: {exe}")
+            while True:
+                message = await client_ws.receive()
+                if message == "close":
+                    self._log_info(f"Closing printer connection {conid}")
+                    return
+                await backend_ws.send(message)
 
         async def from_service_to_browser():
             """Receive messages from backend WebSocket and send them to client."""
-            try:
-                async for message in backend_ws:
-                    if isinstance(message, (bytes)):
-                        await client_ws.send(message)
-                    else:
-                        await client_ws.send(message)
-            except Exception as exe:
-                self._log_info(f"Error in backend-to-client: {exe}")
+            async for message in backend_ws:
+                await client_ws.send(message)
 
-        self._log_info("Establishing new printer connection")
-
+        self._log_info(f"Establishing new printer connection {conid}")
+        tasks = {
+            asyncio.create_task(from_browser_to_service()),
+            asyncio.create_task(from_service_to_browser()),
+        }
         try:
-            await asyncio.gather(from_browser_to_service(), from_service_to_browser())
-        except asyncio.CancelledError:
-            await client_ws.close(512, "Closed")
+            # Runs until one direction ends (or the client disconnects)
+            done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+            for task in done:
+                if task.exception() is not None:
+                    self._log_warn(
+                        f"Printer connection {conid} ended: {task.exception()!r}"
+                    )
+            await client_ws.close(1000, "Closed")
+        except RuntimeError:
+            pass  # the client websocket is already closed
+        finally:
+            for task in tasks:
+                task.cancel()
             await backend_ws.close()
-        self._log_info("Exit printer socket loop")
-        reg.disconnect_connection(conid)
+            reg.disconnect_connection(conid)
+            self._log_info(f"Exit printer socket loop {conid}")
 
     async def add_printer_service(self, host: str, owner: int):
         """Adds printer for specified user"""
@@ -267,16 +271,7 @@ class ProxyExtensions(Loggable):
         if serviceip == "":
             serviceip = await self._get_service_ip(self.config.update_service_ip)
         hub = await get_backend(BackendName.MESSAGING, MessagingBackend)
-        cfg = SshAdapterConfig(
-            hub.cfg_main.sshuser,
-            serviceip,
-            hub.cfg_main.sshport,
-            hub.cfg_main.sshopt_timeout,
-            hub.cfg_main.sshopt_strictcheck,
-            hub.cfg_main.sshopt_nohostauth,
-            hub.cfg_main.logcmd,
-            hub.cfg_main.logresult,
-        )
+        cfg = replace(hub.cfg_ssh, sshhost=serviceip)
         return SshAdapter(cfg)
 
     async def _get_service_ip(self, update: bool) -> str:

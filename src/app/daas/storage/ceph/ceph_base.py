@@ -1,4 +1,4 @@
-""" Baseclass for ceph filestore"""
+"""Baseclass for ceph filestore"""
 
 import os
 import subprocess
@@ -6,7 +6,6 @@ import shutil
 from typing import Optional
 from app.daas.storage.ceph.ceph_config import CephstoreConfig
 from app.qweb.logging.logging import LogTarget, Loggable
-
 
 # Globals
 CMD_LINUX_CEPH = "/usr/bin/ceph"

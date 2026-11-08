@@ -33,7 +33,7 @@ async def printer_ws(args: TaskArgs):
         return QwebResult(400, {}, 2, "No instance")
 
     userid = int(inst.app.id_owner)
-    added = await extensions.add_printer_service(inst, userid)
+    added = await extensions.add_printer_service(inst.host, userid)
     if added:
         url_printer = await extensions.get_url_service_printer()
         url_query = (

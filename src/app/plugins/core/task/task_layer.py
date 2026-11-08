@@ -1,4 +1,4 @@
-""" Database components"""
+"""Database components"""
 
 from enum import Enum
 from typing import Any, Optional

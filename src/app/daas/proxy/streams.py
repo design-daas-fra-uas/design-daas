@@ -4,7 +4,6 @@ import asyncio
 import abc
 import logging
 
-
 from quart import Websocket
 
 from app.qweb.logging.logging import LogTarget
@@ -19,10 +18,6 @@ from .syntax import (
 
 class GuacamoleSocket(abc.ABC):
     """A GuacamoleSocket can send() and receive() Guacamole messages."""
-
-    async def get_path(self) -> str:
-        """Retrieves path from the utilized websocket"""
-        raise NotImplementedError()
 
     async def receive(self) -> tuple[str, ...]:
         """Receive the next Guacamole message over the socket."""
@@ -39,9 +34,6 @@ class GuacamoleSocketWs(GuacamoleSocket):
     def __init__(self, websocket: Websocket) -> None:
         self.__ws = websocket
         self.__parser = IncrementalGuacamoleParser()
-
-    async def get_path(self) -> str:
-        return self.__ws.path
 
     async def receive(self) -> tuple[str, ...]:
         while True:
@@ -97,3 +89,11 @@ class GuacamoleSocketStream(GuacamoleSocket):
     async def send(self, opcode: str, *args: str) -> None:
         self.__writer.write(format_message_b(opcode, *args))
         await self.__writer.drain()  # proper backpressure
+
+    async def close(self) -> None:
+        """Closes the connection to guacd"""
+        self.__writer.close()
+        try:
+            await self.__writer.wait_closed()
+        except (ConnectionError, OSError):
+            pass

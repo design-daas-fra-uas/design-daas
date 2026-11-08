@@ -32,16 +32,12 @@ class DatabasePlugin(PluginBase):
         self.apitasks = []
         self.handlers = []
         super().__init__(
-            self.__class__.__qualname__,
             LoadOrder.Core,
-            False,
             backends=[self.backend],
             layers=[self.objlayer],
             handlers=self.handlers,
             systasks=self.systasks,
             apitasks=self.apitasks,
-            authenticator=None,
-            taskmanager=None,
         )
 
     async def plugin_start(self) -> bool:
@@ -53,7 +49,3 @@ class DatabasePlugin(PluginBase):
             if self.cfg.include_samples:
                 await db.load_demo_apps()
         return connected
-
-    async def plugin_stop(self) -> bool:
-        """Stops plugin"""
-        return await self.backend.disconnect()

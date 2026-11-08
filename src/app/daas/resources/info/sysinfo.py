@@ -224,4 +224,3 @@ class Systeminfo(Loggable):
             elif only_user == -1:
                 result = True
         return result
-

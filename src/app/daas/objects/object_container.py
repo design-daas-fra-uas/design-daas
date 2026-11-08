@@ -3,20 +3,19 @@
 import asyncio
 from dataclasses import dataclass
 from typing import Optional
-from app.daas.common.model import Environment, File
+from app.daas.common.model import Environment
 from app.daas.db.db_mappings import ORMMappingType, ORMModelDomain
 from app.daas.objects.config_factory import get_empty_object_dict
 from app.daas.objects.config_container import ContainerConfigBase
-from app.daas.objects.base_object import LIMIT_REACHED
+from app.daas.objects.object_api import ObjectApiMixin
 from app.daas.objects.object_instance import InstanceObject
-from app.qweb.common.qweb_tools import get_database
 from app.qweb.logging.logging import LogTarget, Loggable
 from app.qweb.processing.processor import QwebResult
 
 
 @ORMModelDomain(ORMMappingType.Container)
 @dataclass(kw_only=True)
-class ContainerObject(ContainerConfigBase):
+class ContainerObject(ObjectApiMixin, ContainerConfigBase):
     """Configuration for a containerized app using Guacamole."""
 
     def __init__(self, **kwargs):
@@ -30,31 +29,11 @@ class ContainerObject(ContainerConfigBase):
             f"obj_type={self.object_type},os_type={self.os_type})"
         )
 
-    async def baseimage_create(self, args: dict) -> QwebResult:
-        if not await self.verify_demand(args["id_owner"]):
-            return QwebResult(400, {}, 1, LIMIT_REACHED)
-        code, str_out, str_err = await self.create(args)
-        status = 200 if code == 0 else 400
-        return QwebResult(status, {}, code, f"{str_out}{str_err}")
-
-    async def baseimage_clone(self, oldid: str, args: dict) -> QwebResult:
-        if not await self.verify_demand(args["id_owner"]):
-            return QwebResult(400, {}, 1, LIMIT_REACHED)
-        code, str_out, str_err = await self.clone(oldid, args)
-        status = 200 if code == 0 else 400
-        return QwebResult(status, {}, code, f"{str_out}{str_err}")
-
     async def baseimage_finalize(self) -> QwebResult:
         self.object_state = "baseimage-final"
         if await self.update():
             return QwebResult(200, {})
         return QwebResult(400, {}, 1, "Error during db update")
-
-    async def environment_create(self, args: dict) -> QwebResult:
-        env = await self.env_create([], [], args)
-        if env is not None:
-            return QwebResult(200, vars(env))
-        return QwebResult(400, {}, 1, "Env not created")
 
     async def environment_finalize(self, env: Environment, args: dict) -> QwebResult:
         if await self.env_finalize(env, args):
@@ -82,7 +61,7 @@ class ContainerObject(ContainerConfigBase):
         userid: int,
         connect: bool,
         object_mode: str = "",
-            args=None,
+        args=None,
     ) -> Optional[InstanceObject]:
         """Starts environment instance"""
         if args is None:
@@ -100,7 +79,7 @@ class ContainerObject(ContainerConfigBase):
         userid: int,
         connect: bool,
         object_mode: str = "",
-            args=None,
+        args=None,
     ) -> Optional[InstanceObject]:
         """Runs environment instance"""
         if args is None:
@@ -117,72 +96,6 @@ class ContainerObject(ContainerConfigBase):
                 await self.set_extended_mode("done")
             return await self._return_connected_instance(connect)
         return None
-
-    async def environment_stop(
-        self, env: Environment, force: bool, args: dict
-    ) -> QwebResult:
-        if await self.env_stop(env, force, args):
-            return QwebResult(200, {}, response_url="-")
-        return QwebResult(400, {}, 1, "Env not stopped")
-
-    async def cfg_applist(
-        self, obj: str, env: Optional[Environment], args: dict
-    ) -> QwebResult:
-        if await self.configure_applist(obj, env, args):
-            return QwebResult(200, {})
-        return QwebResult(400, {}, 1, "Error on applist config")
-
-    async def cfg_tasklist(
-        self, obj: str, env: Optional[Environment], args: dict
-    ) -> QwebResult:
-        if await self.configure_tasklist(obj, env, args):
-            return QwebResult(200, {})
-        return QwebResult(400, {}, 1, "Error on tasklist config")
-
-    async def cfg_set_target(
-        self, obj: str, env: Optional[Environment], args: dict
-    ) -> QwebResult:
-        if await self.configure_target(obj, env):
-            return QwebResult(200, {})
-        return QwebResult(400, {}, 1, "Error on target config")
-
-    async def cfg_installers_deploy(
-        self,
-        files: list[File],
-        installers: list[str],
-        userid: int,
-        env: Optional[Environment],
-        args: dict,
-    ) -> QwebResult:
-        if await self.copy_installers(files, installers, userid, env):
-            return QwebResult(200, {})
-        return QwebResult(400, {}, 1, "error on installer_deploy")
-
-    async def cfg_installers_execute(
-        self, installers: list[str], env: Optional[Environment], args: dict
-    ) -> QwebResult:
-        if await self.execute_tasks(installers, env, args):
-            return QwebResult(200, {})
-        return QwebResult(400, {}, 1, "error on installer_execute")
-
-    async def cfg_install(
-        self,
-        files: list[File],
-        installers: list[str],
-        userid: int,
-        env: Optional[Environment],
-        args: dict,
-    ) -> QwebResult:
-        if await self.copy_installers(files, installers, userid, env):
-            if await self.execute_tasks(installers, env, args):
-                return QwebResult(200, {})
-        return QwebResult(400, {}, 1, "error on installation")
-
-    async def update(self) -> bool:
-        from app.daas.db.database import Database
-
-        dbase = await get_database(Database)
-        return await dbase.update_daas_object(self)
 
 
 async def get_empty_container_object(userid: int, **kwargs) -> ContainerObject:

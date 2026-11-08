@@ -37,9 +37,7 @@ infos = [
         request_args_optional=[],
         request_args_common=perf_args,
         backends=backends,
-        objects=[
-            LayerObject("entity", DBObject.INSTBYOBJ.value, LayerName.DB.value)
-        ],
+        objects=[LayerObject("entity", DBObject.INSTBYOBJ.value, LayerName.DB.value)],
     ),
     BlueprintInfo(
         endpoint_id=110001,
@@ -57,9 +55,7 @@ infos = [
         request_args_optional=[],
         request_args_common=perf_args,
         backends=backends,
-        objects=[
-            LayerObject("entity", DBObject.INSTBYOBJ.value, LayerName.DB.value)
-        ],
+        objects=[LayerObject("entity", DBObject.INSTBYOBJ.value, LayerName.DB.value)],
     ),
     BlueprintInfo(
         endpoint_id=110002,
@@ -77,9 +73,7 @@ infos = [
         request_args_optional=[],
         request_args_common=perf_args,
         backends=backends,
-        objects=[
-            LayerObject("entity", DBObject.INSTBYOBJ.value, LayerName.DB.value)
-        ],
+        objects=[LayerObject("entity", DBObject.INSTBYOBJ.value, LayerName.DB.value)],
     ),
     BlueprintInfo(
         endpoint_id=110003,
@@ -97,9 +91,7 @@ infos = [
         request_args_optional=[],
         request_args_common=perf_args,
         backends=backends,
-        objects=[
-            LayerObject("entity", DBObject.INSTBYOBJ.value, LayerName.DB.value)
-        ],
+        objects=[LayerObject("entity", DBObject.INSTBYOBJ.value, LayerName.DB.value)],
     ),
     BlueprintInfo(
         endpoint_id=110004,
@@ -117,9 +109,7 @@ infos = [
         request_args_optional=[],
         request_args_common=perf_args,
         backends=backends,
-        objects=[
-            LayerObject("entity", DBObject.INSTBYOBJ.value, LayerName.DB.value)
-        ],
+        objects=[LayerObject("entity", DBObject.INSTBYOBJ.value, LayerName.DB.value)],
     ),
     BlueprintInfo(
         endpoint_id=110005,
@@ -137,9 +127,7 @@ infos = [
         request_args_optional=[],
         request_args_common=perf_args,
         backends=backends,
-        objects=[
-            LayerObject("entity", DBObject.INSTBYOBJ.value, LayerName.DB.value)
-        ],
+        objects=[LayerObject("entity", DBObject.INSTBYOBJ.value, LayerName.DB.value)],
     ),
     BlueprintInfo(
         endpoint_id=110006,
@@ -158,9 +146,7 @@ infos = [
         request_args_file=["file"],
         request_args_common=perf_args,
         backends=backends,
-        objects=[
-            LayerObject("entity", DBObject.INSTBYOBJ.value, LayerName.DB.value)
-        ],
+        objects=[LayerObject("entity", DBObject.INSTBYOBJ.value, LayerName.DB.value)],
     ),
     BlueprintInfo(
         endpoint_id=110007,
@@ -178,9 +164,7 @@ infos = [
         request_args_optional=["ceph_public", "ceph_shared", "ceph_user"],
         request_args_common=perf_args,
         backends=backends,
-        objects=[
-            LayerObject("entity", DBObject.INSTBYOBJ.value, LayerName.DB.value)
-        ],
+        objects=[LayerObject("entity", DBObject.INSTBYOBJ.value, LayerName.DB.value)],
     ),
     BlueprintInfo(
         endpoint_id=110008,
@@ -198,9 +182,7 @@ infos = [
         request_args_optional=[],
         request_args_common=perf_args,
         backends=backends,
-        objects=[
-            LayerObject("entity", DBObject.INSTLIST.value, LayerName.DB.value)
-        ],
+        objects=[LayerObject("entity", DBObject.INSTLIST.value, LayerName.DB.value)],
     ),
     BlueprintInfo(
         endpoint_id=110009,
@@ -218,9 +200,7 @@ infos = [
         request_args_optional=[],
         request_args_common=perf_args,
         backends=backends,
-        objects=[
-            LayerObject("entity", DBObject.INSTBYOBJ.value, LayerName.DB.value)
-        ],
+        objects=[LayerObject("entity", DBObject.INSTBYOBJ.value, LayerName.DB.value)],
     ),
     BlueprintInfo(
         endpoint_id=110010,
@@ -238,9 +218,7 @@ infos = [
         request_args_optional=[],
         request_args_common=perf_args,
         backends=backends,
-        objects=[
-            LayerObject("entity", DBObject.INSTBYOBJ.value, LayerName.DB.value)
-        ],
+        objects=[LayerObject("entity", DBObject.INSTBYOBJ.value, LayerName.DB.value)],
     ),
     BlueprintInfo(
         endpoint_id=110011,

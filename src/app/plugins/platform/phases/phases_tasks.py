@@ -24,16 +24,15 @@ from app.qweb.common.common import TaskArgs
 from app.qweb.common.qweb_tools import get_backend_component, run_system_task
 from app.qweb.processing.processor import QwebResult
 
+# Resources of objects created from an app (memory in MiB, disk in bytes)
 DEFAULT_VM_CORES = 4
-DEFAULT_VM_MEMORY = 4 * 1024**1
+DEFAULT_VM_MEMORY = 4 * 1024
 DEFAULT_VM_DISKSIZE_WIN = 64 * 1024**3
 DEFAULT_VM_DISKSIZE_LINUX = 32 * 1024**3
-DEFAULT_VM_OS = "win10"
 DEFAULT_VM_KB = "de"
 DEFAULT_CNT_CORES = 2
-DEFAULT_CNT_MEMORY = 2 * 1024**1
-DEFAULT_CNT_DISKSIZE_WIN = 12 * 1024**2
-DEFAULT_CNT_DISKSIZE_LINUX = 12 * 1024 * 2
+DEFAULT_CNT_MEMORY = 2 * 1024
+DEFAULT_CNT_DISKSIZE = 12 * 1024**2
 DEFAULT_CNT_IMAGE = "wine"
 
 
@@ -82,6 +81,9 @@ async def baseimage_clone(args: TaskArgs) -> QwebResult:
         reqargs["disksize"] = old.hw_disksize
         entity = await _create_empty_object(reqargs, old, userid)
         if entity is not None:
+            # The new object must not carry the old id: the resource limit
+            # check treats an object with a running instance as already counted
+            entity.id = reqargs["newid"]
             return await entity.baseimage_clone(reqargs["id"], reqargs)
         return QwebResult(400, {}, 1, "No object to clone from")
     return QwebResult(400, {}, 1, "object already exists")
@@ -110,7 +112,7 @@ async def baseimage_start(args: TaskArgs) -> QwebResult:
     log_task_arguments(args.ctx, args.req, args.info, args.user)
     entity = get_request_object(args.ctx, "entity", DaasBaseObject)
     reqargs = args.req.request_context.request_args.copy()
-    connect = "connect" in reqargs
+    connect = reqargs.get("connect", "") != ""
     if isinstance(entity, MachineObject | ContainerObject):
         inst = await entity.baseimage_start(args.user.id_user, connect, "run-debug")
         if inst is not None:
@@ -123,7 +125,7 @@ async def baseimage_stop(args: TaskArgs) -> QwebResult:
     log_task_arguments(args.ctx, args.req, args.info, args.user)
     entity = get_request_object_optional(args.ctx, "entity", InstanceObject)
     reqargs = args.req.request_context.request_args.copy()
-    force = reqargs["force"] != ""
+    force = reqargs.get("force", "") != ""
     if entity is not None:
         if isinstance(entity.app, MachineObject | ContainerObject):
             return await entity.app.baseimage_stop(entity, force)
@@ -190,7 +192,7 @@ async def baseimage_clone_from_app(args: TaskArgs) -> QwebResult:
                         return await create_response_url_start(True, inst.id)
                     return QwebResult(400, {}, 1, "Instance not created")
                 return QwebResult(400, {}, 2, "Clone object failed")
-            return QwebResult(400, {}, 3, "Clone object failed")
+            return QwebResult(400, {}, 3, "Object not created")
         return QwebResult(400, {}, 4, "Object exists")
     return QwebResult(400, {}, 5, "No app")
 
@@ -220,8 +222,8 @@ async def baseimage_create_from_app(args: TaskArgs) -> QwebResult:
                         await run_system_task(ttype, userid, newid, inst.id, targs)
                         return await create_response_url_start(True, inst.id)
                     return QwebResult(400, {}, 1, "Instance not created")
-                return QwebResult(400, {}, 2, "Clone object failed")
-            return QwebResult(400, {}, 3, "Clone object failed")
+                return QwebResult(400, {}, 2, "Create object failed")
+            return QwebResult(400, {}, 3, "Object not created")
         return QwebResult(400, {}, 4, "Object exists")
     return QwebResult(400, {}, 5, "No app")
 
@@ -254,7 +256,7 @@ async def _append_default_ressources(reqargs: dict, app: ApplicationObject) -> d
     elif app.os_type == "l26":
         reqargs["cores"] = DEFAULT_CNT_CORES
         reqargs["memsize"] = DEFAULT_CNT_MEMORY
-        reqargs["disksize"] = DEFAULT_CNT_DISKSIZE_WIN
+        reqargs["disksize"] = DEFAULT_CNT_DISKSIZE
         reqargs["rootimage"] = DEFAULT_CNT_IMAGE
         reqargs["os_type"] = app.os_type
     return reqargs

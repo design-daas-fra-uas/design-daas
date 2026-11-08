@@ -60,9 +60,7 @@ async def admin_monitoring_info_tasks(args: TaskArgs) -> QwebResult:
     log_task_arguments(args.ctx, args.req, args.info, args.user)
     mon = MonitoringInfoTool()
     reqargs = args.req.request_context.request_args
-    userid = args.user.id_user
-    if "id_owner" in reqargs:
-        userid = reqargs["id_owner"]
+    userid = _requested_owner(reqargs, args.user.id_user)
     taskinfo = await mon.create_monitoring_info_tasks(userid)
     return QwebResult(200, taskinfo.tojson())
 
@@ -72,9 +70,7 @@ async def admin_monitoring_info_apps(args: TaskArgs) -> QwebResult:
     log_task_arguments(args.ctx, args.req, args.info, args.user)
     mon = MonitoringInfoTool()
     reqargs = args.req.request_context.request_args
-    userid = args.user.id_user
-    if "id_owner" in reqargs:
-        userid = reqargs["id_owner"]
+    userid = _requested_owner(reqargs, args.user.id_user)
     taskinfo = await mon.create_monitoring_info_apps(userid)
     return QwebResult(200, taskinfo.tojson())
 
@@ -84,9 +80,7 @@ async def admin_monitoring_info_files(args: TaskArgs) -> QwebResult:
     log_task_arguments(args.ctx, args.req, args.info, args.user)
     mon = MonitoringInfoTool()
     reqargs = args.req.request_context.request_args
-    userid = args.user.id_user
-    if "id_owner" in reqargs:
-        userid = reqargs["id_owner"]
+    userid = _requested_owner(reqargs, args.user.id_user)
     taskinfo = await mon.create_monitoring_info_files(userid)
     return QwebResult(200, taskinfo.tojson())
 
@@ -96,9 +90,7 @@ async def admin_monitoring_info_sockets(args: TaskArgs) -> QwebResult:
     log_task_arguments(args.ctx, args.req, args.info, args.user)
     mon = MonitoringInfoTool()
     reqargs = args.req.request_context.request_args
-    userid = args.user.id_user
-    if "id_owner" in reqargs:
-        userid = reqargs["id_owner"]
+    userid = _requested_owner(reqargs, args.user.id_user)
     taskinfo = await mon.create_monitoring_info_websockets(userid)
     return QwebResult(200, taskinfo.tojson())
 
@@ -117,9 +109,7 @@ async def admin_monitoring_info_objects(args: TaskArgs) -> QwebResult:
     log_task_arguments(args.ctx, args.req, args.info, args.user)
     mon = MonitoringInfoTool()
     reqargs = args.req.request_context.request_args
-    userid = args.user.id_user
-    if "id_owner" in reqargs:
-        userid = reqargs["id_owner"]
+    userid = _requested_owner(reqargs, args.user.id_user)
     taskinfo = await mon.create_monitoring_info_objects(False, userid)
     return QwebResult(200, taskinfo.tojson())
 
@@ -129,9 +119,7 @@ async def admin_monitoring_info_utilization(args: TaskArgs) -> QwebResult:
     log_task_arguments(args.ctx, args.req, args.info, args.user)
     mon = MonitoringInfoTool()
     reqargs = args.req.request_context.request_args
-    userid = args.user.id_user
-    if "id_owner" in reqargs:
-        userid = reqargs["id_owner"]
+    userid = _requested_owner(reqargs, args.user.id_user)
     taskinfo = await mon.create_monitoring_info_utilization(userid)
     return QwebResult(200, taskinfo.tojson())
 
@@ -141,9 +129,7 @@ async def admin_monitoring_info_limits(args: TaskArgs) -> QwebResult:
     log_task_arguments(args.ctx, args.req, args.info, args.user)
     mon = MonitoringInfoTool()
     reqargs = args.req.request_context.request_args
-    userid = args.user.id_user
-    if "id_owner" in reqargs:
-        userid = reqargs["id_owner"]
+    userid = _requested_owner(reqargs, args.user.id_user)
     taskinfo = await mon.create_monitoring_info_limit(userid)
     return QwebResult(200, taskinfo.tojson())
 
@@ -153,7 +139,7 @@ async def admin_assign_obj_to_user(args: TaskArgs) -> QwebResult:
     log_task_arguments(args.ctx, args.req, args.info, args.user)
     entity = get_request_object_optional(args.ctx, "entity", DaasObject)
     reqargs = args.req.request_context.request_args
-    userid = reqargs["owner"]
+    userid = int(reqargs["owner"])
     if entity is not None:
         if isinstance(entity, MachineObject | ContainerObject):
             changed = await entity.change_owner(userid)
@@ -169,7 +155,7 @@ async def admin_assign_app(args: TaskArgs) -> QwebResult:
     log_task_arguments(args.ctx, args.req, args.info, args.user)
     entity = get_request_object_optional(args.ctx, "entity", Application)
     reqargs = args.req.request_context.request_args
-    userid = reqargs["owner"]
+    userid = int(reqargs["owner"])
     if entity is not None:
         if isinstance(entity, ApplicationObject):
             changed = await entity.change_owner(userid)
@@ -203,11 +189,9 @@ async def admin_task_stop(args: TaskArgs) -> QwebResult:
 
 async def _get_filtered_tasks(reqargs: dict) -> list[dict]:
 
-    userid = 0
-    if reqargs["id_owner"] != "":
-        userid = int(reqargs["id_owner"])
-    objid = reqargs["id_object"]
-    instid = reqargs["id_instance"]
+    userid = _requested_owner(reqargs, 0)
+    objid = reqargs.get("id_object", "")
+    instid = reqargs.get("id_instance", "")
     flt = ScheduledTaskFilter.ALL
     if "state" in reqargs:
         if reqargs["state"] == ScheduledTaskFilter.RUNNING.value:
@@ -218,3 +202,14 @@ async def _get_filtered_tasks(reqargs: dict) -> list[dict]:
     tasks = await mancomp.get_scheduled_tasks(flt)
     filtered = await mancomp.filter_tasks(tasks, userid, objid, instid)
     return [v.to_json() for _, v in filtered.items()]
+
+
+def _requested_owner(reqargs: dict, default: int) -> int:
+    """
+    The owner an admin request is about: id_owner as int, 0 (all users)
+    when it is sent empty, default when it is not sent
+    """
+    if "id_owner" not in reqargs:
+        return default
+    owner = str(reqargs["id_owner"]).strip()
+    return int(owner) if owner != "" else 0

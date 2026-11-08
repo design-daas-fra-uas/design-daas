@@ -33,34 +33,30 @@ backend), except `logging.toml log_dir` and the docker `-v` volumes in
 Every file is read together with `config/local/<same name>.toml` when that
 exists (`app/qweb/common/tomlfile.py`): its keys replace the ones here,
 tables are merged key by key. The folder is ignored by git and readable
-by root only. It holds the **secrets**, so the files here keep empty
-placeholders for them:
+by root only.
 
-| Override | Key | From `installer/daas.env` |
+The tracked files here hold **generic defaults** and empty password
+placeholders. Everything that depends on the host, and every password, is
+written to `config/local/` by `installer/daas/configure.bash`
+(`make daas-configure`) from `installer/daas.env`. The installer never
+edits the tracked files, so `git status` stays clean after an install.
+Manual edits in `config/local/` are overwritten on the next
+`make daas-configure`; change `installer/daas.env` instead.
+
+| Override | Keys | From `installer/daas.env` |
 |---|---|---|
-| `local/vm.toml` | `[vm_rest] apipass` (Proxmox API password of `daas@pve`) | `PVE_API_PASSWORD` |
-| `local/auth.toml` | `[auth.remote] password` (admin of the auth service, remote auth only) | `ADMIN_PASSWORD` |
-| `local/db.toml` | `[db] db_pass` (MariaDB root password) | `DAAS_DB_PASSWORD` |
+| `local/qweb.toml` | `[template_args] hostproto`, `hostip`, `hostport` | scheme, host, port of `DAAS_PUBLIC_URL` |
+| `local/proxy.toml` | `[viewer] viewer_protocol`, `viewer_host`, `viewer_port` | scheme, host, port of `DAAS_PUBLIC_URL` |
+| `local/container.toml` | `[container_request] host` | `192.168.123.HOST_NUMBER` |
+| `local/vm.toml` | `[vm_rest] apipass` | `PVE_API_PASSWORD` (Proxmox account `daas@pve`) |
+| | `[vm_api] node`, `hostIp` | `HOST_NAME`, `192.168.123.HOST_NUMBER` |
+| | `[vm_api] bridge_cidr_{daas,inst,ceph,cluster}` | `192.168.{123,223,100,200}.HOST_NUMBER/24` |
+| | `[vm_api] bridge_gw_daas`, `bridge_adapter_daas` | `192.168.123.1` / `NET_DEVICE`, empty when `STANDALONE` |
+| `local/db.toml` | `[db] db_pass` | `DAAS_DB_PASSWORD` (MariaDB root) |
+| `local/auth.toml` | `[auth] authenticator_type`, `enable_auth_endpoint` | `DAAS_AUTH_MODE`, `DAAS_AUTH_CHECK_ENDPOINTS` |
+| | `[auth.remote] url`, `clientid`, `scope`, `username`, `password` | `http://127.0.0.1:AUTH_PORT`, `OAUTH_CLIENT_ID`, `admin`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` (remote mode only) |
 
-`make daas-configure` writes them. Never put a password into a tracked
-file: this repository is public.
-
-## Values set by the installer
-
-`installer/daas/configure.bash` (`make daas-configure`) sets these keys by
-name, so manual edits to them are overwritten on the next run:
-
-| File | Key | Value |
-|---|---|---|
-| `qweb.toml` | `host` | `127.0.0.1` (only nginx reaches the backend) |
-| `qweb.toml` | `hostproto`, `hostip`, `hostport` | scheme, host, port of `DAAS_PUBLIC_URL` |
-| `proxy.toml` | `viewer_protocol`, `viewer_host`, `viewer_port` | scheme, host, port of `DAAS_PUBLIC_URL` |
-| `vm.toml` | `node` | `HOST_NAME` (the Proxmox node name) |
-| `vm.toml` | `hostIp` | `192.168.123.HOST_NUMBER` |
-| `vm.toml` | `bridge_cidr_{daas,inst,ceph,cluster}` | `192.168.{123,223,100,200}.HOST_NUMBER/24` |
-| `vm.toml` | `bridge_gw_daas`, `bridge_adapter_daas` | `192.168.123.1` / `NET_DEVICE`, empty when `STANDALONE` |
-| `container.toml` | `host` | `192.168.123.HOST_NUMBER` |
-| `auth.toml` | `authenticator_type`, `enable_auth_endpoint`, `url`, `clientid`, `scope`, `username` | `DAAS_AUTH_MODE`, `DAAS_AUTH_CHECK_ENDPOINTS`, `http://127.0.0.1:AUTH_PORT`, `OAUTH_CLIENT_ID`, `admin`, `ADMIN_EMAIL` |
+Never put a password into a tracked file: this repository is public.
 
 ## Values to change for production
 

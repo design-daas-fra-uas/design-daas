@@ -6,7 +6,6 @@ import click
 from ProxyControl import ProxyControl
 from adapter.tools.ProxyTools import split_command_from_args
 
-
 DEBUG_MODE = False
 
 

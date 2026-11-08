@@ -2,6 +2,8 @@
 Windows helpers
 """
 
+import logging
+
 import time
 import os
 import subprocess
@@ -14,6 +16,8 @@ import win32gui
 import win32process
 import win32con
 import win32api
+
+_LOG = logging.getLogger(__name__)
 
 
 @dataclass
@@ -68,7 +72,7 @@ def process_run(prog: str, args: list, shell: bool, codepage: str) -> tuple:
         UnicodeEncodeError,
         UnicodeDecodeError,
     ) as err:
-        print(f"EXCEPTION in subprocess.run: {err}")
+        _LOG.error("Exception in subprocess.run: %s", err)
     return 1, "", "Unknown error in subprocess.run"
 
 
@@ -90,7 +94,7 @@ def process_popen(prog: str, args: list, shell: bool, codepage: str) -> int:
             encoding=codepage,
         )
         if theproc is not None and theproc.returncode is not None:
-            print("RUNNING")
+            _LOG.debug("Process running")
             result = theproc.returncode
     except (
         subprocess.CalledProcessError,
@@ -102,7 +106,7 @@ def process_popen(prog: str, args: list, shell: bool, codepage: str) -> int:
         UnicodeEncodeError,
         UnicodeDecodeError,
     ) as err:
-        print(f"Execption in subprocess.Popen: {err}")
+        _LOG.error("Exception in subprocess.Popen: %s", err)
     return result
 
 
@@ -154,7 +158,7 @@ def process_kill(killterm: int | str, codepage: str):
         UnicodeEncodeError,
         UnicodeDecodeError,
     ) as err:
-        print(f"Exception during process kill: {err}")
+        _LOG.warning("Exception during process kill: %s", err)
 
 
 def try_find_pid(searchterms: list, timeout: int) -> int:
@@ -201,7 +205,7 @@ def maximize_windows_by_pid(pid: int, searchterms: list):
                 win32gui.ShowWindow(hwnd, win32con.SW_MAXIMIZE)
                 break
     except pywintypes.error as ex:
-        print(f"Exception during window search: {ex}")
+        _LOG.warning("Exception during window search: %s", ex)
 
 
 def get_resolution_list() -> list:
@@ -364,7 +368,7 @@ def __find_pid(searchterms: list) -> int:
 
 
 def __tightvnc_app_share(pid: int, codepage: str, filename: str):
-    print("Sharing APP via TIGHTVNC")
+    _LOG.info("Sharing app via TightVNC")
     process_popen(
         filename,
         ["-controlapp", "-shareapp", str(pid)],
@@ -374,13 +378,13 @@ def __tightvnc_app_share(pid: int, codepage: str, filename: str):
 
 
 def __tightvnc_app_start(codepage: str, filename: str):
-    print("Starting TIGHTVNC")
+    _LOG.info("Starting TightVNC")
     process_popen(filename, ["-run"], False, codepage)
     time.sleep(1)
 
 
 def __tightvnc_app_stop(codepage: str, filename: str):
-    print("Stopping TIGHTVNC")
+    _LOG.info("Stopping TightVNC")
     process_popen(filename, ["-stop", "-silent"], False, codepage)
     process_popen(filename, ["-controlapp", "-disconnectall"], False, codepage)
     process_kill("tvnserver.exe", codepage)

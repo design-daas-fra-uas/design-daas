@@ -1,17 +1,14 @@
 """Baseclass for docker filestore"""
 
+from typing import Optional
 import os
 import shutil
 from app.daas.common.model import File
-from app.daas.storage.local.fs_config import FilestoreConfig
 from app.daas.storage.local.fs_uploads import FilestoreUploads
 
 
 class FilestoreDocker(FilestoreUploads):
     """Baseclass for docker filestore"""
-
-    def __init__(self, config: FilestoreConfig):
-        super().__init__(config)
 
     async def create_docker_envfile(
         self,
@@ -19,10 +16,12 @@ class FilestoreDocker(FilestoreUploads):
         userid: int,
         imgname: str,
         envname: str,
-        files: list[File] = [],
-        installers: list[str] = [],
+        files: Optional[list[File]] = None,
+        installers: Optional[list[str]] = None,
     ) -> str:
         """Copies specified Dockerfile into new environmental dockerfile"""
+        files = files if files is not None else []
+        installers = installers if installers is not None else []
         assert self.dbase is not None
         result = ""
         obj = await self.dbase.get_daas_object(objid)
@@ -53,12 +52,14 @@ class FilestoreDocker(FilestoreUploads):
         name: str,
         subdir: str,
         userid: int,
-        files: list[File] = [],
-        installers: list[str] = [],
+        files: Optional[list[File]] = None,
+        installers: Optional[list[str]] = None,
     ) -> str:
         """
         Upload file to tmp folder
         """
+        files = files if files is not None else []
+        installers = installers if installers is not None else []
         folder = await self.get_user_folder_docker(userid, subdir)
         await self.upload_user_file(received_file, folder, f"Dockerfile.{name}", userid)
         dockerfile = await self.get_user_file_docker(subdir, userid, name)

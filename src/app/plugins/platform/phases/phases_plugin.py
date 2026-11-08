@@ -51,7 +51,6 @@ class PhasesPlugin(PluginBase):
         self,
     ):
         self.backend = PhasesBackend()
-        self.objlayer = None
         self.systasks = [
             (PhasesSystemTask.PHASES_POSTBOOT_ACTIONS.value, run_task_postboot),
             (PhasesSystemTask.PHASES_CREATE_FROM_APP.value, run_task_app_create),
@@ -94,22 +93,9 @@ class PhasesPlugin(PluginBase):
         ]
         self.handlers = [handler]
         super().__init__(
-            self.__class__.__qualname__,
             LoadOrder.Platform,
-            False,
             backends=[self.backend],
-            layers=[],
             handlers=self.handlers,
             apitasks=self.apitasks,
             systasks=self.systasks,
-            authenticator=None,
-            taskmanager=None,
         )
-
-    async def plugin_start(self) -> bool:
-        """Starts plugin"""
-        return await self.backend.connect()
-
-    async def plugin_stop(self) -> bool:
-        """Stops plugin"""
-        return await self.backend.disconnect()

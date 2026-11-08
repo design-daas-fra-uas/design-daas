@@ -25,4 +25,3 @@ class FilestoreConfig:
 
     instance_status_outfile_name: str
     """The filename where output is stored"""
-

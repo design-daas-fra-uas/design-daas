@@ -9,7 +9,10 @@ from app.qweb.common.config import QuartConfig, QuartProcessorConfig
 from quart import Request, Response, Websocket
 
 from app.qweb.logging.logging import LogTarget, Loggable
-from app.qweb.service.service_context import QwebProcessorContexts, ServiceComponent
+from app.qweb.service.service_context import (
+    QwebProcessorContexts,
+    ServiceComponent,
+)
 from app.qweb.service.service_tasks import QwebTaskManager
 
 
@@ -53,6 +56,10 @@ class ApiProcessorAction(Enum):
     UNKNOWN = 1
     HTML = 2
     JSON = 3
+
+
+class ObjectNotFoundError(LookupError):
+    """A task's request object is not in the database (answered with 404)"""
 
 
 @dataclass
@@ -128,14 +135,18 @@ class ProcessorBase(ABC, Loggable):
         }
 
     async def run_apitask(
-        self, ctx: QwebProcessorContexts, proc_request: ProcessorRequest, info, user
+        self,
+        ctx: QwebProcessorContexts,
+        proc_request: ProcessorRequest,
+        info,
+        user,
     ):
         """Runs registerable api task"""
         from app.qweb.common.common import TaskArgs
 
         mancomp: QwebTaskManager = ctx.core.get(ServiceComponent.TASK)
         task = mancomp.get_task_endpoint(proc_request.apitask)
-        if task != "":
+        if task is not None:
             args = TaskArgs(ctx, proc_request, info, user)
             newtask = (task, [args], {})
             return await mancomp.run_apitask_concurrently(newtask)
@@ -152,10 +163,11 @@ class ProcessorBase(ABC, Loggable):
         msg: str,
         status_http: int = 500,
         status_sys: int = 1,
-        data: dict = {},
+        data: Optional[dict] = None,
         exception: Optional[Exception] = None,
     ) -> QwebResult:
         """Create error dict"""
+        data = data if data is not None else {}
         from app.qweb.service.service_runtime import get_qweb_runtime
 
         runtime = get_qweb_runtime()
@@ -171,7 +183,11 @@ class ProcessorBase(ABC, Loggable):
 
     @abstractmethod
     async def process(
-        self, ctx: QwebProcessorContexts, proc_request: ProcessorRequest, info, user
+        self,
+        ctx: QwebProcessorContexts,
+        proc_request: ProcessorRequest,
+        info,
+        user,
     ) -> tuple[Response | dict | str, int]:
         """Proicess output"""
         raise NotImplementedError()

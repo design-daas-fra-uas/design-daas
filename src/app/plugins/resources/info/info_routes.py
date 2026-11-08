@@ -185,6 +185,48 @@ infos = [
         request_args_common=perf_args,
         backends=backends,
     ),
+    BlueprintInfo(
+        endpoint_id=120010,
+        name="get_quota",
+        description=(
+            "Returns the caller's resource limits (own entry or the limits.toml "
+            "fallback) next to what they currently use: VMs, containers, objects, "
+            "CPUs, memory and disk"
+        ),
+        url="/monitoring/get_quota",
+        methods=["POST"],
+        auth_params=AuthenticationMode.ALL,
+        conc_params=ConcurrencyMode.CTX_AND_AUTH,
+        processor=ProcessorType.API,
+        processor_action=ApiProcessorAction.JSON,
+        processor_task=InfoTask.INFO_QUOTA.value,
+        content_type="application/json",
+        request_args_mandatory=[],
+        request_args_optional=[],
+        request_args_common=perf_args,
+        backends=backends,
+    ),
+    BlueprintInfo(
+        endpoint_id=120011,
+        name="get_system_status",
+        description=(
+            "Returns the health of the stack, like `make status`: DaaS backend, "
+            "auth service (actuator), service containers and frontend (admins only)"
+        ),
+        url="/monitoring/get_system_status",
+        methods=["POST"],
+        auth_params=AuthenticationMode.ALL,
+        admin_only=True,
+        conc_params=ConcurrencyMode.CTX_AND_AUTH,
+        processor=ProcessorType.API,
+        processor_action=ApiProcessorAction.JSON,
+        processor_task=InfoTask.INFO_SYSTEM_STATUS.value,
+        content_type="application/json",
+        request_args_mandatory=[],
+        request_args_optional=[],
+        request_args_common=perf_args,
+        backends=backends,
+    ),
 ]
 
 

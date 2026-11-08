@@ -4,7 +4,6 @@ from app.daas.common.enums import BackendName
 from app.qweb.service.service_context import ServiceComponent
 from app.qweb.service.service_tasks import ScheduledTask
 
-
 T = TypeVar("T")
 
 
@@ -52,40 +51,21 @@ async def run_system_task(
     id_owner: int,
     id_object: str = "",
     id_instance: str = "",
-    args: dict = {},
+    args: Optional[dict] = None,
 ) -> Optional[ScheduledTask]:
+    """Starts the system task registered as name in the background"""
     from app.qweb.service.service_tasks import QwebTaskManager
     from app.qweb.common.common import SystemTaskArgs
 
     mancomp: QwebTaskManager = await get_service(ServiceComponent.TASK, QwebTaskManager)
     task = mancomp.get_task_system(name)
-    if task != "":
-        sysargs = SystemTaskArgs(args, "", id_object, id_instance)
+    if task is not None:
+        sysargs = SystemTaskArgs(args or {}, "", id_object, id_instance)
         newtask = (task, [sysargs], {})
         return await mancomp.start_systask(
             name, newtask, True, id_owner, id_object, id_instance
         )
     return None
-
-
-# async def run_systask(
-#     self,
-#     name: str,
-#     ctx: QwebProcessorContexts,
-#     proc_request: ProcessorRequest,
-#     info,
-#     user,
-# ):
-#     """Runs registerable system task"""
-#     from app.qweb.common.common import TaskArgs
-#
-#     mancomp: QwebTaskManager = ctx.core.get(ServiceComponent.TASK)
-#     task = mancomp.get_task_system(name)
-#     if task != "":
-#         args = TaskArgs(ctx, proc_request, info, user)
-#         newtask = (task, [args], {})
-#         return await mancomp.run_systask_concurrently(newtask)
-#     return {}
 
 
 async def get_database(ret_type: Type[T]) -> T:

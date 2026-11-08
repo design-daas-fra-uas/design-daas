@@ -218,7 +218,7 @@ class DockerRequest(Loggable):
                 self._log_info(f"Started service {name} from {image}")
                 return 0, name, ""
         except Exception as exe:
-            self._log_error(f"  1 -> Exception raised1: {exe}")
+            self._log_error(f"Starting service {cfg.name} failed:", 1, exe)
         return 1, "", "Service was not created!"
 
     async def docker_service_stop(self, cfg: ContainerConfigDocker) -> tuple:
@@ -230,7 +230,7 @@ class DockerRequest(Loggable):
             self._log_info(f"Stopped service {cfg.name} from {cfg.image}")
             return 0, "", ""
         except Exception as exe:
-            self._log_error(f"  1 -> Exception raised1: {exe}")
+            self._log_error(f"Stopping service {cfg.name} failed:", 1, exe)
         return 1, "", "Service was not stopped!"
 
     async def docker_container_start(
@@ -240,8 +240,8 @@ class DockerRequest(Loggable):
         cpus: int,
         memory_b: int,
         privileged: bool = False,
-        ports = None,
-        volumes = None,
+        ports=None,
+        volumes=None,
     ) -> tuple:
         """
         Starts a new container based on specified image
@@ -265,7 +265,7 @@ class DockerRequest(Loggable):
                 self._log_info(f"Started container {name} from {image}")
                 return 0, name, ""
         except Exception as exe:
-            self._log_error(f"  1 -> Exception raised1: {exe}")
+            self._log_error(f"Starting container {name} from {image} failed:", 1, exe)
         return 1, "", "Container was not created!"
 
     def _remove_stale_container(self, name: str):
@@ -280,7 +280,8 @@ class DockerRequest(Loggable):
 
     async def docker_container_stop(self, name: str, force: bool) -> tuple:
         """
-        Starts a new container based on specified image
+        Stops (force: kills) the running container called name and waits
+        until it is gone
         """
         if self.docker is None:
             return 1, "", "No docker env"
@@ -301,7 +302,7 @@ class DockerRequest(Loggable):
                             await asyncio.sleep(0.1)
                         return 0, name, ""
                 except Exception as exe:
-                    self._log_error(f"  1 -> Exception raised2: {exe}")
+                    self._log_error(f"Stopping container {name} failed:", 2, exe)
         return 2, "", "No container"
 
     async def docker_get_container_ip(self, container_id: str) -> str:
@@ -366,6 +367,10 @@ class DockerRequest(Loggable):
             result = None
         return result
 
+    def service_container_names(self) -> list[str]:
+        """Names of the service containers of container.toml (guacd, ...)"""
+        return [cfg.name for cfg in self._read_service_config()]
+
     def _read_service_config(self) -> list[ContainerConfigDocker]:
         result = []
         for service in self.config_services.service_containers:
@@ -402,10 +407,12 @@ class DockerRequest(Loggable):
         cpus: int,
         memory_b: int,
         privileged: bool = False,
-        ports: list[str] = [],
-        volumes: list[str] = [],
+        ports: Optional[list[str]] = None,
+        volumes: Optional[list[str]] = None,
     ) -> dict:
 
+        ports = ports if ports is not None else []
+        volumes = volumes if volumes is not None else []
         mapped_ports = self._get_config_ports(ports)
         mapped_volumes = self._get_config_volumes(volumes)
         return {
@@ -455,7 +462,10 @@ class DockerRequest(Loggable):
                         )
                     cntpath = volargs[1]
                     permissions = volargs[2]
-                    mapped_volumes[hostpath] = {"bind": cntpath, "mode": permissions}
+                    mapped_volumes[hostpath] = {
+                        "bind": cntpath,
+                        "mode": permissions,
+                    }
         return mapped_volumes
 
     # pylint: disable=broad-exception-caught

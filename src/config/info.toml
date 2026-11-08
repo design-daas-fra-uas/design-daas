@@ -10,7 +10,7 @@ known_daas_images = [
   "daas-0-mariadb",
   "daas-0-rabbit",
   "daas-0-extensions",
-  "design-daas-application-frontend-web",
+  "daas-frontend",
 ]
 known_daas_vms = []
 # Object fields hidden from API responses

@@ -231,6 +231,47 @@ class MonitoringInfoTool:
                 limits = []
         return MonitoringInfoLimit(limits, limiter.limit_system, limiter.limit_fallback)
 
+    async def create_quota_info(self, userid: int) -> dict:
+        """
+        The user's limits (limits.toml fallback or their own entry) next to
+        what they use now. "used" is computed exactly like the check before a
+        new object or instance is started (RessourceLimits.verify_demand_against_user):
+        a row at its limit means the next start of that kind exceeds it, which
+        is refused unless limits.toml enable_overcommit is set.
+        """
+        limiter = await get_backend_component(BackendName.LIMITS, RessourceLimits)
+        own = await limiter.dbase.get_limit(userid)
+        if own is not None:
+            limit, source = own, "user"
+        elif limiter.config.enable_fallback_userlimit:
+            limit, source = limiter.limit_fallback, "fallback"
+        else:
+            limit, source = None, "none"
+        infotool = Objectinfo()
+        await infotool.initialize()
+        used = await infotool.get_objectinfo_user(userid)
+        rows = [
+            ("vms", used.object_vms, "vm_max", "count"),
+            ("containers", used.object_images, "container_max", "count"),
+            ("objects", used.objects, "obj_max", "count"),
+            ("cpus", used.utilized_cpus, "cpu_max", "count"),
+            ("memory", used.utilized_memory, "mem_max", "bytes"),
+            ("disk", used.utilized_diskspace, "dsk_max", "bytes"),
+        ]
+        return {
+            "source": source,
+            "overcommit": limiter.config.enable_overcommit,
+            "items": [
+                {
+                    "key": key,
+                    "used": value,
+                    "limit": getattr(limit, field) if limit is not None else None,
+                    "unit": unit,
+                }
+                for key, value, field, unit in rows
+            ],
+        }
+
     async def create_monitoring_info_utilization(
         self,
         userid: int = 0,

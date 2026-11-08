@@ -61,7 +61,7 @@ class DaasAuthenticatorBase(QwebAuthenticatorBase):
             elif isinstance(entity, list):
                 return await self.verify_list(entity, owner, is_admin)
             if self.config.enable_log_entity_verification:
-                self._log_info("Verifying ownership error: Invalid entity type")
+                self._log_warn("Verifying ownership error: Invalid entity type")
             return False
         if self.config.enable_log_entity_verification:
             self._log_info(f"Verifying ownership disabled: {True} for owner {owner}")
@@ -76,7 +76,9 @@ class DaasAuthenticatorBase(QwebAuthenticatorBase):
             )
         return result
 
-    async def verify_list(self, entity: list, owner: int, is_admin: bool = False) -> bool:
+    async def verify_list(
+        self, entity: list, owner: int, is_admin: bool = False
+    ) -> bool:
         # Admins may list every user's entries (admin dashboard, e.g. limits)
         if is_admin:
             return True

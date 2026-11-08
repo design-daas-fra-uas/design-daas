@@ -75,7 +75,7 @@ Each step prints a banner like `==== [4/7] Docker images ====`:
 |---|---|---|
 | 1/7 | `proxmox-install` | Proxmox repo + PVE kernel (then **reboot**), then `proxmox-ve`. Skipped when Proxmox is already installed. |
 | 2/7 | `deps` | **All host dependencies** in one place: docker, nginx, dnsmasq, Python build tools, ISO tools, git, jq, ...; docker data root `/home/daas-docker`; `docker-compose`; an SSH key for root (`/root/.ssh/id_rsa`). |
-| 3/7 | `daas-install` `daas-configure` | Python venv + `daas.service` (not started yet); writes `daas.env` into `src/config/*.toml`, the nginx site, the TLS certificate and dnsmasq (DHCP for the instances). |
+| 3/7 | `daas-install` `daas-configure` | Python venv + `daas.service` (not started yet); writes the host values and passwords from `daas.env` to `src/config/local/*.toml`, the nginx site, the TLS certificate and dnsmasq (DHCP for the instances). |
 | 4/7 | `images` | Builds the service containers (`containers-install`) and the desktop images (`images-install`). |
 | 5/7 | `auth-install` | Builds and starts the auth service; creates the admin account on its first start and checks the login. |
 | 6/7 | `frontend-all` `daas-restart` | nginx site :8443, builds and starts the frontend, then starts the DaaS backend (which starts the containers and creates the Proxmox storages and bridges). |
