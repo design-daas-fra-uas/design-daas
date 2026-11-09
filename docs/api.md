@@ -817,6 +817,14 @@ Stops task by user, object or instance
 - Required: `id_owner`, `id_task`, `id_object`, `id_instance`
 - Response: `application/json`
 
+### `POST /admin/delete_user_data`
+
+Deletes everything a user owns before their account is deleted
+
+- Access: admin
+- Required: `id_owner`
+- Response: `application/json`
+
 ## info
 
 ### `POST /monitoring/dashboard_info`

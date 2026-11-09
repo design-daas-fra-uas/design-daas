@@ -268,6 +268,24 @@ infos = [
         backends=backends,
         objects=[LayerObject("entity", ServiceObject.TASK.value, LayerName.TASK.value)],
     ),
+    BlueprintInfo(
+        endpoint_id=140011,
+        name="admin_delete_user_data",
+        description="Deletes everything a user owns before their account is deleted",
+        url="/admin/delete_user_data",
+        methods=["POST"],
+        auth_params=AuthenticationMode.ALL,
+        admin_only=True,
+        conc_params=ConcurrencyMode.CTX_AND_AUTH,
+        processor=ProcessorType.API,
+        processor_action=ApiProcessorAction.JSON,
+        processor_task=AdminTask.ADMIN_DELETE_USER_DATA.value,
+        content_type="application/json",
+        request_args_mandatory=["id_owner"],
+        request_args_optional=[],
+        request_args_common=perf_args,
+        backends=backends,
+    ),
 ]
 
 

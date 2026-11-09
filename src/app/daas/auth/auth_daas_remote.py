@@ -1,5 +1,6 @@
 """Authenticates requests"""
 
+import time
 import aiohttp
 from typing import Optional
 from datetime import datetime, timedelta
@@ -11,6 +12,10 @@ from app.qweb.common.config import QwebAuthenticatorConfig
 from app.qweb.common.qweb_tools import get_database
 from app.qweb.processing.processor import ProcessorRequest
 
+# How long an allow/deny answer of the auth backend is reused. Saves one HTTP
+# call per request; a changed rule takes effect after at most this long.
+PERMISSION_CACHE_SECONDS = 30
+
 
 class DaasRemoteAuthenticator(DaasAuthenticatorBase):
     """Remote authenticator"""
@@ -21,6 +26,8 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
         self.cfg_http = cfg_http
         self.adapter = HttpAdapter(self.cfg_http)
         self.token: Optional[AuthToken] = None
+        # (endpoint, userid) -> (expires at, answer of GET /permissions)
+        self.permission_cache: dict[tuple[str, int], tuple[float, dict]] = {}
         DaasAuthenticatorBase.__init__(self, cfg_auth)
 
     async def initialize(self) -> bool:
@@ -67,8 +74,11 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
         if not self.config.enable_auth_endpoint:
             return user
         if user.authenticated:
-
-            response_remote = await self.get_endpoint_permission(
+            # Admins are always allowed (the auth backend answers the same),
+            # so the call is skipped for them
+            if user.role == "admin":
+                return user
+            response_remote = await self.get_endpoint_permission_cached(
                 info.name, user.id_user
             )
             if (
@@ -121,6 +131,24 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
                             f"200 ->   Viewer token accepted for user '{result.id_user}'"
                         )
         return result
+
+    async def get_endpoint_permission_cached(self, endpoint: str, userid: int) -> dict:
+        """
+        Like get_endpoint_permission, but reuses an allow/deny answer for
+        PERMISSION_CACHE_SECONDS. Errors are never cached, so a backend that
+        is down is asked again on the next request.
+        """
+        key = (endpoint, userid)
+        now = time.monotonic()
+        cached = self.permission_cache.get(key)
+        if cached is not None and cached[0] > now:
+            return cached[1]
+        response = await self.get_endpoint_permission(endpoint, userid)
+        if response.get("result") in ("allow", "deny"):
+            self.permission_cache[key] = (now + PERMISSION_CACHE_SECONDS, response)
+        else:
+            self.permission_cache.pop(key, None)
+        return response
 
     async def get_endpoint_permission(self, endpoint: str, userid: int) -> dict:
         """Get user details"""

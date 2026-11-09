@@ -7,6 +7,7 @@ from app.plugins.resources.admin.admin_tasks import (
     AdminTask,
     admin_assign_app,
     admin_assign_obj_to_user,
+    admin_delete_user_data,
     admin_monitoring_info,
     admin_monitoring_info_apps,
     admin_monitoring_info_files,
@@ -70,6 +71,10 @@ class AdminPlugin(PluginBase):
             (
                 AdminTask.ADMIN_TASK_STOP.value,
                 admin_task_stop,
+            ),
+            (
+                AdminTask.ADMIN_DELETE_USER_DATA.value,
+                admin_delete_user_data,
             ),
         ]
         self.handlers = [handler]
