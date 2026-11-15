@@ -360,7 +360,8 @@ class DockerRequest(Loggable):
         """
         container = await self.docker_container_get(name)
         if container is not None:
-            return 0, f"{container.logs()}", ""
+            # logs() returns bytes: decode them, or the text arrives as a b'...' literal.
+            return 0, container.logs().decode("utf-8", errors="replace"), ""
         code = 1
         msg = f"No container with specified name: {name}"
         self._log_error(msg)
