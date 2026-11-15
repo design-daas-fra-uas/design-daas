@@ -6,6 +6,7 @@ import asyncio
 import os
 import json
 import ast
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Iterator, Optional
 import docker
@@ -338,10 +339,20 @@ class DockerRequest(Loggable):
         if self.docker is None:
             return result
         contlist = self.docker.containers.list()
-        for cont in contlist:
-            info = self.__create_container_info(cont, include_stats)
-            result.append(info)
-        return result
+        if not include_stats or not contlist:
+            return [self.__create_container_info(cont) for cont in contlist]
+        # Docker blocks ~2s per stats call (it samples CPU twice), so ask for all
+        # containers at once, each in its own thread: the list takes as long as
+        # one call and the event loop stays free meanwhile.
+        loop = asyncio.get_running_loop()
+        with ThreadPoolExecutor(max_workers=len(contlist)) as pool:
+            result = await asyncio.gather(
+                *(
+                    loop.run_in_executor(pool, self.__create_container_info, cont, True)
+                    for cont in contlist
+                )
+            )
+        return list(result)
 
     async def docker_container_logs(self, name: str) -> tuple[int, str, str]:
         """

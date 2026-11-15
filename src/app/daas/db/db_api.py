@@ -58,7 +58,9 @@ class DatabaseApi(DatabaseApiBase):
 
     def connect(self):
         """Creates new session"""
-        self.session = Session(self.engine)
+        # One session for the whole process: loaded objects stay readable after
+        # a commit, every select ends its own transaction (see db_session_select).
+        self.session = Session(self.engine, expire_on_commit=False)
         self.connected = True
 
     def disconnect(self):
@@ -97,7 +99,11 @@ class DatabaseApi(DatabaseApiBase):
         """Query the session by using specified mapping"""
         if self.session is None:
             return None
-        qresult = self.session.query(mapping)
+        # A transaction left open (e.g. by a lazy load) would pin an old
+        # REPEATABLE READ snapshot: end it so the query sees committed changes.
+        if self.session.in_transaction():
+            self.session.commit()
+        qresult = self.session.query(mapping).populate_existing()
         if filter is not None:
             qresult = qresult.filter(filter)
         return qresult
@@ -168,7 +174,11 @@ class DatabaseApi(DatabaseApiBase):
         qresult = await self.db_session_query(mapping, filter)
         if qresult is None:
             return []
-        return [x for x in qresult if isinstance(x, ORMEntity)]
+        result = [x for x in qresult if isinstance(x, ORMEntity)]
+        # Ends the read transaction: an open one keeps its snapshot (stale reads)
+        # and metadata locks that block ALTER TABLE on the tables it read.
+        self.session.commit()
+        return result
 
     async def get_table(self, name: str) -> Optional[Table]:
         """Returns associated table object if available"""
