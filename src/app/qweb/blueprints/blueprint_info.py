@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Callable, Optional
 
 from app.qweb.processing.processor import (
     ApiProcessorAction,
@@ -66,6 +67,11 @@ class BlueprintInfo:
     # Changes or deletes the objects it loads: on system objects (owner 0,
     # shared by all users, e.g. templates) only admins may call it
     protect_system_objects: bool = False
+    # Returns the type of object the request creates ("vm", "container") from
+    # its request args and loaded objects. If set, the endpoint permission is
+    # also checked for "<name>_<type>", so rules can tell VMs and containers
+    # apart although both use the same route.
+    permission_type: Optional[Callable[[dict, dict], str]] = None
 
     def __repr__(self):
         return (

@@ -15,6 +15,8 @@ from app.qweb.processing.processor import ProcessorRequest
 # How long an allow/deny answer of the auth backend is reused. Saves one HTTP
 # call per request; a changed rule takes effect after at most this long.
 PERMISSION_CACHE_SECONDS = 30
+# The own (admin) token is renewed this long before it expires
+TOKEN_RENEW_MARGIN_SECONDS = 60
 
 
 class DaasRemoteAuthenticator(DaasAuthenticatorBase):
@@ -99,6 +101,18 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
                     return result
             self._log_error(f"HTTP Remote Auth denied endpoint '{info.name}'", 1)
         return result
+
+    async def verify_permission(self, name: str, user: QwebUser) -> bool:
+        """Asks the auth backend for one more permission of a verified user"""
+        # Same rules as verify_endpoint: off, or an admin, means allowed
+        if not self.config.enable_auth_endpoint or user.role == "admin":
+            return True
+        response_remote = await self.get_endpoint_permission_cached(name, user.id_user)
+        if response_remote.get("result") == "allow":
+            self._log_request(f"200 ->   HTTP Remote Auth success for '{name}'")
+            return True
+        self._log_error(f"HTTP Remote Auth denied permission '{name}'", 1)
+        return False
 
     async def get_user_session(self, bearer: str) -> dict:
         """Verify bearer"""
@@ -192,12 +206,26 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
         }
         if len(data) > 0:
             header["Content-Type"] = "application/json"
-        return await self.adapter.request(method, url, header=header, data=data)
+        response, result = await self.adapter.request(
+            method, url, header=header, data=data
+        )
+        # Own token rejected although not expired (e.g. the auth service was
+        # restarted and signs with a new key): get a new one and retry once
+        if access_token == "" and response is not None and response.status == 401:
+            self._log_request("Own token rejected, requesting a new one")
+            self.token = None
+            header["Authorization"] = (
+                f"Bearer {await self.__choose_bearer_token(access_token)}"
+            )
+            response, result = await self.adapter.request(
+                method, url, header=header, data=data
+            )
+        return response, result
 
     async def __choose_bearer_token(self, access_token: str) -> str:
         if access_token == "":
-            if self.token is None:
-                await self.refresh_session()
+            # Checks the expiry of the own token and fetches a new one if needed
+            await self.refresh_session()
             if self.token is not None:
                 return self.token.access_token
             return ""
@@ -223,7 +251,9 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
 
     def __check_token(self):
         if self.token is not None:
-            if datetime.now() < self.token.valid_until:
+            # Renew a little early, so a token does not expire on its way
+            margin = timedelta(seconds=TOKEN_RENEW_MARGIN_SECONDS)
+            if datetime.now() + margin < self.token.valid_until:
                 pass
             else:
                 obj = self.token.valid_until

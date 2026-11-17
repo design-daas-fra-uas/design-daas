@@ -74,6 +74,14 @@ class QwebAuthenticatorBase(Loggable):
         """Verifies only endpoint"""
         raise NotImplementedError("Not implemented")
 
+    async def verify_permission(self, name: str, user: QwebUser) -> bool:
+        """
+        Checks one more permission of an already verified user, e.g. the typed
+        permission of a route (see BlueprintInfo.permission_type). Allowed
+        unless an authenticator with permission rules says otherwise.
+        """
+        return True
+
     async def _sleep(self, time_s: float):
         if time_s > 0:
             await asyncio.sleep(time_s)

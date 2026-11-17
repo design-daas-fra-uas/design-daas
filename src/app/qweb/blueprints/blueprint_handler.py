@@ -167,6 +167,13 @@ class BlueprintHandler(BlueprintHandlerBase):
             return await self._create_error_response(
                 "Only admins may change system objects", 403, content_type=ctype
             )
+        if await self.__typed_permission_denied(
+            ctx.objects.objects, req, authres, info
+        ):
+            ctype = await self.get_requested_content_type(info)
+            return await self._create_error_response(
+                "Permission denied", 403, content_type=ctype
+            )
         verified = await self.__verify_entity_ownerships(
             ctx.objects.objects, authres, info
         )
@@ -229,6 +236,13 @@ class BlueprintHandler(BlueprintHandlerBase):
             ctype = await self.get_requested_content_type(info)
             return await self._create_error_response(
                 "Only admins may change system objects", 403, content_type=ctype
+            )
+        if await self.__typed_permission_denied(
+            ctxres.objects.objects, req, authres, info
+        ):
+            ctype = await self.get_requested_content_type(info)
+            return await self._create_error_response(
+                "Permission denied", 403, content_type=ctype
             )
         verified = await self.__verify_entity_ownerships(
             ctxres.objects.objects, authres, info
@@ -300,6 +314,13 @@ class BlueprintHandler(BlueprintHandlerBase):
             ctype = await self.get_requested_content_type(info)
             return await self._create_error_response(
                 "Only admins may change system objects", 403, content_type=ctype
+            )
+        if await self.__typed_permission_denied(
+            ctx.objects.objects, req, authres, info
+        ):
+            ctype = await self.get_requested_content_type(info)
+            return await self._create_error_response(
+                "Permission denied", 403, content_type=ctype
             )
         verified = await self.__verify_entity_ownerships(
             ctx.objects.objects, authres, info
@@ -406,6 +427,24 @@ class BlueprintHandler(BlueprintHandlerBase):
                 )
                 return True
         return False
+
+    async def __typed_permission_denied(
+        self, objects: dict, req: ProcessorRequest, user: QwebUser, info: BlueprintInfo
+    ) -> bool:
+        if info.permission_type is None:
+            return False
+        obj_type = info.permission_type(req.request_context.request_args, objects)
+        # Unknown type: the task itself rejects the request
+        if obj_type == "":
+            return False
+        name = f"{info.name}_{obj_type}"
+        authman = await self._get_authmanager()
+        if await authman.verify_permission(name, user):
+            return False
+        self._log_error(
+            f"User {user.id_user} (role '{user.role}') denied permission {name}", 1
+        )
+        return True
 
     async def __verify_entity_ownerships(
         self, objects: dict, user: QwebUser, info: BlueprintInfo
