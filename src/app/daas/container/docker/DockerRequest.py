@@ -518,10 +518,12 @@ class DockerRequest(Loggable):
         imginfo = DockerImageInfo(name, cont.image.attrs, cont.image.tags)
         if detailed is True:
             stats_raw = cont.stats(stream=False)
-            stats_cpu = stats_raw["cpu_stats"]
-            stats_mem = stats_raw["memory_stats"]
-            stats_disk = stats_raw["blkio_stats"]
-            stats_net = stats_raw["networks"]
+            # Docker leaves out a section it has no data for, e.g. "networks"
+            # for a container with --network host (daas-auth)
+            stats_cpu = stats_raw.get("cpu_stats", {})
+            stats_mem = stats_raw.get("memory_stats", {})
+            stats_disk = stats_raw.get("blkio_stats", {})
+            stats_net = stats_raw.get("networks", {})
         result = DockerContainerInfo(
             name,
             cont.id,
