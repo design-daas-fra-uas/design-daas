@@ -187,6 +187,39 @@ toml_string() {
     printf '"%s"' "$value"
 }
 
+# sql_string VALUE: VALUE as a quoted MariaDB string literal
+sql_string() {
+    local value="$1"
+    value="${value//\\/\\\\}"
+    value="${value//\'/\'\'}"
+    printf "'%s'" "$value"
+}
+
+# The DaaS MariaDB (installer/mariadb), shared by the DaaS backend (mergedb)
+# and the auth service (AUTH_DB_NAME). Connections to its published port
+# 127.0.0.1:3306 arrive from the docker host address below.
+DAAS_DB_CONTAINER="daas-0-mariadb"
+DAAS_DB_CLIENT_HOST="172.17.0.1"
+
+# daas_db_sql [ARGS...]: run the SQL on stdin as root in the DaaS MariaDB
+# (ARGS go to the mariadb client); the root password stays in the container
+daas_db_sql() {
+    docker exec -i "$DAAS_DB_CONTAINER" sh -c 'MYSQL_PWD="$MARIADB_ROOT_PASSWORD" exec mariadb -uroot "$@"' sh "$@"
+}
+
+# wait_daas_db [TRIES]: wait until the DaaS MariaDB accepts logins (2s per
+# try, default 60 tries). Returns 1 on timeout.
+wait_daas_db() {
+    local tries="${1:-60}" i
+    for (( i = 1; i <= tries; i++ )); do
+        if daas_db_sql -e 'SELECT 1' >/dev/null 2>&1; then
+            return 0
+        fi
+        sleep 2
+    done
+    return 1
+}
+
 # load_env_file FILE: export KEY=value lines from FILE.
 # Values are taken literally (no $ expansion, unlike `source`), so passwords
 # may contain any character. Surrounding single/double quotes are removed.
@@ -221,7 +254,7 @@ load_stack_env() {
     local pair old new
     for pair in JAVA_BACKEND_FOLDER:AUTH_FOLDER JAVA_PORT:AUTH_PORT JAVA_PROFILE:AUTH_PROFILE \
             JAVA_DB_NAME:AUTH_DB_NAME JAVA_DB_USER:AUTH_DB_USER \
-            JAVA_DB_PASSWORD:AUTH_DB_PASSWORD JAVA_DB_ROOT_PASSWORD:AUTH_DB_ROOT_PASSWORD; do
+            JAVA_DB_PASSWORD:AUTH_DB_PASSWORD; do
         old="${pair%%:*}" new="${pair##*:}"
         if [[ -n "${!old:-}" && -z "${!new:-}" ]]; then
             export "$new=${!old}"

@@ -110,7 +110,7 @@ usage:
 	@echo "    daas-install            [3/7] DaaS backend: Python venv, daas.service"
 	@echo "    daas-configure                $(notdir $(ENV_FILE)) -> src/config/local/*.toml, nginx, TLS, dnsmasq"
 	@echo "    images                  [4/7] Docker images: containers-install + images-install"
-	@echo "    auth-install            [5/7] auth service (users, login) + its MariaDB"
+	@echo "    auth-install            [5/7] auth service (users, login), data in the DaaS MariaDB"
 	@echo "    frontend-all            [6/7] Frontend: nginx site :8443 + build + frontend.service"
 	@echo "    daas-restart                  Start the DaaS backend (it starts the containers)"
 	@echo "    iso-install             [7/7] Build the install ISOs, upload them (skip: SKIP_ISOS=1)"
@@ -439,8 +439,8 @@ auth-admin-password: require-env
 	./auth/set-admin-password.bash -e "$(ENV_FILE)"
 
 # Saves the database (users, permissions) and signing keys to auth/backups/
-auth-backup:
-	./auth/backup.bash
+auth-backup: require-env
+	./auth/backup.bash -e "$(ENV_FILE)"
 
 auth-reinstall: require-env
 	$(MAKE) auth-delete auth-install

@@ -5,7 +5,7 @@
 #   service.bash [-e <env-file>] <action> [-p] <component>...
 #
 # Components, by kind:
-#   service    auth (daas-auth.service: auth service + its MariaDB)
+#   service    auth (daas-auth.service: auth service; its data is in db)
 #              daas (daas.service), frontend (frontend.service)
 #   container  guacd, rabbit, db, extensions: images built from installer/
 #              (guacd, rabbit, mariadb, extensions); the DaaS backend starts
@@ -135,6 +135,11 @@ do_start() {
         service)
             unit="$(unit_of "$c").service"
             [[ -f "/etc/systemd/system/$unit" ]] || die "$unit is not installed (make $c-install)"
+            # The auth service keeps its data in the DaaS MariaDB, which the
+            # DaaS backend starts only after it (it logs in through auth)
+            if [[ "$c" == auth ]] && ! container_running db; then
+                do_start db start
+            fi
             run systemctl "$action" "$unit"
             sleep 2
             check_active "$unit"
@@ -285,7 +290,12 @@ do_delete() {
     local c="$1" name image
     case "$(kind_of "$c")" in
         service)
-            "$DAAS_INSTALLER_DIR/$c/delete.bash" $PURGE
+            if [[ "$c" == auth ]]; then
+                # Its database lives in the DaaS MariaDB; -p needs the env file for its name
+                "$DAAS_INSTALLER_DIR/$c/delete.bash" $PURGE ${ENV_FILE:+-e "$ENV_FILE"}
+            else
+                "$DAAS_INSTALLER_DIR/$c/delete.bash" $PURGE
+            fi
             ;;
         container|image)
             name="$(container_of "$c")"

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
-# Checks the running auth service (see README.md): service and containers,
-# the token endpoint, the admin login (directly as the DaaS backend uses it,
-# and through nginx /auth/ as the frontend uses it), its data volumes, and
-# that user instances cannot reach it directly. Changes nothing; the admin
+# Checks the running auth service (see README.md): service and container,
+# its database in the DaaS MariaDB, the admin login (directly as the DaaS
+# backend uses it, and through nginx /auth/ as the frontend uses it), its
+# keys volume, and that user instances cannot reach it directly. Changes nothing; the admin
 # password is never printed.
 #
 # Usage: ./check.bash -e <env-file>     (run as root)
@@ -44,10 +44,13 @@ login() {
 echo "Checking the auth service on 127.0.0.1:$AUTH_PORT and $AUTH_PUBLIC_URL"
 
 if systemctl is-active --quiet daas-auth.service; then ok "daas-auth.service running"; else fail "daas-auth.service not running (make auth-logs)"; fi
-for c in daas-auth daas-auth-db; do
+for c in daas-auth "$DAAS_DB_CONTAINER"; do
     state="$(docker inspect -f '{{.State.Status}}{{if .State.Health}} {{.State.Health.Status}}{{end}}' "$c" 2>/dev/null)"
     if [[ "$state" == running* && "$state" != *unhealthy* ]]; then ok "container $c ($state)"; else fail "container $c: ${state:-missing}"; fi
 done
+
+n="$(daas_db_sql -N -e "SELECT COUNT(*) FROM \`$AUTH_DB_NAME\`.users" 2>/dev/null)"
+if [[ "$n" =~ ^[0-9]+$ ]]; then ok "database $AUTH_DB_NAME in $DAAS_DB_CONTAINER ($n users)"; else fail "database $AUTH_DB_NAME in $DAAS_DB_CONTAINER not readable"; fi
 
 c="$(login "$DIRECT")"
 if [[ "$c" == 200 ]]; then
@@ -61,20 +64,19 @@ fi
 c="$(login "$AUTH_PUBLIC_URL" --cacert /etc/nginx/ssl/daas-ca.crt --resolve "$URL_HOST:$URL_PORT:127.0.0.1")"
 if [[ "$c" == 200 ]]; then ok "admin login on $AUTH_PUBLIC_URL (as the frontend, through nginx)"; else fail "admin login on $AUTH_PUBLIC_URL: HTTP $c (502 = auth service down, 000 = TLS/nginx)"; fi
 
-for v in daas-auth_db-data daas-auth_keys; do
-    if docker volume inspect "$v" >/dev/null 2>&1; then ok "volume $v"; else fail "volume $v missing"; fi
-done
+if docker volume inspect daas-auth_keys >/dev/null 2>&1; then ok "volume daas-auth_keys"; else fail "volume daas-auth_keys missing"; fi
 
-# User instances live on the default docker bridge; they must not reach the auth service
-ip="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' daas-auth 2>/dev/null)"
+# User instances live on the default docker bridge; they must not reach the
+# auth service, which runs on the host network bound to 127.0.0.1
+ip="$DAAS_DB_CLIENT_HOST"
 probe=""
 for c in $(docker ps -q --filter network=bridge); do
     docker exec "$c" sh -c 'command -v bash' >/dev/null 2>&1 && { probe="$c"; break; }
 done
 if [[ -z "$probe" || -z "$ip" ]]; then
     info "No container on the default bridge to test isolation from"
-elif docker exec "$probe" sh -c "timeout 3 bash -c 'exec 3<>/dev/tcp/$ip/8080'" >/dev/null 2>&1; then
-    fail "auth service container $ip:8080 is reachable from containers on the default bridge"
+elif docker exec "$probe" sh -c "timeout 3 bash -c 'exec 3<>/dev/tcp/$ip/$AUTH_PORT'" >/dev/null 2>&1; then
+    fail "auth service $ip:$AUTH_PORT is reachable from containers on the default bridge"
 else
     ok "not reachable from the default docker bridge (instances)"
 fi

@@ -12,7 +12,7 @@ After `make install` one host runs the whole stack:
 | Proxmox VE | Runs the VM instances (web UI for admins) | `https://<host>:8006` |
 | DaaS backend | Python API that creates and controls the instances (`daas.service`) | `https://<host>` (nginx :443) |
 | Frontend | React web app the users work in (`frontend.service`) | `https://<host>:8443` |
-| auth service | Users, login (OAuth), permissions (`daas-auth.service`) + its own MariaDB | `https://<host>:8443/auth` |
+| auth service | Users, login (OAuth), permissions (`daas-auth.service`); data in the DaaS MariaDB (`daas-0-mariadb`, database `design_backend`) | `https://<host>:8443/auth` |
 | Service containers | `guacd`, `rabbit`, `db` (MariaDB: the DaaS backend's database), `extensions`; started and stopped by the DaaS backend | docker |
 | Desktop images | `x11vnc`, `wine`; the DaaS backend starts one container per instance | docker |
 | ISOs | Unattended install ISOs (win10, win11, debian12) in the `daas-iso` storage | Proxmox |
@@ -48,7 +48,7 @@ This copies `daas.env.example` to `daas.env` (mode 600, not committed). Edit it:
 - **Host**: `HOST_NAME`, `HOST_DOMAIN`, `HOST_IP`, `HOST_NUMBER`, `NET_DEVICE`.
   Set `STANDALONE=yes` for a single host without an uplink bridge.
 - **Passwords**: change `ADMIN_PASSWORD`, `AUTH_DB_PASSWORD`,
-  `AUTH_DB_ROOT_PASSWORD` (every `change-me-*` value). `ADMIN_EMAIL` /
+  `DAAS_DB_PASSWORD` (every `change-me-*` value). `ADMIN_EMAIL` /
   `ADMIN_PASSWORD` is the first admin account you log in with.
 - Optional: other public URLs (DNS alias, reverse proxy), mail settings.
 

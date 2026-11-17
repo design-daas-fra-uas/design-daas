@@ -1,8 +1,11 @@
-# mariadb: the DaaS backend's database
+# mariadb: the database of the whole stack
 
-MariaDB **11.4** (LTS) for the **DaaS backend**: VMs, containers, instances,
-apps, files and limits (`src/config/db.toml`, `db_type = "mariadb"`).
-Separate from the auth service's own MariaDB (`daas-auth-db`).
+MariaDB **11.4** (LTS), the one database server of the stack:
+
+| Database | Used by | Content |
+|---|---|---|
+| `mergedb` | **DaaS backend** (`src/config/db.toml`, `db_type = "mariadb"`) | VMs, containers, instances, apps, files and limits |
+| `design_backend` (`AUTH_DB_NAME`) | **auth service** ([`../auth`](../auth/README.md)) | users, groups, OAuth tokens, permissions |
 
 ## How it is used
 
@@ -14,6 +17,11 @@ Separate from the auth service's own MariaDB (`daas-auth-db`).
   `src/config/local/db.toml`, not in git) to the database `mergedb`, and
   creates missing tables itself on start. It waits up to 60 s for MariaDB
   to accept connections after starting the container.
+- The auth service connects as its own user `AUTH_DB_USER@172.17.0.1`, with
+  rights on `AUTH_DB_NAME` only; `make auth-install` creates both. Since the
+  DaaS backend starts and stops this container, the auth service is down
+  while the DaaS backend is stopped (`make auth-start` starts the container
+  first; the auth service reconnects on its own).
 
 ## Security
 
@@ -47,7 +55,7 @@ From `installer/mariadb/`, as root:
 | `make check` | Starts a test container with its own empty data folder on 127.0.0.1:13306 (does not touch `daas-0-mariadb`), checks the version, that root logs in from the host but **not** from the docker bridge, and that the old public password is refused. Removes it again |
 | `make clean` | Removes the image |
 
-Look inside:
+Look inside (`design_backend` for the auth service):
 
 ```bash
 docker exec -it daas-0-mariadb sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" mergedb'
@@ -61,6 +69,11 @@ system, change it in MariaDB too
 `make db-install daas-configure daas-restart`.
 
 ## History
+
+On 2026-11-17 the auth service's own MariaDB (`daas-auth-db`, volume
+`daas-auth_db-data`) was merged into this one as the database
+`design_backend` (checksums of all 17 tables compared equal) and then
+removed. The last dump of it is `installer/auth/backups/db-final-20261117-160301.sql.gz`.
 
 Until 2026-11-05 the backend used SQLite (`src/data/db/sqlite/mergedb.sqlite3`)
 and this container ran unused, with a public root password. the SQLite file

@@ -1,15 +1,26 @@
 #!/usr/bin/env bash
 #
 # Backs up the auth service's data while it runs (see README.md):
-#   db-<time>.sql.gz    the database: all users, roles and permissions
+#   db-<time>.sql.gz    its database AUTH_DB_NAME in the DaaS MariaDB: all
+#                       users, roles and permissions
 #   keys-<time>.tar.gz  the token signing keys (without them every issued
 #                       token becomes invalid)
 # into installer/auth/backups/ (root only, not committed). The passwords
 # stay inside the containers and never show up in the log.
 #
-# Usage: ./backup.bash [<backup-folder>]
+# Usage: ./backup.bash -e <env-file> [<backup-folder>]
 
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.bash"
+
+ENV_FILE=""
+while getopts ":e:" o; do
+    case "$o" in
+        e) ENV_FILE="$OPTARG" ;;
+        *) echo "Usage: $0 -e <env-file> [<backup-folder>]" >&2; exit 1 ;;
+    esac
+done
+shift $((OPTIND - 1))
+[[ -n "$ENV_FILE" ]] || { echo "Usage: $0 -e <env-file> [<backup-folder>]" >&2; exit 1; }
 
 BACKUP_DIR="${1:-$DAAS_INSTALLER_DIR/auth/backups}"
 STAMP="$(date +%Y%m%d-%H%M%S)"
@@ -18,17 +29,19 @@ KEYS_FILE="$BACKUP_DIR/keys-$STAMP.tar.gz"
 
 require_root
 require_cmds docker gzip tar
-for c in daas-auth-db daas-auth; do
+load_stack_env "$ENV_FILE" >/dev/null
+[[ "$AUTH_DB_NAME" =~ ^[A-Za-z0-9_]+$ ]] || die "Unexpected characters in AUTH_DB_NAME"
+for c in "$DAAS_DB_CONTAINER" daas-auth; do
     [[ -n "$(docker ps -q --filter "name=^$c$")" ]] || die "$c is not running (make auth-start)"
 done
 
 mkdir -p -m 700 "$BACKUP_DIR"
 umask 077
 
-step "Database -> $DB_FILE"
+step "Database $AUTH_DB_NAME -> $DB_FILE"
 # --single-transaction: a consistent dump without locking the running app
-docker exec daas-auth-db sh -c 'exec mariadb-dump -uroot -p"$MARIADB_ROOT_PASSWORD" \
-    --single-transaction --routines --triggers --databases "$MARIADB_DATABASE"' \
+docker exec "$DAAS_DB_CONTAINER" sh -c 'MYSQL_PWD="$MARIADB_ROOT_PASSWORD" exec mariadb-dump -uroot \
+    --single-transaction --routines --triggers --databases "$1"' sh "$AUTH_DB_NAME" \
     | gzip > "$DB_FILE"
 gzip -t "$DB_FILE" || die "The database dump is broken"
 tables="$(gzip -dc "$DB_FILE" | grep -c '^CREATE TABLE')"
