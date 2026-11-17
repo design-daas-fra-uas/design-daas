@@ -1,5 +1,6 @@
 """Auth plugin"""
 
+from app.daas.auth.auth_daas_remote import DaasRemoteAuthenticator
 from app.daas.common.enums import ConfigFile, ConfigSections
 from app.qweb.common.config import (
     QwebAuthenticatorConfig,
@@ -7,6 +8,7 @@ from app.qweb.common.config import (
     QwebRemoteAuthenticatorConfig,
 )
 from app.qweb.service.service_plugin import LoadOrder, PluginBase
+from app.qweb.service.service_runtime import get_qweb_runtime
 from app.plugins.core.auth.auth_backend import AuthBackend
 from app.plugins.core.auth.auth_routes import handler
 
@@ -47,3 +49,13 @@ class AuthPlugin(PluginBase):
             apitasks=self.apitasks,
             authenticator=self.backend.auth,
         )
+
+    async def plugin_start(self) -> bool:
+        """Connects the backend and sends the route list to the auth service"""
+        result = await super().plugin_start()
+        # All plugins are registered before the first one starts, so the
+        # runtime knows every route here
+        if isinstance(self.backend.auth, DaasRemoteAuthenticator):
+            routes = list(get_qweb_runtime().blueprints.values())
+            self.backend.auth.start_endpoint_sync(routes)
+        return result

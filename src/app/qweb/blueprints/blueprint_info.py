@@ -12,6 +12,9 @@ from app.qweb.processing.processor import (
     WebsocketProcessorAction,
 )
 
+# Every type a permission_type function can return (see BlueprintInfo)
+PERMISSION_TYPES = ("vm", "container")
+
 
 class ConcurrencyMode(Enum):
     """File action"""
@@ -77,3 +80,19 @@ class BlueprintInfo:
         return (
             f"{self.__class__.__qualname__}" f"(id={self.endpoint_id},name={self.name})"
         )
+
+    def permission_names(self) -> list[tuple[str, str]]:
+        """
+        The names (with a description) the auth service may be asked for
+        about this route: none if the route has no endpoint check, else its
+        name and, with permission_type, "<name>_<type>" for every type.
+        """
+        if self.auth_params != AuthenticationMode.ALL:
+            return []
+        result = [(self.name, self.description)]
+        if self.permission_type is not None:
+            for obj_type in PERMISSION_TYPES:
+                result.append(
+                    (f"{self.name}_{obj_type}", f"{self.description} ({obj_type})")
+                )
+        return result

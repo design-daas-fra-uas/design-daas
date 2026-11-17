@@ -1,5 +1,6 @@
 """Authenticates requests"""
 
+import asyncio
 import time
 import aiohttp
 from typing import Optional
@@ -17,6 +18,9 @@ from app.qweb.processing.processor import ProcessorRequest
 PERMISSION_CACHE_SECONDS = 30
 # The own (admin) token is renewed this long before it expires
 TOKEN_RENEW_MARGIN_SECONDS = 60
+# Wait between two tries to send the route list (the auth service may start
+# after DaaS)
+ENDPOINT_SYNC_RETRY_SECONDS = 60
 
 
 class DaasRemoteAuthenticator(DaasAuthenticatorBase):
@@ -30,6 +34,7 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
         self.token: Optional[AuthToken] = None
         # (endpoint, userid) -> (expires at, answer of GET /permissions)
         self.permission_cache: dict[tuple[str, int], tuple[float, dict]] = {}
+        self.endpoint_sync_task: Optional[asyncio.Task] = None
         DaasAuthenticatorBase.__init__(self, cfg_auth)
 
     async def initialize(self) -> bool:
@@ -113,6 +118,40 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
             return True
         self._log_error(f"HTTP Remote Auth denied permission '{name}'", 1)
         return False
+
+    def start_endpoint_sync(self, infos: list[BlueprintInfo]) -> None:
+        """
+        Sends the route list to the auth service in the background, so the
+        endpoints rules can target always match the code. Tried again until it
+        works, so DaaS also starts while the auth service is down.
+        """
+        self.endpoint_sync_task = asyncio.create_task(self.__sync_endpoints(infos))
+
+    async def __sync_endpoints(self, infos: list[BlueprintInfo]) -> None:
+        names: dict[str, str] = {}
+        for info in infos:
+            for name, description in info.permission_names():
+                names[name] = description
+        endpoints = [
+            {"functionName": name, "description": description}
+            for name, description in sorted(names.items())
+        ]
+        url = f"{self.cfg_auth.remote.url}/endpoints/sync"
+        while True:
+            try:
+                response, data = await self.__request_api(
+                    "put", url, data={"endpoints": endpoints}
+                )
+            except Exception:  # pylint: disable=broad-exception-caught
+                response, data = None, {}
+            if response is not None and response.status == 200:
+                self._log_info(
+                    f"Endpoints synced ({len(endpoints)}): added {data.get('added')}, "
+                    f"updated {data.get('updated')}, obsolete {data.get('obsolete')}"
+                )
+                return
+            self.__log_http_error(url, response)
+            await asyncio.sleep(ENDPOINT_SYNC_RETRY_SECONDS)
 
     async def get_user_session(self, bearer: str) -> dict:
         """Verify bearer"""
