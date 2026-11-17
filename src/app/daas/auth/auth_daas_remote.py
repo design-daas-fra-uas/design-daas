@@ -147,7 +147,7 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
             if response is not None and response.status == 200:
                 self._log_info(
                     f"Endpoints synced ({len(endpoints)}): added {data.get('added')}, "
-                    f"updated {data.get('updated')}, obsolete {data.get('obsolete')}"
+                    f"updated {data.get('updated')}, deleted {data.get('deleted')}"
                 )
                 return
             self.__log_http_error(url, response)
