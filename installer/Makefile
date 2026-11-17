@@ -51,10 +51,10 @@ IMAGES := x11vnc wine
 HOST := nginx dnsmasq docker proxmox
 COMPONENTS := $(SERVICES) $(CONTAINERS) $(IMAGES) $(HOST) iso
 # Folder in installer/ with the Makefile of each image
-IMAGE_DIR_db := mariadb
+IMAGE_DIR_db := postgres
 image_dir = $(or $(IMAGE_DIR_$(1)),$(1))
 # Container name of each service container (as in src/config/container.toml)
-CONTAINER_NAME_db := daas-0-mariadb
+CONTAINER_NAME_db := daas-0-postgres
 container_name = $(or $(CONTAINER_NAME_$(1)),daas-0-$(1))
 ACTIONS := start stop restart status logs delete
 LIFECYCLE := $(foreach c,$(COMPONENTS),$(addprefix $(c)-,$(ACTIONS)))
@@ -110,7 +110,7 @@ usage:
 	@echo "    daas-install            [3/7] DaaS backend: Python venv, daas.service"
 	@echo "    daas-configure                $(notdir $(ENV_FILE)) -> src/config/local/*.toml, nginx, TLS, dnsmasq"
 	@echo "    images                  [4/7] Docker images: containers-install + images-install"
-	@echo "    auth-install            [5/7] auth service (users, login), data in the DaaS MariaDB"
+	@echo "    auth-install            [5/7] auth service (users, login), data in the DaaS PostgreSQL"
 	@echo "    frontend-all            [6/7] Frontend: nginx site :8443 + build + frontend.service"
 	@echo "    daas-restart                  Start the DaaS backend (it starts the containers)"
 	@echo "    iso-install             [7/7] Build the install ISOs, upload them (skip: SKIP_ISOS=1)"
@@ -126,7 +126,7 @@ usage:
 	@echo ""
 	@echo "  Options: PURGE=1          delete/reinstall also delete the data"
 	@echo "                            (auth: DB + keys, daas: src/data + nginx site,"
-	@echo "                            frontend: nginx site, db: src/data/db/mariadb)"
+	@echo "                            frontend: nginx site, db: src/data/db/postgres)"
 	@echo "           SKIP_ISOS=1      install without generating/uploading ISOs"
 	@echo ""
 	@echo "ONE COMPONENT  make <component>-<action>"
@@ -218,7 +218,7 @@ deps:
 reset:
 	@[ "$(CONFIRM)" = yes ] || { \
 		echo "make reset deletes ALL data of the DaaS stack, for good:"; \
-		echo "  - the DaaS database (src/data/db/mariadb) and src/data"; \
+		echo "  - the DaaS database (src/data/db/postgres) and src/data"; \
 		echo "  - the auth service's users, permissions and token keys"; \
 		echo "  - all instance containers and user images (daas.*)"; \
 		echo "  - the service containers and all images the installer built"; \

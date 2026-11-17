@@ -2,8 +2,9 @@
 #
 # Installs the auth service (users, OAuth tokens, permissions) as
 # daas-auth.service (docker-compose, 127.0.0.1:AUTH_PORT). Its data lives in
-# the DaaS MariaDB (daas-0-mariadb), database AUTH_DB_NAME: this script starts
-# that container if needed and creates the database and AUTH_DB_USER there.
+# the DaaS PostgreSQL (daas-0-postgres), database AUTH_DB_NAME: this script
+# starts that container if needed and creates the database and AUTH_DB_USER
+# there.
 # All settings come from the stack env file (installer/daas.env).
 #
 # The image is rebuilt from the current Java code on every run; the
@@ -65,16 +66,21 @@ if [[ -z "$(docker ps -q --filter "name=^$DAAS_DB_CONTAINER$")" ]]; then
 fi
 wait_daas_db || die "$DAAS_DB_CONTAINER does not accept logins (make db-logs)"
 
-# Own user with rights on its database only. The password is set on every
-# run, so a changed AUTH_DB_PASSWORD takes effect with auth-install.
-DB_USER="$(sql_string "$AUTH_DB_USER")@$(sql_string "$DAAS_DB_CLIENT_HOST")"
+# Own user that owns its database and may connect to no other (the image
+# takes CONNECT on mergedb away from everyone else). pg_hba.conf lets it log
+# in from the docker host only. The password is set on every run, so a
+# changed AUTH_DB_PASSWORD takes effect with auth-install.
+# \gexec runs the CREATE only when the SELECT returns it (no IF NOT EXISTS
+# for databases in PostgreSQL).
 daas_db_sql <<SQL
-CREATE DATABASE IF NOT EXISTS \`$AUTH_DB_NAME\` CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci;
-CREATE USER IF NOT EXISTS $DB_USER;
-ALTER USER $DB_USER IDENTIFIED BY $(sql_string "$AUTH_DB_PASSWORD");
-GRANT ALL PRIVILEGES ON \`$AUTH_DB_NAME\`.* TO $DB_USER;
+SELECT 'CREATE ROLE "$AUTH_DB_USER" LOGIN'
+    WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '$AUTH_DB_USER')\\gexec
+ALTER ROLE "$AUTH_DB_USER" WITH LOGIN PASSWORD $(sql_string "$AUTH_DB_PASSWORD");
+SELECT 'CREATE DATABASE "$AUTH_DB_NAME" OWNER "$AUTH_DB_USER"'
+    WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '$AUTH_DB_NAME')\\gexec
+REVOKE CONNECT, TEMPORARY ON DATABASE "$AUTH_DB_NAME" FROM PUBLIC;
 SQL
-success "Database $AUTH_DB_NAME, user $AUTH_DB_USER@$DAAS_DB_CLIENT_HOST"
+success "Database $AUTH_DB_NAME, user $AUTH_DB_USER (logs in from $DAAS_DB_CLIENT_HOST)"
 
 # ============================================================
 step "Compose env ($COMPOSE_ENV)"
@@ -104,7 +110,7 @@ step "systemd unit: $SERVICE_NAME.service"
 write_file "/etc/systemd/system/$SERVICE_NAME.service" <<EOF
 [Unit]
 Description=Design DaaS auth service (users, OAuth, permissions)
-# Its database daas-0-mariadb is started by daas.service
+# Its database daas-0-postgres is started by daas.service
 After=docker.service network-online.target
 Requires=docker.service
 

@@ -1,0 +1,5 @@
+# Only these files are needed
+*
+!Dockerfile
+!pg_hba.conf
+!init.sh

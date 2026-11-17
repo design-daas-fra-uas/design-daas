@@ -5,10 +5,10 @@
 #   - the daas-auth container
 #   - the daas-auth image (rebuilt from the current code on install)
 #
-# Kept: its database in the DaaS MariaDB and the token signing keys (docker
+# Kept: its database in the DaaS PostgreSQL and the token signing keys (docker
 # volume), so users, permissions and issued tokens survive a reinstall.
 # With -p (needs -e <env-file>) also:
-#   - the database AUTH_DB_NAME and the user AUTH_DB_USER in daas-0-mariadb
+#   - the database AUTH_DB_NAME and the user AUTH_DB_USER in daas-0-postgres
 #     (ALL users and permissions are lost; the admin is created again on the
 #     next start), and the volume daas-auth_keys
 #   - the generated compose env (installer/auth/.env)
@@ -23,7 +23,7 @@ AUTH_DIR="$DAAS_INSTALLER_DIR/auth"
 CONTAINERS=(daas-auth)
 IMAGE="daas-auth"
 VOLUMES=(daas-auth_keys)
-# Left over from before the auth service used the DaaS MariaDB
+# Left over from before the auth service used the DaaS database
 OLD_CONTAINERS=(daas-auth-db)
 OLD_VOLUMES=(daas-auth_db-data)
 NETWORK="daas-auth_default"
@@ -86,8 +86,8 @@ else
     warn "Deleting the auth service database and signing keys"
     if [[ -n "$(docker ps -q --filter "name=^$DAAS_DB_CONTAINER$")" ]]; then
         daas_db_sql <<SQL
-DROP DATABASE IF EXISTS \`$AUTH_DB_NAME\`;
-DROP USER IF EXISTS $(sql_string "$AUTH_DB_USER")@$(sql_string "$DAAS_DB_CLIENT_HOST");
+DROP DATABASE IF EXISTS "$AUTH_DB_NAME" WITH (FORCE);
+DROP ROLE IF EXISTS "$AUTH_DB_USER";
 SQL
         success "Dropped database $AUTH_DB_NAME and user $AUTH_DB_USER in $DAAS_DB_CONTAINER"
     else

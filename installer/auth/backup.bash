@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Backs up the auth service's data while it runs (see README.md):
-#   db-<time>.sql.gz    its database AUTH_DB_NAME in the DaaS MariaDB: all
+#   db-<time>.sql.gz    its database AUTH_DB_NAME in the DaaS PostgreSQL: all
 #                       users, roles and permissions
 #   keys-<time>.tar.gz  the token signing keys (without them every issued
 #                       token becomes invalid)
@@ -39,9 +39,9 @@ mkdir -p -m 700 "$BACKUP_DIR"
 umask 077
 
 step "Database $AUTH_DB_NAME -> $DB_FILE"
-# --single-transaction: a consistent dump without locking the running app
-docker exec "$DAAS_DB_CONTAINER" sh -c 'MYSQL_PWD="$MARIADB_ROOT_PASSWORD" exec mariadb-dump -uroot \
-    --single-transaction --routines --triggers --databases "$1"' sh "$AUTH_DB_NAME" \
+# pg_dump reads one snapshot: consistent without locking the running app.
+# --create: the dump creates the database itself on restore
+docker exec "$DAAS_DB_CONTAINER" pg_dump -U postgres --create "$AUTH_DB_NAME" \
     | gzip > "$DB_FILE"
 gzip -t "$DB_FILE" || die "The database dump is broken"
 tables="$(gzip -dc "$DB_FILE" | grep -c '^CREATE TABLE')"

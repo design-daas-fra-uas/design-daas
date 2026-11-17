@@ -113,10 +113,10 @@ class RepositoryBase(Loggable):
         return await self._get_filter_str(filter)
 
     async def _get_filter_statement(self, col: Colnames, value: int | str) -> str:
-        if isinstance(value, int):
-            return f"{col.value} = {value}"
-        if isinstance(value, str):
-            return f"{col.value} = '{value}'"
+        # Always a quoted literal: PostgreSQL refuses comparing a text column
+        # with a number, but converts '5' for an integer column itself
+        quoted = str(value).replace("'", "''")
+        return f"{col.value} = '{quoted}'"
 
     async def _get_filter_str(self, clause: str) -> TextClause:
         return text(clause)

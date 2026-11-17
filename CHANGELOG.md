@@ -5,6 +5,11 @@ Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+- **Breaking — database:** one PostgreSQL 18 (`daas-0-postgres`, `installer/postgres`, `127.0.0.1:5432`) replaces
+  both MariaDB servers. It holds `mergedb` (DaaS backend, `db_type = "postgres"`, driver psycopg) and
+  `design_backend` (auth service, own user without access to `mergedb`). The auth service no longer has its own
+  database container and runs on the host network. Existing data was copied over and compared row by row; the
+  MariaDB data folder `src/data/db/mariadb` is left as it was.
 - `POST /admin/delete_user_data` (admin only): stops a user's tasks and instances and deletes their objects with
   their environments, files, apps and resource limit. The frontend calls it before deleting the account and keeps
   the account if anything could not be deleted (`400` with the list).

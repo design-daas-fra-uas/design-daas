@@ -8,7 +8,7 @@
 #   service    auth (daas-auth.service: auth service; its data is in db)
 #              daas (daas.service), frontend (frontend.service)
 #   container  guacd, rabbit, db, extensions: images built from installer/
-#              (guacd, rabbit, mariadb, extensions); the DaaS backend starts
+#              (guacd, rabbit, postgres, extensions); the DaaS backend starts
 #              them on its start (src/config/container.toml) and stops them
 #              on its stop. Here they can also be controlled one by one.
 #   image      x11vnc, wine: desktop images, the DaaS backend starts one
@@ -27,7 +27,7 @@
 #   logs                     follow the logs (containers: one at a time)
 #   delete [-p]              remove it; -p also deletes its data
 #                            (auth: DB + keys, daas: src/data + nginx site,
-#                            frontend: nginx site, db: src/data/db/mariadb)
+#                            frontend: nginx site, db: src/data/db/postgres)
 #
 # Installing is done by the Makefile (<component>-install / -reinstall).
 
@@ -87,13 +87,13 @@ unit_of() {
 # Service containers: container name and image as in container.toml
 container_of() {
     case "$1" in
-        db) echo daas-0-mariadb ;;
+        db) echo daas-0-postgres ;;
         *)  echo "daas-0-$1" ;;
     esac
 }
 image_of() {
     case "$1" in
-        db)     echo daas-0-mariadb ;;
+        db)     echo daas-0-postgres ;;
         x11vnc) echo x11vnc ;;
         wine)   echo wine ;;
         *)      echo "daas-0-$1" ;;
@@ -135,7 +135,7 @@ do_start() {
         service)
             unit="$(unit_of "$c").service"
             [[ -f "/etc/systemd/system/$unit" ]] || die "$unit is not installed (make $c-install)"
-            # The auth service keeps its data in the DaaS MariaDB, which the
+            # The auth service keeps its data in the DaaS PostgreSQL, which the
             # DaaS backend starts only after it (it logs in through auth)
             if [[ "$c" == auth ]] && ! container_running db; then
                 do_start db start
@@ -291,7 +291,7 @@ do_delete() {
     case "$(kind_of "$c")" in
         service)
             if [[ "$c" == auth ]]; then
-                # Its database lives in the DaaS MariaDB; -p needs the env file for its name
+                # Its database lives in the DaaS PostgreSQL; -p needs the env file for its name
                 "$DAAS_INSTALLER_DIR/$c/delete.bash" $PURGE ${ENV_FILE:+-e "$ENV_FILE"}
             else
                 "$DAAS_INSTALLER_DIR/$c/delete.bash" $PURGE
@@ -312,8 +312,8 @@ do_delete() {
                 info "No image $image"
             fi
             if [[ "$c" == db && -n "$PURGE" ]]; then
-                warn "Deleting the DaaS MariaDB data (src/data/db/mariadb)"
-                run rm -rf "$REPO_FOLDER/src/data/db/mariadb"
+                warn "Deleting the DaaS PostgreSQL data (src/data/db/postgres)"
+                run rm -rf "$REPO_FOLDER/src/data/db/postgres"
             fi
             success "Deleted $c"
             ;;

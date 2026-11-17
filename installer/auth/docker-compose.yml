@@ -1,6 +1,6 @@
 # auth service (users, OAuth tokens, permissions).
 #
-# Its data lives in the DaaS MariaDB (daas-0-mariadb, installer/mariadb),
+# Its data lives in the DaaS PostgreSQL (daas-0-postgres, installer/postgres),
 # database AUTH_DB_NAME next to the DaaS backend's mergedb; auth/install.bash
 # creates the database and its user there.
 #
@@ -18,7 +18,7 @@ services:
     image: daas-auth
     container_name: daas-auth
     restart: unless-stopped
-    # Host network: reaches the DaaS MariaDB on its published 127.0.0.1:3306.
+    # Host network: reaches the DaaS PostgreSQL on its published 127.0.0.1:5432.
     # Until that runs (the DaaS backend starts it) the app exits and docker
     # restarts it.
     network_mode: host
@@ -27,7 +27,7 @@ services:
       SERVER_ADDRESS: 127.0.0.1
       SERVER_PORT: ${AUTH_PORT}
       SPRING_PROFILES_ACTIVE: ${AUTH_PROFILE}
-      DB_URL: jdbc:mariadb://127.0.0.1:3306/${AUTH_DB_NAME}
+      DB_URL: jdbc:postgresql://127.0.0.1:5432/${AUTH_DB_NAME}
       DB_USERNAME: ${AUTH_DB_USER}
       DB_PASSWORD: ${AUTH_DB_PASSWORD}
       # Create ADMIN_EMAIL on the first start (the prod profile turns this

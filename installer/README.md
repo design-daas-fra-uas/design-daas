@@ -12,8 +12,8 @@ After `make install` one host runs the whole stack:
 | Proxmox VE | Runs the VM instances (web UI for admins) | `https://<host>:8006` |
 | DaaS backend | Python API that creates and controls the instances (`daas.service`) | `https://<host>` (nginx :443) |
 | Frontend | React web app the users work in (`frontend.service`) | `https://<host>:8443` |
-| auth service | Users, login (OAuth), permissions (`daas-auth.service`); data in the DaaS MariaDB (`daas-0-mariadb`, database `design_backend`) | `https://<host>:8443/auth` |
-| Service containers | `guacd`, `rabbit`, `db` (MariaDB: the DaaS backend's database), `extensions`; started and stopped by the DaaS backend | docker |
+| auth service | Users, login (OAuth), permissions (`daas-auth.service`); data in the DaaS PostgreSQL (`daas-0-postgres`, database `design_backend`) | `https://<host>:8443/auth` |
+| Service containers | `guacd`, `rabbit`, `db` (PostgreSQL: the database of the DaaS backend and the auth service), `extensions`; started and stopped by the DaaS backend | docker |
 | Desktop images | `x11vnc`, `wine`; the DaaS backend starts one container per instance | docker |
 | ISOs | Unattended install ISOs (win10, win11, debian12) in the `daas-iso` storage | Proxmox |
 
@@ -116,11 +116,11 @@ sets them in `daas.env` and re-runs the steps that use them.
 | `make configure` | You changed `daas.env`: apply it without rebuilding |
 | `make reinstall` | You changed code: rebuild the services, containers and images (data is kept) |
 | `make delete` | Remove services, containers and images (data is kept) |
-| `make <command> PURGE=1` | `delete` / `reinstall` also delete the data (auth DB + keys, `src/data`, nginx sites, the DaaS MariaDB) |
+| `make <command> PURGE=1` | `delete` / `reinstall` also delete the data (auth DB + keys, `src/data`, nginx sites, the DaaS PostgreSQL) |
 
-**`PURGE=1` deletes data for good**, including `src/data/db/mariadb`, the
-DaaS backend's whole database. Back it up first (`docker exec daas-0-mariadb
-sh -c 'mariadb-dump -uroot -p"$MARIADB_ROOT_PASSWORD" mergedb' > daas.sql`)
+**`PURGE=1` deletes data for good**, including `src/data/db/postgres`, the
+whole database of the DaaS backend and the auth service. Back it up first
+(`docker exec daas-0-postgres pg_dump -U postgres --create mergedb > daas.sql`)
 and the auth service (`make auth-backup`).
 
 Frontend URLs and auth service settings are baked into their builds, so after
@@ -161,7 +161,7 @@ this repository is public.
 |---|---|
 | `PVE_API_PASSWORD` (Proxmox account `daas@pve` of the backend) | `make daas-configure daas-restart` (configure sets it in Proxmox) |
 | `ADMIN_PASSWORD` (admin of the auth service, also used by the backend) | `make auth-admin-password daas-configure daas-restart` |
-| `DAAS_DB_PASSWORD` (DaaS backend's MariaDB) | see `mariadb/README.md` (only applied to a new data folder) |
+| `DAAS_DB_PASSWORD` (superuser of the stack's PostgreSQL) | see `postgres/README.md` (only applied to a new data folder) |
 
 Generate one with `head -c 48 /dev/urandom | base64 | tr -dc A-Za-z0-9 | head -c 32`.
 
@@ -198,6 +198,6 @@ Values come from, in this order: the command line
 | `deps/` | Host dependencies (`make deps`) |
 | `daas/` | DaaS backend: install, configure, nginx site, certificate |
 | `auth/`, `frontend/` | docker-compose setup of the auth service and the frontend |
-| `guacd/`, `rabbit/`, `mariadb/`, `extensions/` | Service container images |
+| `guacd/`, `rabbit/`, `postgres/`, `extensions/` | Service container images |
 | `x11vnc/`, `wine/` | Desktop images |
 | `iso/` | ISO generator (see `iso/README.md`) |

@@ -78,19 +78,6 @@ class DatabaseApi(DatabaseApiBase):
         """Converts model object to orm object"""
         return create_orm(model)
 
-    def db_session_create(
-        self,
-        dbname: str,
-    ) -> bool:
-        """Flush all changes to the db"""
-        if self.session is None:
-            return False
-        with self.engine.connect() as connection:
-            self._log_info(f"Create Database {dbname}")
-            connection.execute(text(f"CREATE DATABASE IF NOT EXISTS {dbname};"))
-            connection.commit()
-        return True
-
     async def db_session_query(
         self,
         mapping: Type,

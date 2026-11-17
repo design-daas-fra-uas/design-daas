@@ -265,7 +265,7 @@ class QwebServiceRuntime(Loggable):
 
     async def __stop_app(self) -> bool:
         # Reverse start order: the container backend started the service
-        # containers (MariaDB, RabbitMQ) first, so it must stop them last,
+        # containers (PostgreSQL, RabbitMQ) first, so it must stop them last,
         # after the database and messaging backends have disconnected
         for name, backend in reversed(list(self.backends.backends.items())):
             if isinstance(backend, QwebBackend):

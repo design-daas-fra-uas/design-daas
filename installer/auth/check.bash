@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Checks the running auth service (see README.md): service and container,
-# its database in the DaaS MariaDB, the admin login (directly as the DaaS
+# its database in the DaaS PostgreSQL, the admin login (directly as the DaaS
 # backend uses it, and through nginx /auth/ as the frontend uses it), its
 # keys volume, and that user instances cannot reach it directly. Changes nothing; the admin
 # password is never printed.
@@ -49,7 +49,7 @@ for c in daas-auth "$DAAS_DB_CONTAINER"; do
     if [[ "$state" == running* && "$state" != *unhealthy* ]]; then ok "container $c ($state)"; else fail "container $c: ${state:-missing}"; fi
 done
 
-n="$(daas_db_sql -N -e "SELECT COUNT(*) FROM \`$AUTH_DB_NAME\`.users" 2>/dev/null)"
+n="$(daas_db_sql -tA -d "$AUTH_DB_NAME" -c 'SELECT COUNT(*) FROM users' 2>/dev/null)"
 if [[ "$n" =~ ^[0-9]+$ ]]; then ok "database $AUTH_DB_NAME in $DAAS_DB_CONTAINER ($n users)"; else fail "database $AUTH_DB_NAME in $DAAS_DB_CONTAINER not readable"; fi
 
 c="$(login "$DIRECT")"

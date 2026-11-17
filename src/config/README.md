@@ -16,7 +16,7 @@ backend), except `logging.toml log_dir` and the docker `-v` volumes in
 | `qweb.toml` | runtime (`ConfigReader`) | HTTP server, TLS, CORS, folders |
 | `logging.toml` | runtime (`LoggerConfig`) | log files and log targets |
 | `auth.toml` | `AuthPlugin` | local (fixed user) or remote (OAuth) auth |
-| `db.toml` | `DatabasePlugin` | sqlite / mariadb, sample data |
+| `db.toml` | `DatabasePlugin` | postgres / sqlite, sample data |
 | `container.toml` | `ContainerPlugin` | Docker, service containers started by the backend |
 | `vm.toml` | `VmPlugin` | Proxmox API, node, storages, network bridges |
 | `node.toml` | `NodePlugin` | dnsmasq DHCP entries, local SSH |
@@ -52,7 +52,7 @@ Manual edits in `config/local/` are overwritten on the next
 | | `[vm_api] node`, `hostIp` | `HOST_NAME`, `192.168.123.HOST_NUMBER` |
 | | `[vm_api] bridge_cidr_{daas,inst,ceph,cluster}` | `192.168.{123,223,100,200}.HOST_NUMBER/24` |
 | | `[vm_api] bridge_gw_daas`, `bridge_adapter_daas` | `192.168.123.1` / `NET_DEVICE`, empty when `STANDALONE` |
-| `local/db.toml` | `[db] db_pass` | `DAAS_DB_PASSWORD` (MariaDB root) |
+| `local/db.toml` | `[db] db_pass` | `DAAS_DB_PASSWORD` (PostgreSQL superuser) |
 | `local/auth.toml` | `[auth] authenticator_type`, `enable_auth_endpoint` | `DAAS_AUTH_MODE`, `DAAS_AUTH_CHECK_ENDPOINTS` |
 | | `[auth.remote] url`, `clientid`, `scope`, `username`, `password` | `http://127.0.0.1:AUTH_PORT`, `OAUTH_CLIENT_ID`, `admin`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` (remote mode only) |
 

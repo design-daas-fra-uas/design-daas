@@ -7,7 +7,7 @@ known_daas_images = [
   "x11vnc",
   "wine",
   "daas-0-guacd",
-  "daas-0-mariadb",
+  "daas-0-postgres",
   "daas-0-rabbit",
   "daas-0-extensions",
   "daas-frontend",

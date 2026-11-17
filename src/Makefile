@@ -9,7 +9,7 @@ IMGNAME?=skeleton
 # Python packages of the backend venv, pinned to the versions 2.0.0 was
 # tested with (a newer websockets/SQLAlchemy may break the backend);
 # installer/daas/install.bash reads this list too
-VENV_INST="Quart==0.22.0 quart-cors==0.8.0 requests==2.34.2 aiohttp==3.14.5 websockets==17.4 flake8==7.5.0 pylint==4.1.3 pika==1.4.4 netifaces==0.11.0 psutil==7.2.2 SQLAlchemy==2.1.8 PyMySQL==1.2.3 pylint-per-file-ignores==4.0.0 black==26.10.1 types-requests==2.33.0.20261030 types-click==7.1.8 types-aiofiles==25.1.0.20261107 aiosqlite==0.22.1 docker==7.2.0"
+VENV_INST="Quart==0.22.0 quart-cors==0.8.0 requests==2.34.2 aiohttp==3.14.5 websockets==17.4 flake8==7.5.0 pylint==4.1.3 pika==1.4.4 netifaces==0.11.0 psutil==7.2.2 SQLAlchemy==2.1.8 psycopg[binary]==3.3.9 pylint-per-file-ignores==4.0.0 black==26.10.1 types-requests==2.33.0.20261030 types-click==7.1.8 types-aiofiles==25.1.0.20261107 aiosqlite==0.22.1 docker==7.2.0"
 # ------------------------------------------------------------------------------
 # --- Help
 # ------------------------------------------------------------------------------

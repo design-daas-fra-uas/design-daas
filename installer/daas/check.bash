@@ -30,7 +30,7 @@ fail() { echo "  FAIL  $*"; FAILED=1; }
 
 HOST="$(url_host "$DAAS_PUBLIC_URL")"
 PORT="$(url_port "$DAAS_PUBLIC_URL")"
-SERVICES=(daas-0-guacd daas-0-mariadb daas-0-rabbit daas-0-extensions)
+SERVICES=(daas-0-guacd daas-0-postgres daas-0-rabbit daas-0-extensions)
 
 echo "Checking $DAAS_PUBLIC_URL"
 
@@ -73,9 +73,9 @@ import sys; sys.path.insert(0, ".")
 from app.qweb.common.tomlfile import read_toml_with_local
 db = read_toml_with_local("config/db.toml")["db"]; print(db["db_type"], db["db_name"])' 2>/dev/null)"
 read -r dbtype dbname <<<"$dbtype"
-if [[ "$dbtype" == mariadb ]]; then
-    n="$(docker exec daas-0-mariadb sh -c "MYSQL_PWD=\"\$MARIADB_ROOT_PASSWORD\" mariadb -uroot -N -e 'SELECT COUNT(*) FROM \`$dbname\`.daas_objects'" 2>/dev/null)"
-    if [[ "$n" =~ ^[0-9]+$ ]]; then ok "database: MariaDB $dbname ($n objects)"; else fail "database: MariaDB $dbname not readable (make db-logs)"; fi
+if [[ "$dbtype" == postgres ]]; then
+    n="$(docker exec daas-0-postgres psql -U postgres -tA -d "$dbname" -c 'SELECT COUNT(*) FROM daas_objects' 2>/dev/null)"
+    if [[ "$n" =~ ^[0-9]+$ ]]; then ok "database: PostgreSQL $dbname ($n objects)"; else fail "database: PostgreSQL $dbname not readable (make db-logs)"; fi
 else
     ok "database: $dbtype ($dbname)"
 fi
