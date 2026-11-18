@@ -74,7 +74,7 @@ dump is made with `pg_dump --create`, so it recreates the database itself.
 Restore (replaces the current users and permissions):
 
 ```bash
-cd /root/design-daas/installer/auth
+cd /daas/design-daas/installer/auth
 systemctl stop daas-auth                                       # removes the container, keeps the keys volume
 docker exec daas-0-postgres dropdb -U postgres --force design_backend
 gzip -dc backups/db-<time>.sql.gz | docker exec -i daas-0-postgres psql -U postgres -q -d postgres

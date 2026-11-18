@@ -15,13 +15,13 @@ browser ─https :443── nginx (daas.conf) → DaaS backend (VMs, containers,
 ## What you need
 
 - The frontend repository next to this one
-  (`/root/design-daas-application-frontend`, or `FRONTEND_FOLDER` in
+  (`/daas/design-daas-application-frontend`, or `FRONTEND_FOLDER` in
   `installer/daas.env`).
 - **The URL patch applied to it** (once per clone): the frontend must take
   the backend URLs as build arguments. Without it the installer stops.
 
   ```bash
-  git -C /root/design-daas-application-frontend apply /root/design-daas/installer/frontend/frontend-env-urls.patch
+  git -C /daas/design-daas-application-frontend apply /daas/design-daas/installer/frontend/frontend-env-urls.patch
   ```
 
 - `make daas-configure` done before (it writes nginx.conf with the

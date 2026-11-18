@@ -4,7 +4,7 @@ Everything here is driven by `make`. Run all commands **as root** from this
 folder (`installer/`). `make help` prints a short version of this page.
 
 For a first install on a blank machine (Debian install, cloning, browser
-setup), follow the step-by-step guide in the [top-level README](../README.md#installation-from-a-blank-machine-to-a-running-system);
+setup), follow the step-by-step guide in the [top-level README](../README.md#installation-from-a-fresh-debian-12-to-a-running-system);
 this page is the reference for all `make` targets.
 
 ## What you get
@@ -31,9 +31,9 @@ After `make install` one host runs the whole stack:
   in `daas.env`):
 
   ```
-  /root/design-daas                        this repo
-  /root/design-daas-application-frontend   FRONTEND_FOLDER
-  /root/design-daas-backend-java           AUTH_FOLDER
+  /daas/design-daas                        this repo
+  /daas/design-daas-application-frontend   FRONTEND_FOLDER
+  /daas/design-daas-backend-java           AUTH_FOLDER
   ```
 - `make`: `apt install make` if it is missing. Everything else is installed
   by the installer itself (step 2, `make deps`).
@@ -43,7 +43,7 @@ After `make install` one host runs the whole stack:
 ### 1. Create the settings file
 
 ```bash
-cd /root/design-daas/installer
+cd /daas/design-daas/installer
 make env
 ```
 
@@ -73,7 +73,7 @@ On a fresh Debian this **stops after the first step** with
 
 ```bash
 reboot
-cd /root/design-daas/installer && make install
+cd /daas/design-daas/installer && make install
 ```
 
 The second run skips what is already done and goes through all seven steps.
