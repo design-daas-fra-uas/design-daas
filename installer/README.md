@@ -3,6 +3,10 @@
 Everything here is driven by `make`. Run all commands **as root** from this
 folder (`installer/`). `make help` prints a short version of this page.
 
+For a first install on a blank machine (Debian install, cloning, browser
+setup), follow the step-by-step guide in the [top-level README](../README.md#installation-from-a-blank-machine-to-a-running-system);
+this page is the reference for all `make` targets.
+
 ## What you get
 
 After `make install` one host runs the whole stack:
@@ -50,7 +54,11 @@ This copies `daas.env.example` to `daas.env` (mode 600, not committed). Edit it:
 - **Passwords**: change `ADMIN_PASSWORD`, `AUTH_DB_PASSWORD`,
   `DAAS_DB_PASSWORD` (every `change-me-*` value). `ADMIN_EMAIL` /
   `ADMIN_PASSWORD` is the first admin account you log in with.
-- Optional: other public URLs (DNS alias, reverse proxy), mail settings.
+- **Public URLs**: leave `DAAS_PUBLIC_URL`, `FRONTEND_PUBLIC_URL` and
+  `AUTH_PUBLIC_URL` empty; then everything runs under `HOST_NAME.HOST_DOMAIN`.
+  Set them only for other names (DNS alias, reverse proxy); the rules are in
+  the comment above them. `AUTH_PUBLIC_URL` must stay `FRONTEND_PUBLIC_URL/auth`.
+- Optional: mail settings.
 
 Each key is explained in the file itself.
 
@@ -95,8 +103,9 @@ One line per component. Everything should be `active` / `running` /
 
 ## Using it
 
-1. On the computer with the browser, make `<host>` resolve to the host's IP
-   (DNS, or a line in its hosts file).
+1. On the computer with the browser, make every name of the public URLs
+   resolve to the host's IP (DNS, or the line `make client-hosts` prints in
+   its hosts file).
 2. Trust the local CA once: import `/etc/nginx/ssl/daas-ca.crt` from the host
    into the browser as a trusted authority. (Or accept the certificate
    warning on `https://<host>/` **and** `https://<host>:8443/`.)
@@ -104,7 +113,9 @@ One line per component. Everything should be `active` / `running` /
 
 Using other names than `HOST_NAME.HOST_DOMAIN`, e.g. the test names
 `pve.cluster.local` / `front0.cluster.local`: `./use-hostnames.bash [<ip>]`
-sets them in `daas.env` and re-runs the steps that use them.
+sets the three public URLs in `daas.env` and re-runs the steps that use them.
+`HOST_NAME` / `HOST_DOMAIN` stay as they are: `HOST_NAME` is also the Proxmox
+node name and must not change after the install.
 
 ## Everyday commands
 
@@ -114,6 +125,7 @@ sets them in `daas.env` and re-runs the steps that use them.
 | `make start` / `stop` / `restart` | The three services auth, daas, frontend (daas starts/stops the containers) |
 | `make logs` | Follow the logs of auth, daas and frontend |
 | `make configure` | You changed `daas.env`: apply it without rebuilding |
+| `make client-hosts` | The hosts file line for the computers with a browser (all names of the public URLs) |
 | `make reinstall` | You changed code: rebuild the services, containers and images (data is kept) |
 | `make delete` | Remove services, containers and images (data is kept) |
 | `make <command> PURGE=1` | `delete` / `reinstall` also delete the data (auth DB + keys, `src/data`, nginx sites, the DaaS PostgreSQL) |

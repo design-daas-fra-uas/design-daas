@@ -277,6 +277,10 @@ load_stack_env() {
     DAAS_PUBLIC_URL="${DAAS_PUBLIC_URL%/}"
     FRONTEND_PUBLIC_URL="${FRONTEND_PUBLIC_URL%/}"
     AUTH_PUBLIC_URL="${AUTH_PUBLIC_URL%/}"
+    # nginx serves the auth service only as /auth/ on the frontend's site, so
+    # another AUTH_PUBLIC_URL needs a proxy of your own in front of it
+    [[ "$AUTH_PUBLIC_URL" == "$FRONTEND_PUBLIC_URL/auth" ]] \
+        || warn "AUTH_PUBLIC_URL ($AUTH_PUBLIC_URL) is not FRONTEND_PUBLIC_URL/auth: nginx serves the auth service only there (leave AUTH_PUBLIC_URL empty unless you run your own proxy)"
 
     export DAAS_AUTH_MODE="${DAAS_AUTH_MODE:-remote}"
     export DAAS_AUTH_CHECK_ENDPOINTS="${DAAS_AUTH_CHECK_ENDPOINTS:-false}"

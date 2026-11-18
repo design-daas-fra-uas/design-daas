@@ -83,7 +83,8 @@ PURGE_OPT = $(if $(PURGE),-p)
         daas-all daas-install daas-configure daas-services daas-containers daas-check \
         daas-reinstall \
         frontend-all frontend-install frontend-configure frontend-reinstall frontend-check \
-        env require-env auth-install auth-reinstall auth-check auth-backup auth-admin-password
+        env require-env auth-install auth-reinstall auth-check auth-backup auth-admin-password \
+        client-hosts
 
 default: usage
 
@@ -120,6 +121,7 @@ usage:
 	@echo "  make status               Everything, one line each"
 	@echo "  make logs                 Follow auth, daas, frontend"
 	@echo "  make configure            Re-apply $(notdir $(ENV_FILE)) (no rebuilds)"
+	@echo "  make client-hosts         Hosts file line for the computers with a browser"
 	@echo "  make reinstall            After code changes: rebuild services and images"
 	@echo "  make delete               Remove services, containers and images"
 	@echo "  make reset CONFIRM=yes    Fresh start: delete ALL data + builds (then make install)"
@@ -204,6 +206,9 @@ install: require-env
 	$(if $(SKIP_ISOS),@echo "Skipped (SKIP_ISOS=1)",$(MAKE) iso-install)
 	@echo ""
 	@echo "Everything installed. Check with: make status"
+	@echo ""
+	@./daas/client-hosts.bash -e "$(ENV_FILE)"
+	@echo ""
 	@echo "Then open $(or $(call env_get,FRONTEND_PUBLIC_URL),https://$(HOST_NAME).$(HOST_DOMAIN):8443) (see README.md: Using it)"
 
 all: install
@@ -377,6 +382,10 @@ daas-configure: require-env
 		-n "$(NET_DEVICE)" \
 		-s "$(STANDALONE)" \
 		-e "$(ENV_FILE)"
+
+# The hosts file line for the computers with a browser (changes nothing)
+client-hosts: require-env
+	@./daas/client-hosts.bash -e "$(ENV_FILE)"
 
 # Checks the running backend (changes nothing)
 daas-check: require-env
