@@ -3,8 +3,8 @@
 Everything here is driven by `make`. Run all commands **as root** from this
 folder (`installer/`). `make help` prints a short version of this page.
 
-For a first install on a blank machine (Debian install, cloning, browser
-setup), follow the step-by-step guide in the [top-level README](../README.md#installation-from-a-fresh-debian-12-to-a-running-system);
+For a first install on a fresh Debian 12 (cloning, settings, installer,
+browser setup), follow the step-by-step guide in the [top-level README](../README.md#installation-from-a-fresh-debian-12-to-a-running-system);
 this page is the reference for all `make` targets.
 
 ## What you get
@@ -13,10 +13,10 @@ After `make install` one host runs the whole stack:
 
 | Part | What it is | Where |
 |---|---|---|
-| Proxmox VE | Runs the VM instances (web UI for admins) | `https://<host>:8006` |
-| DaaS backend | Python API that creates and controls the instances (`daas.service`) | `https://<host>` (nginx :443) |
-| Frontend | React web app the users work in (`frontend.service`) | `https://<host>:8443` |
-| auth service | Users, login (OAuth), permissions (`daas-auth.service`); data in the DaaS PostgreSQL (`daas-0-postgres`, database `design_backend`) | `https://<host>:8443/auth` |
+| Frontend | React web app the users work in (`frontend.service`) | `https://<host>:8443`, the only address users open |
+| DaaS backend | Python API that creates and controls the instances (`daas.service`) | `127.0.0.1:5000`; nginx serves it on :443 of the same name, which the frontend calls in the background |
+| auth service | Users, login (OAuth), permissions (`daas-auth.service`); data in the DaaS PostgreSQL (`daas-0-postgres`, database `design_backend`) | `127.0.0.1:8080`; the frontend reaches it through nginx as `/auth/` on :8443 |
+| Proxmox VE | Runs the VM instances | host |
 | Service containers | `guacd`, `rabbit`, `db` (PostgreSQL: the database of the DaaS backend and the auth service), `extensions`; started and stopped by the DaaS backend | docker |
 | Desktop images | `x11vnc`, `wine`; the DaaS backend starts one container per instance | docker |
 | ISOs | Unattended install ISOs (win10, win11, debian12) in the `daas-iso` storage | Proxmox |
@@ -103,12 +103,14 @@ One line per component. Everything should be `active` / `running` /
 
 ## Using it
 
-1. On the computer with the browser, make every name of the public URLs
-   resolve to the host's IP (DNS, or the line `make client-hosts` prints in
-   its hosts file).
-2. Trust the local CA once: import `/etc/nginx/ssl/daas-ca.crt` from the host
-   into the browser as a trusted authority. (Or accept the certificate
-   warning on `https://<host>/` **and** `https://<host>:8443/`.)
+Steps 7 and 8 of the [top-level README](../README.md#7-prepare-the-computer-with-the-browser)
+describe it exactly; in short:
+
+1. On the computer with the browser, add the line `make client-hosts` prints
+   to `/etc/hosts` (unless DNS resolves the names).
+2. Import `/etc/nginx/ssl/daas-ca.crt` from the host into the browser as a
+   trusted authority (required, otherwise the frontend cannot reach the
+   backend in the background).
 3. Open `https://<host>:8443/` and log in with `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
 
 Using other names than `HOST_NAME.HOST_DOMAIN`, e.g. the test names

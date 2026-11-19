@@ -52,12 +52,12 @@ if [[ -n "$ENV_FILE" ]]; then
     CLI_FRONTEND_FOLDER="$FRONTEND_FOLDER"
     load_stack_env "$ENV_FILE"
     FRONTEND_FOLDER="$CLI_FRONTEND_FOLDER"
-    # Without the patch the build ignores the URLs and the frontend talks to
-    # http://<host>:5000 / :8080 (dev defaults), so the login fails
+    # An old frontend clone ignores the URLs and talks to http://<host>:5000
+    # / :8080 (dev defaults), so the login fails
     if ! grep -q "REACT_APP_DAAS_API_URL" "$FRONTEND_FOLDER/Dockerfile"; then
-        error "The frontend does not take the backend URLs as build args yet. Apply the patch:"
-        error "  git -C $FRONTEND_FOLDER apply $FRONTEND_DIR/frontend-env-urls.patch"
-        die "Frontend repository not patched"
+        error "The frontend in $FRONTEND_FOLDER is too old: it does not take the backend URLs as build args."
+        error "Update it: git -C $FRONTEND_FOLDER pull"
+        die "Frontend repository too old"
     fi
     info "DaaS API:   $DAAS_PUBLIC_URL"
     info "Auth API:   $AUTH_PUBLIC_URL"
@@ -117,5 +117,16 @@ if [[ -n "$old_project" && "$old_project" != daas-frontend ]]; then
 fi
 # restart: a running container is recreated from the new image
 enable_and_restart "$SERVICE_NAME.service"
+
+# ============================================================
+step "Wait for the frontend"
+# ============================================================
+
+# systemd reports the service as started before nginx in the container
+# serves, so a frontend-check right after this would see 502s
+if ! wait_http "http://127.0.0.1:5001/" 24; then
+    "${COMPOSE[@]}" logs --tail 50 web || true
+    die "Frontend did not answer on 127.0.0.1:5001 after 2 min (logs: make frontend-logs)"
+fi
 
 success "Frontend installed (logs: make frontend-logs)"

@@ -180,6 +180,13 @@ name.
 
 Every value that still starts with `change-me-` must be replaced.
 
+`daas.env` is the **only file you edit**. The installer writes every other
+settings file from it (`installer/auth/.env`, `installer/frontend/.env`,
+`src/config/local/*.toml`) and overwrites them on the next run, so changes
+there are lost. To change a setting later, edit `daas.env` and see
+[installer/README.md → Which files do I edit?](installer/README.md#which-files-do-i-edit)
+for the command that applies it.
+
 ### 5. Run the installer
 
 ```bash
