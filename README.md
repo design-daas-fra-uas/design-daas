@@ -113,6 +113,7 @@ console, or from the client over SSH with the normal user created during the
 Debian installation and switch to root:
 
 ```bash
+ssh <user>@<host-ip>
 su -
 ```
 
@@ -274,10 +275,9 @@ make frontend-check
 
 ### 7. Prepare the computer with the browser
 
-All commands in this step run **on the client**.
-
-**a) Make the host name known.** Print the line for the client's hosts file
-**on the host**:
+**a) Make the host name known.** Print the line for the client's hosts file;
+this one command runs **on the host**, everything after it in this step on
+the client:
 
 ```bash
 make -C /daas/design-daas/installer client-hosts

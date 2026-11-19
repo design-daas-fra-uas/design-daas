@@ -269,6 +269,12 @@ run cp "$DAAS_INSTALLER_DIR/daas/nginx.conf" /etc/nginx/nginx.conf
 sed -e "s#pve1.cluster.local#$PUBLIC_HOST#g" "$DAAS_INSTALLER_DIR/daas/daas.conf" \
     | write_file "$NGINX_SITE"
 run ln -sfn "$NGINX_SITE" "$NGINX_ENABLED"
+# The nginx package enables a "Welcome to nginx" page on port 80; nothing of
+# the system uses port 80, so do not leave it open
+if [[ -L /etc/nginx/sites-enabled/default ]]; then
+    run rm /etc/nginx/sites-enabled/default
+    info "Disabled nginx's default site (port 80)"
+fi
 
 reload_nginx
 
