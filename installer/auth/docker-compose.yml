@@ -1,4 +1,8 @@
-# auth service (users, OAuth tokens, permissions) + its MariaDB.
+# auth service (users, OAuth tokens, permissions).
+#
+# Its data lives in the DaaS PostgreSQL (daas-0-postgres, installer/postgres),
+# database AUTH_DB_NAME next to the DaaS backend's mergedb; auth/install.bash
+# creates the database and its user there.
 #
 # Values come from installer/auth/.env, which auth/install.bash generates
 # from installer/daas.env. Started by daas-auth.service.
@@ -8,38 +12,25 @@
 name: daas-auth
 
 services:
-  db:
-    image: mariadb:11.4
-    container_name: daas-auth-db
-    restart: unless-stopped
-    environment:
-      MARIADB_DATABASE: ${AUTH_DB_NAME}
-      MARIADB_USER: ${AUTH_DB_USER}
-      MARIADB_PASSWORD: ${AUTH_DB_PASSWORD}
-      MARIADB_ROOT_PASSWORD: ${AUTH_DB_ROOT_PASSWORD}
-    volumes:
-      - db-data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      interval: 5s
-      timeout: 5s
-      retries: 30
-
   backend:
     build:
       context: ${AUTH_FOLDER}
     image: daas-auth
     container_name: daas-auth
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
-    ports:
-      # Only reachable from this host: nginx (/auth/) and the DaaS backend
-      - "127.0.0.1:${AUTH_PORT}:8080"
+    # Host network: reaches the DaaS PostgreSQL on its published 127.0.0.1:5432.
+    # Until that runs (the DaaS backend starts it) the app exits and docker
+    # restarts it.
+    network_mode: host
     environment:
+      # Only reachable from this host: nginx (/auth/) and the DaaS backend
+      SERVER_ADDRESS: 127.0.0.1
+      SERVER_PORT: ${AUTH_PORT}
+      # nginx serves it as /auth/ and says so in X-Forwarded-Prefix/-Proto:
+      # use them for redirects and links (e.g. the Swagger UI with AUTH_PROFILE=dev)
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
       SPRING_PROFILES_ACTIVE: ${AUTH_PROFILE}
-      DB_URL: jdbc:mariadb://db:3306/${AUTH_DB_NAME}
+      DB_URL: jdbc:postgresql://127.0.0.1:5432/${AUTH_DB_NAME}
       DB_USERNAME: ${AUTH_DB_USER}
       DB_PASSWORD: ${AUTH_DB_PASSWORD}
       # Create ADMIN_EMAIL on the first start (the prod profile turns this
@@ -53,9 +44,9 @@ services:
       OAUTH_REFRESH_TOKEN_TTL_DAYS: ${OAUTH_REFRESH_TOKEN_TTL_DAYS}
       FRONTEND_URL: ${FRONTEND_PUBLIC_URL}
       CORS_ALLOWED_ORIGINS: ${FRONTEND_PUBLIC_URL}
-      # nginx reaches the container through the docker bridge gateway, so
-      # trust X-Forwarded-For from there (needed for per-client rate limits)
-      RATE_LIMIT_TRUSTED_PROXIES: 127.0.0.1/32,::1/128,172.16.0.0/12
+      # nginx connects from 127.0.0.1, so trust X-Forwarded-For from there
+      # (needed for per-client rate limits)
+      RATE_LIMIT_TRUSTED_PROXIES: 127.0.0.1/32,::1/128
       MAIL_ENABLED: ${MAIL_ENABLED}
       MAIL_HOST: ${MAIL_HOST}
       MAIL_PORT: ${MAIL_PORT}
@@ -67,5 +58,4 @@ services:
       - keys:/app/keys
 
 volumes:
-  db-data:
   keys:

@@ -4,7 +4,7 @@
 instance's desktop visible in the browser: it speaks VNC, RDP and SSH to
 the instances and the Guacamole protocol to the DaaS backend, which passes
 it through a websocket to `guacamole.js` in the browser
-([guacamole-client](../guacamole-client/README.md)).
+([guacamole-client](../../dev-tools/guacamole-client/README.md)).
 
 ```
 browser (guacamole.js) ⇄ websocket ⇄ DaaS backend ⇄ guacd :4822 ⇄ VNC/RDP/SSH of the instance
@@ -76,7 +76,7 @@ From `installer/guacd/` (working on the image itself), as root:
    and test a VNC and an RDP session in the browser.
 
 Keep the client in mind: the browser side
-([guacamole-client](../guacamole-client/README.md)) has the same version
+([guacamole-client](../../dev-tools/guacamole-client/README.md)) has the same version
 (1.6.0); update both together.
 
 ## Files

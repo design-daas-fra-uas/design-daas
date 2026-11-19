@@ -31,7 +31,8 @@ require_cmds docker
 load_stack_env "$ENV_FILE" >/dev/null
 warn_default_secret ADMIN_PASSWORD
 [[ "$ADMIN_EMAIL" =~ ^[A-Za-z0-9._@+-]+$ ]] || die "Unexpected characters in ADMIN_EMAIL"
-[[ -n "$(docker ps -q --filter name=^daas-auth-db$)" ]] || die "daas-auth-db is not running (make auth-start)"
+[[ "$AUTH_DB_NAME" =~ ^[A-Za-z0-9_]+$ ]] || die "Unexpected characters in AUTH_DB_NAME"
+[[ -n "$(docker ps -q --filter "name=^$DAAS_DB_CONTAINER$")" ]] || die "$DAAS_DB_CONTAINER is not running (make auth-start)"
 
 step "BCrypt hash ($HASHER_IMAGE)"
 hash="$(printf '%s' "$ADMIN_PASSWORD" | docker run --rm -i "$HASHER_IMAGE" sh -c \
@@ -41,18 +42,17 @@ hash="$(printf '%s' "$ADMIN_PASSWORD" | docker run --rm -i "$HASHER_IMAGE" sh -c
 success "Hash created"
 
 step "Admin $ADMIN_EMAIL in the auth service database"
-result="$(docker exec -i daas-auth-db sh -c 'MYSQL_PWD="$MARIADB_ROOT_PASSWORD" exec mariadb -uroot -N "$MARIADB_DATABASE"' <<SQL
-SET @uid = (SELECT id FROM users WHERE email = '$ADMIN_EMAIL');
-UPDATE users SET password = '$hash', failed_login_attempts = 0, locked_until = NULL WHERE id = @uid;
-SELECT ROW_COUNT();
-DELETE FROM access_tokens WHERE user_id = @uid;
-SELECT ROW_COUNT();
-DELETE FROM refresh_tokens WHERE user_id = @uid;
-SELECT ROW_COUNT();
+# One statement: the counts of updated users and deleted tokens, as "1|2|3"
+result="$(daas_db_sql -tA -d "$AUTH_DB_NAME" <<SQL
+WITH u AS (UPDATE users SET password = '$hash', failed_login_attempts = 0, locked_until = NULL
+           WHERE email = '$ADMIN_EMAIL' RETURNING id),
+     a AS (DELETE FROM access_tokens WHERE user_id IN (SELECT id FROM u) RETURNING 1),
+     r AS (DELETE FROM refresh_tokens WHERE user_id IN (SELECT id FROM u) RETURNING 1)
+SELECT (SELECT COUNT(*) FROM u), (SELECT COUNT(*) FROM a), (SELECT COUNT(*) FROM r);
 SQL
 )"
 unset hash
-read -r updated access refresh <<<"$(echo $result)"
+IFS='|' read -r updated access refresh <<<"$result"
 [[ "$updated" == 1 ]] || die "No admin $ADMIN_EMAIL in the auth service database"
 success "Password set, $access access and $refresh refresh tokens revoked"
 

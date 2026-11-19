@@ -2,21 +2,21 @@
 # and Database -> SampleRegistryConfig (app/daas/db/db_samples.py).
 
 [db]
-# "mariadb" (db_* settings below, the daas-0-mariadb container) or "sqlite"
+# "postgres" (db_* settings below, the daas-0-postgres container) or "sqlite"
 # (file data_path/sqlite/<db_name>.sqlite3)
-db_type = "mariadb"
+db_type = "postgres"
 # Relative to qweb.toml [sys] data_path (src/data/db)
 data_path = "db"
 enable_echo = false
 # Insert the sample objects/apps of [samples] on startup (missing ones only)
 include_samples = true
-# MariaDB connection (root may only log in from this host, see
-# installer/mariadb); the password comes from DAAS_DB_PASSWORD
+# PostgreSQL connection as the superuser postgres (may only log in from this
+# host, see installer/postgres); the password comes from DAAS_DB_PASSWORD
 db_name = "mergedb"
-db_user = "root"
+db_user = "postgres"
 db_pass = ""  # set by the installer in config/local/db.toml (not in git)
 db_host = "127.0.0.1"
-db_port = 3306
+db_port = 5432
 
 [samples]
 # Owners and screen resolution of the sample objects (db.include_samples)

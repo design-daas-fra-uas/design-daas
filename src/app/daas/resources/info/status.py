@@ -3,7 +3,7 @@ Health of the whole stack for the admin status page (/monitoring/system_status).
 
 Checks the same parts as `make status` in installer/: the DaaS backend
 itself, the auth service (through its Spring actuator, /actuator/health),
-the service containers the backend starts (container.toml: guacd, MariaDB,
+the service containers the backend starts (container.toml: guacd, PostgreSQL,
 RabbitMQ, extensions) and the frontend container.
 """
 

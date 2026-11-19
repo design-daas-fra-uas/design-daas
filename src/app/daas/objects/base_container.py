@@ -64,11 +64,13 @@ class ContainerBase(DaasBaseObject):
         api = await get_backend_component(BackendName.CONTAINER, DockerRequest)
         tag = await self.get_container_tag()
         code, str_out, str_err = await api.docker_image_build(self.os_installer, tag)
-        return QwebResult(200, {}, code, f"{str_out}{str_err}")
+        status = 200 if code == 0 else 400
+        return QwebResult(status, {}, code, f"{str_out}{str_err}")
 
     async def image_delete(self) -> QwebResult:
         """Deletes specified docker image"""
         api = await get_backend_component(BackendName.CONTAINER, DockerRequest)
         tag = await self.get_container_tag()
         code, str_out, str_err = await api.docker_image_delete(tag)
-        return QwebResult(200, {}, code, f"{str_out}{str_err}")
+        status = 200 if code == 0 else 400
+        return QwebResult(status, {}, code, f"{str_out}{str_err}")

@@ -51,8 +51,10 @@ if [[ "$c" == 200 ]]; then ok "deep link /login"; else fail "deep link /login: H
 c="$(code -X POST "$BASE/auth/oauth2/user/token")"
 if [[ "$c" =~ ^[1-4][0-9][0-9]$ ]]; then ok "/auth/ reaches the auth service (HTTP $c)"; else fail "/auth/ -> HTTP $c (auth service down? make auth-status)"; fi
 
-js="$("${CURL[@]}" "$BASE/" | grep -o 'static/js/main[^"]*\.js' | head -1)"
-bundle="$("${CURL[@]}" "$BASE/$js")"
+# The Vite build splits the app into assets/*.js; index.html loads the entry
+# and preloads the chunks, and the URLs end up in one of them
+js="$("${CURL[@]}" "$BASE/" | grep -o 'assets/[^"]*\.js' | sort -u)"
+bundle="$(for f in $js; do "${CURL[@]}" "$BASE/$f"; done)"
 for v in DAAS_PUBLIC_URL AUTH_PUBLIC_URL OAUTH_CLIENT_ID; do
     if [[ -n "$js" ]] && grep -qF -- "${!v}" <<<"$bundle"; then
         ok "build uses $v=${!v}"

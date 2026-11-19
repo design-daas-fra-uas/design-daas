@@ -51,10 +51,10 @@ IMAGES := x11vnc wine
 HOST := nginx dnsmasq docker proxmox
 COMPONENTS := $(SERVICES) $(CONTAINERS) $(IMAGES) $(HOST) iso
 # Folder in installer/ with the Makefile of each image
-IMAGE_DIR_db := mariadb
+IMAGE_DIR_db := postgres
 image_dir = $(or $(IMAGE_DIR_$(1)),$(1))
 # Container name of each service container (as in src/config/container.toml)
-CONTAINER_NAME_db := daas-0-mariadb
+CONTAINER_NAME_db := daas-0-postgres
 container_name = $(or $(CONTAINER_NAME_$(1)),daas-0-$(1))
 ACTIONS := start stop restart status logs delete
 LIFECYCLE := $(foreach c,$(COMPONENTS),$(addprefix $(c)-,$(ACTIONS)))
@@ -83,7 +83,8 @@ PURGE_OPT = $(if $(PURGE),-p)
         daas-all daas-install daas-configure daas-services daas-containers daas-check \
         daas-reinstall \
         frontend-all frontend-install frontend-configure frontend-reinstall frontend-check \
-        env require-env auth-install auth-reinstall auth-check auth-backup auth-admin-password
+        env require-env auth-install auth-reinstall auth-check backup auth-admin-password \
+        client-hosts
 
 default: usage
 
@@ -110,7 +111,7 @@ usage:
 	@echo "    daas-install            [3/7] DaaS backend: Python venv, daas.service"
 	@echo "    daas-configure                $(notdir $(ENV_FILE)) -> src/config/local/*.toml, nginx, TLS, dnsmasq"
 	@echo "    images                  [4/7] Docker images: containers-install + images-install"
-	@echo "    auth-install            [5/7] auth service (users, login) + its MariaDB"
+	@echo "    auth-install            [5/7] auth service (users, login), data in the DaaS PostgreSQL"
 	@echo "    frontend-all            [6/7] Frontend: nginx site :8443 + build + frontend.service"
 	@echo "    daas-restart                  Start the DaaS backend (it starts the containers)"
 	@echo "    iso-install             [7/7] Build the install ISOs, upload them (skip: SKIP_ISOS=1)"
@@ -120,19 +121,20 @@ usage:
 	@echo "  make status               Everything, one line each"
 	@echo "  make logs                 Follow auth, daas, frontend"
 	@echo "  make configure            Re-apply $(notdir $(ENV_FILE)) (no rebuilds)"
+	@echo "  make client-hosts         Hosts file line for the computers with a browser"
 	@echo "  make reinstall            After code changes: rebuild services and images"
 	@echo "  make delete               Remove services, containers and images"
 	@echo "  make reset CONFIRM=yes    Fresh start: delete ALL data + builds (then make install)"
+	@echo "  make backup               Save all data (PostgreSQL + auth keys) to backups/<time>/"
 	@echo ""
 	@echo "  Options: PURGE=1          delete/reinstall also delete the data"
 	@echo "                            (auth: DB + keys, daas: src/data + nginx site,"
-	@echo "                            frontend: nginx site, db: src/data/db/mariadb)"
+	@echo "                            frontend: nginx site, db: src/data/db/postgres)"
 	@echo "           SKIP_ISOS=1      install without generating/uploading ISOs"
 	@echo ""
 	@echo "ONE COMPONENT  make <component>-<action>"
 	@echo "  service    auth daas frontend           install start stop restart status logs delete reinstall"
 	@echo "             proxmox-check, daas-check, frontend-check, auth-check: test the running parts"
-	@echo "             auth-backup: save the auth service users/permissions + signing keys"
 	@echo "  container  guacd rabbit db extensions   install start stop restart status logs delete reinstall"
 	@echo "  image      x11vnc wine                  install status delete reinstall"
 	@echo "  host       nginx dnsmasq docker proxmox start stop restart status logs"
@@ -140,7 +142,7 @@ usage:
 	@echo "  Groups:    make containers-install | images-install | images | images-delete"
 	@echo "  e.g.       make db-restart   make db-logs   make extensions-reinstall"
 	@echo ""
-	@echo "PROXMOX (optional, multi-host setups)"
+	@echo "PROXMOX (experimental, untested: multi-host setups, not used by make install)"
 	@echo "  proxmox-install-ceph      Install Ceph (mon + mgr)"
 	@echo "  proxmox-install-ceph-osd  Create OSD on CEPH_DISK"
 	@echo "  proxmox-install-ceph-cephfs"
@@ -204,6 +206,9 @@ install: require-env
 	$(if $(SKIP_ISOS),@echo "Skipped (SKIP_ISOS=1)",$(MAKE) iso-install)
 	@echo ""
 	@echo "Everything installed. Check with: make status"
+	@echo ""
+	@./daas/client-hosts.bash -e "$(ENV_FILE)"
+	@echo ""
 	@echo "Then open $(or $(call env_get,FRONTEND_PUBLIC_URL),https://$(HOST_NAME).$(HOST_DOMAIN):8443) (see README.md: Using it)"
 
 all: install
@@ -218,11 +223,12 @@ deps:
 reset:
 	@[ "$(CONFIRM)" = yes ] || { \
 		echo "make reset deletes ALL data of the DaaS stack, for good:"; \
-		echo "  - the DaaS database (src/data/db/mariadb) and src/data"; \
+		echo "  - the DaaS database (src/data/db/postgres) and src/data"; \
 		echo "  - the auth service's users, permissions and token keys"; \
 		echo "  - all instance containers and user images (daas.*)"; \
 		echo "  - the service containers and all images the installer built"; \
 		echo "Kept: installer/daas.env, src/config, the ISOs, the Proxmox VMs."; \
+		echo "Back up first: sudo make backup"; \
 		echo "Run: sudo make reset CONFIRM=yes"; exit 1; }
 	$(SERVICE_CMD) delete -p all
 	@ids="$$(docker ps -aq --filter name=^daas)"; \
@@ -378,6 +384,10 @@ daas-configure: require-env
 		-s "$(STANDALONE)" \
 		-e "$(ENV_FILE)"
 
+# The hosts file line for the computers with a browser (changes nothing)
+client-hosts: require-env
+	@./daas/client-hosts.bash -e "$(ENV_FILE)"
+
 # Checks the running backend (changes nothing)
 daas-check: require-env
 	./daas/check.bash -e "$(ENV_FILE)"
@@ -438,9 +448,9 @@ auth-check: require-env
 auth-admin-password: require-env
 	./auth/set-admin-password.bash -e "$(ENV_FILE)"
 
-# Saves the database (users, permissions) and signing keys to auth/backups/
-auth-backup:
-	./auth/backup.bash
+# Saves all data (the whole PostgreSQL + the auth signing keys) to backups/<time>/
+backup:
+	./backup.bash
 
 auth-reinstall: require-env
 	$(MAKE) auth-delete auth-install

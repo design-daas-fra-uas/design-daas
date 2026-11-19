@@ -81,7 +81,7 @@ out). The old automatic download of an Office installer from file-hosting
 links was removed; use a licensed Office Deployment Tool setup in
 `cfg/<type>/tools/office/` if you need it.
 
-### Test VM and dev cluster (optional)
+### Developer tools: test VM and dev cluster (not used by `make install`)
 
 | Command | What it does |
 |---|---|

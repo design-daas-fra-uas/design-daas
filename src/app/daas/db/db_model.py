@@ -283,7 +283,9 @@ class ORMApplication(ORMEntity):
 class ORMLimit(ORMEntity):
     __tablename__ = "limits"
 
-    id_owner: Mapped[int] = mapped_column(primary_key=True)
+    # The owner's account id, never generated: with AUTO_INCREMENT, MariaDB stores
+    # owner 0 (the sample limit) as the next free id, one new row per start.
+    id_owner: Mapped[int] = mapped_column(primary_key=True, autoincrement=False)
     vm_max: Mapped[int] = mapped_column()
     container_max: Mapped[int] = mapped_column()
     obj_max: Mapped[int] = mapped_column()

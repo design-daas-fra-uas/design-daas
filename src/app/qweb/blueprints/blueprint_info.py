@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Callable, Optional
 
 from app.qweb.processing.processor import (
     ApiProcessorAction,
@@ -10,6 +11,9 @@ from app.qweb.processing.processor import (
     TemplateProcessorAction,
     WebsocketProcessorAction,
 )
+
+# Every type a permission_type function can return (see BlueprintInfo)
+PERMISSION_TYPES = ("vm", "container")
 
 
 class ConcurrencyMode(Enum):
@@ -66,8 +70,29 @@ class BlueprintInfo:
     # Changes or deletes the objects it loads: on system objects (owner 0,
     # shared by all users, e.g. templates) only admins may call it
     protect_system_objects: bool = False
+    # Returns the type of object the request creates ("vm", "container") from
+    # its request args and loaded objects. If set, the endpoint permission is
+    # also checked for "<name>_<type>", so rules can tell VMs and containers
+    # apart although both use the same route.
+    permission_type: Optional[Callable[[dict, dict], str]] = None
 
     def __repr__(self):
         return (
             f"{self.__class__.__qualname__}" f"(id={self.endpoint_id},name={self.name})"
         )
+
+    def permission_names(self) -> list[tuple[str, str]]:
+        """
+        The names (with a description) the auth service may be asked for
+        about this route: none if the route has no endpoint check, else its
+        name and, with permission_type, "<name>_<type>" for every type.
+        """
+        if self.auth_params != AuthenticationMode.ALL:
+            return []
+        result = [(self.name, self.description)]
+        if self.permission_type is not None:
+            for obj_type in PERMISSION_TYPES:
+                result.append(
+                    (f"{self.name}_{obj_type}", f"{self.description} ({obj_type})")
+                )
+        return result

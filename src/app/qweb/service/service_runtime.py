@@ -40,11 +40,12 @@ class QwebServiceRuntime(Loggable):
         self.reader = ConfigReader(qwebfile=qwebfile, authfile=authfile)
         self.cfg_qweb = self.reader.cfg_qweb
         self.cfg_auth = self.reader.cfg_auth
+        # Before __create_app, which adds the default routes
+        self.blueprints = {}
         self.app = self.__create_app()
         self.services = CoreContextProvider(
             QwebTaskManager(), QwebDummyAuthenticator(self.cfg_auth)
         )
-        self.blueprints = {}
         self.backends = BackendContextProvider()
         self.layers = ObjectLayerContextProvider()
         self.service_task = None
@@ -260,12 +261,14 @@ class QwebServiceRuntime(Loggable):
 
         # Blueprints
         self.app.register_blueprint(handler_default.blueprints)
+        for name, data in handler_default.infos.items():
+            self.blueprints[name] = data
 
         return self.app
 
     async def __stop_app(self) -> bool:
         # Reverse start order: the container backend started the service
-        # containers (MariaDB, RabbitMQ) first, so it must stop them last,
+        # containers (PostgreSQL, RabbitMQ) first, so it must stop them last,
         # after the database and messaging backends have disconnected
         for name, backend in reversed(list(self.backends.backends.items())):
             if isinstance(backend, QwebBackend):

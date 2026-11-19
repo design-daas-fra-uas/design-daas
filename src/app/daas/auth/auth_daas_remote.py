@@ -1,5 +1,7 @@
 """Authenticates requests"""
 
+import asyncio
+import time
 import aiohttp
 from typing import Optional
 from datetime import datetime, timedelta
@@ -11,6 +13,15 @@ from app.qweb.common.config import QwebAuthenticatorConfig
 from app.qweb.common.qweb_tools import get_database
 from app.qweb.processing.processor import ProcessorRequest
 
+# How long an allow/deny answer of the auth backend is reused. Saves one HTTP
+# call per request; a changed rule takes effect after at most this long.
+PERMISSION_CACHE_SECONDS = 30
+# The own (admin) token is renewed this long before it expires
+TOKEN_RENEW_MARGIN_SECONDS = 60
+# Wait between two tries to send the route list (the auth service may start
+# after DaaS)
+ENDPOINT_SYNC_RETRY_SECONDS = 60
+
 
 class DaasRemoteAuthenticator(DaasAuthenticatorBase):
     """Remote authenticator"""
@@ -21,6 +32,9 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
         self.cfg_http = cfg_http
         self.adapter = HttpAdapter(self.cfg_http)
         self.token: Optional[AuthToken] = None
+        # (endpoint, userid) -> (expires at, answer of GET /permissions)
+        self.permission_cache: dict[tuple[str, int], tuple[float, dict]] = {}
+        self.endpoint_sync_task: Optional[asyncio.Task] = None
         DaasAuthenticatorBase.__init__(self, cfg_auth)
 
     async def initialize(self) -> bool:
@@ -67,8 +81,11 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
         if not self.config.enable_auth_endpoint:
             return user
         if user.authenticated:
-
-            response_remote = await self.get_endpoint_permission(
+            # Admins are always allowed (the auth backend answers the same),
+            # so the call is skipped for them
+            if user.role == "admin":
+                return user
+            response_remote = await self.get_endpoint_permission_cached(
                 info.name, user.id_user
             )
             if (
@@ -89,6 +106,52 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
                     return result
             self._log_error(f"HTTP Remote Auth denied endpoint '{info.name}'", 1)
         return result
+
+    async def verify_permission(self, name: str, user: QwebUser) -> bool:
+        """Asks the auth backend for one more permission of a verified user"""
+        # Same rules as verify_endpoint: off, or an admin, means allowed
+        if not self.config.enable_auth_endpoint or user.role == "admin":
+            return True
+        response_remote = await self.get_endpoint_permission_cached(name, user.id_user)
+        if response_remote.get("result") == "allow":
+            self._log_request(f"200 ->   HTTP Remote Auth success for '{name}'")
+            return True
+        self._log_error(f"HTTP Remote Auth denied permission '{name}'", 1)
+        return False
+
+    def start_endpoint_sync(self, infos: list[BlueprintInfo]) -> None:
+        """
+        Sends the route list to the auth service in the background, so the
+        endpoints rules can target always match the code. Tried again until it
+        works, so DaaS also starts while the auth service is down.
+        """
+        self.endpoint_sync_task = asyncio.create_task(self.__sync_endpoints(infos))
+
+    async def __sync_endpoints(self, infos: list[BlueprintInfo]) -> None:
+        names: dict[str, str] = {}
+        for info in infos:
+            for name, description in info.permission_names():
+                names[name] = description
+        endpoints = [
+            {"functionName": name, "description": description}
+            for name, description in sorted(names.items())
+        ]
+        url = f"{self.cfg_auth.remote.url}/endpoints/sync"
+        while True:
+            try:
+                response, data = await self.__request_api(
+                    "put", url, data={"endpoints": endpoints}
+                )
+            except Exception:  # pylint: disable=broad-exception-caught
+                response, data = None, {}
+            if response is not None and response.status == 200:
+                self._log_info(
+                    f"Endpoints synced ({len(endpoints)}): added {data.get('added')}, "
+                    f"updated {data.get('updated')}, deleted {data.get('deleted')}"
+                )
+                return
+            self.__log_http_error(url, response)
+            await asyncio.sleep(ENDPOINT_SYNC_RETRY_SECONDS)
 
     async def get_user_session(self, bearer: str) -> dict:
         """Verify bearer"""
@@ -121,6 +184,24 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
                             f"200 ->   Viewer token accepted for user '{result.id_user}'"
                         )
         return result
+
+    async def get_endpoint_permission_cached(self, endpoint: str, userid: int) -> dict:
+        """
+        Like get_endpoint_permission, but reuses an allow/deny answer for
+        PERMISSION_CACHE_SECONDS. Errors are never cached, so a backend that
+        is down is asked again on the next request.
+        """
+        key = (endpoint, userid)
+        now = time.monotonic()
+        cached = self.permission_cache.get(key)
+        if cached is not None and cached[0] > now:
+            return cached[1]
+        response = await self.get_endpoint_permission(endpoint, userid)
+        if response.get("result") in ("allow", "deny"):
+            self.permission_cache[key] = (now + PERMISSION_CACHE_SECONDS, response)
+        else:
+            self.permission_cache.pop(key, None)
+        return response
 
     async def get_endpoint_permission(self, endpoint: str, userid: int) -> dict:
         """Get user details"""
@@ -164,12 +245,26 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
         }
         if len(data) > 0:
             header["Content-Type"] = "application/json"
-        return await self.adapter.request(method, url, header=header, data=data)
+        response, result = await self.adapter.request(
+            method, url, header=header, data=data
+        )
+        # Own token rejected although not expired (e.g. the auth service was
+        # restarted and signs with a new key): get a new one and retry once
+        if access_token == "" and response is not None and response.status == 401:
+            self._log_request("Own token rejected, requesting a new one")
+            self.token = None
+            header["Authorization"] = (
+                f"Bearer {await self.__choose_bearer_token(access_token)}"
+            )
+            response, result = await self.adapter.request(
+                method, url, header=header, data=data
+            )
+        return response, result
 
     async def __choose_bearer_token(self, access_token: str) -> str:
         if access_token == "":
-            if self.token is None:
-                await self.refresh_session()
+            # Checks the expiry of the own token and fetches a new one if needed
+            await self.refresh_session()
             if self.token is not None:
                 return self.token.access_token
             return ""
@@ -195,7 +290,9 @@ class DaasRemoteAuthenticator(DaasAuthenticatorBase):
 
     def __check_token(self):
         if self.token is not None:
-            if datetime.now() < self.token.valid_until:
+            # Renew a little early, so a token does not expire on its way
+            margin = timedelta(seconds=TOKEN_RENEW_MARGIN_SECONDS)
+            if datetime.now() + margin < self.token.valid_until:
                 pass
             else:
                 obj = self.token.valid_until

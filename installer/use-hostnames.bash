@@ -2,7 +2,8 @@
 #
 # Switches this host to the names pve.cluster.local (DaaS backend, :443) and
 # front0.cluster.local (frontend + auth service, :8443):
-#   - sets the host name and public URLs in installer/daas.env
+#   - sets the public URLs and HOST_IP in installer/daas.env (HOST_NAME and
+#     HOST_DOMAIN are kept: HOST_NAME is the Proxmox node name)
 #   - points both names at this host's IP in /etc/hosts
 #   - re-runs the installer steps that use them: certificate + nginx + toml
 #     (daas-configure), frontend nginx site, auth service and frontend
@@ -45,9 +46,9 @@ set_env() {
 }
 
 run cp -p "$ENV_FILE" "$ENV_FILE.bak-$STAMP"
-# FQDN = HOST_NAME.HOST_DOMAIN; HOST_NAME is also the Proxmox node name
-set_env HOST_NAME           "pve"
-set_env HOST_DOMAIN         "cluster.local"
+# HOST_NAME and HOST_DOMAIN stay as installed: HOST_NAME is the Proxmox node
+# name, renaming it here would point the backend at a node that does not exist.
+# Only the names the browser uses change.
 set_env HOST_IP             "$HOST_IP"
 set_env DAAS_PUBLIC_URL     "https://$DAAS_HOST"
 set_env FRONTEND_PUBLIC_URL "https://$FRONT_HOST:8443"
@@ -76,7 +77,7 @@ run make ENV_FILE="$ENV_FILE" frontend-install
 run make ENV_FILE="$ENV_FILE" daas-restart
 
 success "Done. On the computer with the browser:"
-info "  1. Add to its hosts file: $HOST_IP $DAAS_HOST $FRONT_HOST"
-info "  2. Trust /etc/nginx/ssl/selfsigned.crt (import it), or accept the"
+info "  1. Add to its hosts file: $HOST_IP $DAAS_HOST $FRONT_HOST (make client-hosts)"
+info "  2. Trust /etc/nginx/ssl/daas-ca.crt (import it as an authority), or accept the"
 info "     warning once on https://$DAAS_HOST/ and on https://$FRONT_HOST:8443/"
 info "  3. Open https://$FRONT_HOST:8443/"

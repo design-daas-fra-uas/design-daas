@@ -49,7 +49,7 @@ DaaS backend starts it. `service.bash` uses it for
 `--privileged`; other options are ignored with a warning.
 
 ```bash
-python3 -I lib/service_container.py /root/design-daas daas-0-guacd
+python3 -I lib/service_container.py /daas/design-daas daas-0-guacd
 ```
 
 ## Things to know

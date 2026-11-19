@@ -2,7 +2,12 @@
 
 from app.daas.common.enums import BackendName, LayerName
 from app.plugins.core.db.db_layer import DBObject
-from app.plugins.platform.phases.phases_tasks import PhasesTask
+from app.plugins.platform.phases.phases_tasks import (
+    PhasesTask,
+    created_type_from_app,
+    created_type_from_args,
+    created_type_from_source,
+)
 from app.plugins.platform.phases.phases_tasks_config import ConfigurationTask
 from app.plugins.platform.phases.phases_tasks_env import EnvironmentTask
 from app.qweb.blueprints.blueprint_info import (
@@ -30,6 +35,7 @@ infos = [
         processor=ProcessorType.API,
         processor_action=ApiProcessorAction.JSON,
         processor_task=PhasesTask.PHASES_BASEIMAGE_CREATE.value,
+        permission_type=created_type_from_args,
         content_type="application/json",
         request_args_mandatory=[
             "id",
@@ -67,6 +73,7 @@ infos = [
         processor=ProcessorType.API,
         processor_action=ApiProcessorAction.JSON,
         processor_task=PhasesTask.PHASES_BASEIMAGE_CLONE.value,
+        permission_type=created_type_from_source,
         content_type="application/json",
         request_args_mandatory=["id", "newid", "name"],
         request_args_optional=[
@@ -460,6 +467,7 @@ infos = [
         processor=ProcessorType.API,
         processor_action=ApiProcessorAction.JSON,
         processor_task=PhasesTask.PHASES_BASEIMAGE_CREATE_FROM_APP.value,
+        permission_type=created_type_from_app,
         content_type="application/json",
         request_args_mandatory=["id", "env", "appid", "name"],
         request_args_optional=["run"],
@@ -481,6 +489,7 @@ infos = [
         processor=ProcessorType.API,
         processor_action=ApiProcessorAction.JSON,
         processor_task=PhasesTask.PHASES_BASEIMAGE_CLONE_FROM_APP.value,
+        permission_type=created_type_from_source,
         content_type="application/json",
         request_args_mandatory=["newid", "env", "appid", "name"],
         request_args_optional=["id", "run"],

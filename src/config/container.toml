@@ -24,13 +24,14 @@ service_containers = [
     2,
     2147483648,  # 2 GiB
   ],
-  # MariaDB (only used when db.toml db_type = "mariadb")
+  # PostgreSQL (db.toml db_type = "postgres"), also the auth service's
+  # database (installer/postgres)
   [
-    "daas-0-mariadb",
-    "daas-0-mariadb",
+    "daas-0-postgres",
+    "daas-0-postgres",
     [
-      "-p 127.0.0.1:3306:3306",
-      "-v db/mariadb:/var/lib/mysql:rw",
+      "-p 127.0.0.1:5432:5432",
+      "-v db/postgres:/var/lib/postgresql:rw",
     ],
     2,
     2147483648,  # 2 GiB

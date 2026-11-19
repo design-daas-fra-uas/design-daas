@@ -262,15 +262,45 @@ async def _append_default_ressources(reqargs: dict, app: ApplicationObject) -> d
     return reqargs
 
 
+def app_object_type(app: ApplicationObject) -> str:
+    """Type of object ("vm", "container") an app is installed in, "" if unknown"""
+    if app.os_type in ("win10", "win11", "l26vm"):
+        return "vm"
+    if app.os_type == "l26":
+        return "container"
+    return ""
+
+
+def created_type_from_args(reqargs: dict, objects: dict) -> str:
+    """Typed permission of baseimage_create: the requested obj_type"""
+    return reqargs.get("obj_type", "")
+
+
+def created_type_from_source(reqargs: dict, objects: dict) -> str:
+    """Typed permission of clones: the type of the object cloned from"""
+    for name in ("old", "template"):
+        source = objects.get(name)
+        if source is not None:
+            return getattr(source, "object_type", "")
+    return ""
+
+
+def created_type_from_app(reqargs: dict, objects: dict) -> str:
+    """Typed permission of baseimage_create_from_app: the app's object type"""
+    app = objects.get("app")
+    return app_object_type(app) if isinstance(app, ApplicationObject) else ""
+
+
 async def _create_empty_object_by_app(
     reqargs: dict, app: ApplicationObject, userid: int
 ) -> Optional[MachineObject | ContainerObject]:
     entity = None
-    if app.os_type in ("win10", "win11", "l26vm"):
+    obj_type = app_object_type(app)
+    if obj_type == "vm":
         entity = await get_empty_machine_object(userid, **reqargs)
         entity.os_type = app.os_type
         entity.os_installer = await choose_template_root(entity.os_type)
-    elif app.os_type == "l26":
+    elif obj_type == "container":
         entity = await get_empty_container_object(userid, **reqargs)
         entity.os_type = app.os_type
     return entity

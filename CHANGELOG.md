@@ -3,6 +3,20 @@
 All notable changes to this project are documented in this file. The project uses [Semantic
 Versioning](https://semver.org/).
 
+## [Unreleased]
+
+- **Breaking — database:** one PostgreSQL 18 (`daas-0-postgres`, `installer/postgres`, `127.0.0.1:5432`) replaces
+  both MariaDB servers. It holds `mergedb` (DaaS backend, `db_type = "postgres"`, driver psycopg) and
+  `design_backend` (auth service, own user without access to `mergedb`). The auth service no longer has its own
+  database container and runs on the host network. Existing data was copied over and compared row by row; the
+  MariaDB data folder `src/data/db/mariadb` is left as it was.
+- `POST /admin/delete_user_data` (admin only): stops a user's tasks and instances and deletes their objects with
+  their environments, files, apps and resource limit. The frontend calls it before deleting the account and keeps
+  the account if anything could not be deleted (`400` with the list).
+- Endpoint permission check (`enable_auth_endpoint = true`): admins are let through without asking the auth service,
+  and its allow/deny answers are reused for 30 seconds (`PERMISSION_CACHE_SECONDS`), so a changed rule takes effect
+  after at most that long.
+
 ## [2.0.0]
 
 - **Breaking — new installer:** `make env` → `make install` → `make status` replaces the old targets and `HOST_*`

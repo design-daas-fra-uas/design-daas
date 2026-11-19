@@ -117,7 +117,8 @@ async def create_response_url_start(connect: bool, id_instance: str) -> QwebResu
                     200, {}, response_url=con.viewer_url, id_instance=inst.id
                 )
         return QwebResult(400, {}, 1, "instance or connection missing")
-    return QwebResult(200, {})
+    # Without a viewer the instance id is the only handle to stop it later.
+    return QwebResult(200, {}, id_instance=id_instance)
 
 
 async def remove_args(args: dict, exclude_params: list[str]) -> dict:
