@@ -45,7 +45,6 @@ From `installer/`, as root:
 |---|---|
 | `make auth-install` | Starts `daas-0-postgres` if needed and creates the database and user there, builds the image from the current Java code (Maven inside docker), writes the unit, (re)starts and waits until it answers, then tests the admin login |
 | `make auth-check` | Tests the running backend (changes nothing): service, containers, its database, admin login directly **and** through nginx `/auth/`, the keys volume, and that user instances cannot reach it directly |
-| `make auth-backup` | Saves the database and the signing keys to `auth/backups/` (below) |
 | `make auth-admin-password` | Sets the admin password to `ADMIN_PASSWORD` (BCrypt hash made in a throwaway container, never printed) and revokes all the admin's tokens; then `make daas-configure daas-restart` |
 | `make auth-status` / `auth-logs` / `auth-restart` | Service control |
 | `make auth-reinstall` | Delete + install from the current code; users and keys are kept |

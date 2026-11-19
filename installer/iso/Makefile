@@ -69,6 +69,7 @@ clean-all: clean
 	rm -f iso/*-daas.iso
 
 # ------------------------------------------------------------
+# Developer tool, not used by make install:
 # Test VM: boot the built ISO in qemu on this host
 # ------------------------------------------------------------
 
@@ -86,6 +87,7 @@ ssh:
 		-p $(VMSSHPORT) -u $(USERNAME) -i $(INCFOLDER) -f pve -t $(TIMEOUTS)
 
 # ------------------------------------------------------------
+# Developer tool, not used by make install:
 # Dev cluster: three Proxmox nodes in qemu (cfg/devenv)
 # ------------------------------------------------------------
 

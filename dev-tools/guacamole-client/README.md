@@ -38,7 +38,7 @@ file, so `cat` is enough (no Maven/Java needed).
 
 ## Commands
 
-In `installer/guacamole-client/` (no root needed, needs curl + internet):
+In `dev-tools/guacamole-client/` (no root needed, needs curl + internet):
 
 | Command | What it does |
 |---|---|
