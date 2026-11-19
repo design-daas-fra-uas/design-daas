@@ -14,22 +14,78 @@ ______________________________________________________________________
 
 ## Table of Contents
 
-1. [Features](#features)
-2. [Installation: from a fresh Debian 12 to a running system](#installation-from-a-fresh-debian-12-to-a-running-system)
+1. [Quick start](#quick-start)
+2. [Features](#features)
+3. [Installation: from a fresh Debian 12 to a running system](#installation-from-a-fresh-debian-12-to-a-running-system)
    1. [Starting point](#1-starting-point)
    2. [Log in as root and install git + make](#2-log-in-as-root-and-install-git--make)
    3. [Get the three repositories](#3-get-the-three-repositories)
    4. [Write the settings file](#4-write-the-settings-file)
    5. [Run the installer](#5-run-the-installer)
    6. [Check the installation](#6-check-the-installation)
-   7. [Prepare the computer with the browser](#7-prepare-the-computer-with-the-browser)
+   7. [Trust the certificate in the browser](#7-trust-the-certificate-in-the-browser)
    8. [First login](#8-first-login)
    9. [Optional: run the end-to-end tests](#9-optional-run-the-end-to-end-tests)
-3. [Usage](#usage)
-4. [Acknowledgments](#acknowledgments)
-5. [Resources](#resources)
+4. [Usage](#usage)
+5. [Troubleshooting](#troubleshooting)
+6. [Acknowledgments](#acknowledgments)
+7. [Resources](#resources)
 
 ______________________________________________________________________
+
+## Quick start
+
+Everything runs on **one computer**: install it there and open it in the
+browser on the same computer. Every step links to the full explanation further
+down.
+
+**1. Get the code** ([details](#3-get-the-three-repositories))
+
+```bash
+su -
+apt-get update && apt-get install -y git make
+mkdir -p /daas && cd /daas
+git clone https://github.com/design-daas-fra-uas/design-daas.git
+git clone https://github.com/design-daas-fra-uas/design-daas-application-frontend.git
+git clone https://github.com/design-daas-fra-uas/design-daas-backend-java.git
+```
+
+**2. Write the settings** ([details](#4-write-the-settings-file))
+
+```bash
+ip -br -4 addr      # your network device, e.g. enp0s3 or wlp3s0
+cd /daas/design-daas/installer
+make env
+nano daas.env
+```
+
+Set `NET_DEVICE` to that device and every `change-me-*` password. Leave
+`HOST_IP` **empty**: the installer detects it.
+
+**3. Install** ([details](#5-run-the-installer))
+
+```bash
+make install        # first run stops: "Reboot into the PVE kernel"
+reboot
+# open a terminal again, su -
+cd /daas/design-daas/installer
+make install        # second run: 7 steps, 1-2 hours
+make status         # every line: active / running / installed / built
+```
+
+**4. Open it** ([details](#7-trust-the-certificate-in-the-browser))
+
+Import `/etc/nginx/ssl/daas-ca.crt` into the browser as a trusted
+**certificate authority** and restart the browser. Then open:
+
+| What | Address | Login |
+|---|---|---|
+| DaaS frontend | `https://pve1.daas-design.de:8443/` | *Admin* tab, `ADMIN_EMAIL` / `ADMIN_PASSWORD` |
+| Proxmox | `https://pve1.daas-design.de:8006/` | `root`, realm *Linux PAM*, the root password |
+
+(The name is `<HOST_NAME>.<HOST_DOMAIN>` from `daas.env`.)
+
+Something went wrong? See [Troubleshooting](#troubleshooting).
 
 ## Features
 
@@ -46,85 +102,37 @@ This section starts with a freshly installed Debian 12 and ends with the admin
 logged in to the web frontend. Follow it from top to bottom and type every
 command exactly as shown; values in `<angle brackets>` are yours to fill in.
 
-Everything runs on **one host**. Users only ever open one address, the
-frontend:
+Everything runs on **one host**, and you use it in the browser on that same
+host. You open two addresses:
 
-| Part | What it is | Do users open it? |
+| Part | What it is | Do you open it? |
 |---|---|---|
-| **Frontend** | Web app users and admins work in (`frontend.service`) | **Yes: `https://<host>:8443`**, the only address |
+| **Frontend** | Web app users and admins work in (`frontend.service`) | **Yes: `https://<host>:8443`** |
+| **Proxmox VE** | Runs the virtual machines | **Yes: `https://<host>:8006`** (admin only) |
 | DaaS backend | Python API that creates and controls the desktops (`daas.service`, `127.0.0.1:5000`) | No |
 | auth service | Java service for users, login and permissions (`daas-auth.service`, `127.0.0.1:8080`) | No |
-| Proxmox VE | Runs the virtual machines | No |
 | Containers | `guacd` (desktop gateway), RabbitMQ, PostgreSQL, `extensions`, and one container per started desktop | No |
 
 `<host>` is the host's full name, `<HOST_NAME>.<HOST_DOMAIN>` from step 4,
-e.g. `pve1.daas-design.de`. In the background the frontend also uses port
-**443** of the same name (DaaS API and the desktop stream), so ports 8443 and
-443 of the host must be reachable from the users' computers.
+e.g. `pve1.daas-design.de`. The installer adds this name to the host's
+`/etc/hosts`, so the browser finds it without any DNS.
 
 ### 1. Starting point
 
-**The host** (the computer the system is installed on):
-
-- **Debian 12 "bookworm"**, amd64, freshly installed. No other version: Proxmox
-  VE 8 is built for Debian 12. During the Debian installation:
-  - set a **root password** (do not leave it empty),
-  - in the software selection, choose **SSH server** and **standard system
-    utilities**, and no desktop environment.
-- Hardware virtualization (Intel VT-x / AMD-V) **enabled in the BIOS/UEFI**
-  (for a VM: nested virtualization), at least 4 CPU cores, 16 GB RAM and
-  250 GB disk (the install ISOs take about 30 GB, the docker images about
-  20 GB, the rest is for the VM disks).
-- Internet access and an IPv4 address that **never changes** (static, or a
-  DHCP reservation in the router): the installer writes it into
-  `/etc/hosts`, and Proxmox stops working when it changes.
-- **Network: a wired connection is the simplest.** Proxmox takes over the
-  network configuration (`/etc/network/interfaces`), and a Wi-Fi set up by
-  the Debian installer would be gone after the installer's reboot. A Wi-Fi
-  only works if **NetworkManager** runs it; the installer checks this and
-  stops before changing anything if it does not (see below).
-
-**Only if the host uses Wi-Fi:** hand the Wi-Fi to NetworkManager before step
-2. Do this at the host's console, not over SSH: the connection drops for a
-moment. As root (`su -`), with your Wi-Fi device (`ip -br link`, e.g.
-`wlp3s0`) and network:
-
-```bash
-apt-get install -y network-manager
-ifdown wlp3s0
-nano /etc/network/interfaces     # put a # in front of every line of the wlp3s0 block (allow-hotplug, iface, wpa-ssid, wpa-psk)
-systemctl restart NetworkManager
-nmcli device wifi connect "<SSID>" password "<Wi-Fi password>"
-nmcli device                      # wlp3s0 must show "connected"
-```
-
-The installer then keeps the Wi-Fi working through Proxmox's changes.
-
-**The client**: a second computer with Debian and Firefox or Chromium in the
-same network. This is where you (and later the users) open the frontend.
+- **Debian 12 "bookworm"**, amd64, freshly installed, with a desktop and a
+  browser (e.g. GNOME with Firefox). No other version: Proxmox VE 8 is built
+  for Debian 12.
 
 **Time**: about 1–2 hours, most of it unattended. The Windows ISOs alone
 download about 11 GB from Microsoft.
 
 ### 2. Log in as root and install git + make
 
-Every command on the host runs **as root**. Log in as `root` at the host's
-console, or from the client over SSH with the normal user created during the
-Debian installation and switch to root:
+Every command runs **as root**. Open a terminal and switch to root with
+`su -` (it asks for the root password; use `su -`, not `sudo`):
 
 ```bash
-ssh <user>@<host-ip>
 su -
-```
-
-Type `su -` with the dash: without it `/usr/sbin` is missing from the `PATH`
-and several tools are not found. (Debian does not accept `ssh root@...` with
-a password, hence the detour over the normal user.)
-
-Install the two tools the installer needs to start; it installs everything
-else itself (Proxmox, docker, nginx, Python, ...):
-
-```bash
 apt-get update
 apt-get install -y git make
 ```
@@ -161,7 +169,7 @@ services when it installs them, so do not move it afterwards (or run
 ### 4. Write the settings file
 
 All settings of the system are in one file, `installer/daas.env`. First find
-out the host's network interface, IP address and name:
+out the host's network interface and name:
 
 ```bash
 ip -br -4 addr
@@ -169,7 +177,7 @@ hostname
 ```
 
 Example output of `ip -br -4 addr`: `enp0s3  UP  192.168.0.158/24`. The
-interface is `enp0s3`, the IP is `192.168.0.158` (without the `/24`).
+interface is `enp0s3`.
 
 Create the settings file and open it:
 
@@ -187,10 +195,8 @@ the file itself:
 |---|---|
 | `HOST_NAME` | the short host name, e.g. `pve1` (the output of `hostname`) |
 | `HOST_DOMAIN` | a domain, e.g. `daas-design.de` (it does not need to exist in public DNS) |
-| `HOST_IP` | the IP address, e.g. `192.168.0.158` |
+| `HOST_IP` | leave **empty**: the installer takes the IP the host uses for its network. If you set it, it must be one of the host's own addresses, or the install stops before changing anything |
 | `NET_DEVICE` | the network interface, e.g. `enp0s3` |
-| `STANDALONE` | `yes` (one host, the normal case) |
-| `HOST_NUMBER` | keep `11` |
 | `ADMIN_EMAIL` | e-mail address of the first admin; you log in with it |
 | `ADMIN_PASSWORD` | password of that admin |
 | `AUTH_DB_PASSWORD`, `DAAS_DB_PASSWORD`, `PVE_API_PASSWORD` | three different new passwords; only used internally, you never type them in |
@@ -205,9 +211,7 @@ Every value that still starts with `change-me-` must be replaced.
 `daas.env` is the **only file you edit**. The installer writes every other
 settings file from it (`installer/auth/.env`, `installer/frontend/.env`,
 `src/config/local/*.toml`) and overwrites them on the next run, so changes
-there are lost. To change a setting later, edit `daas.env` and see
-[installer/README.md → Which files do I edit?](installer/README.md#which-files-do-i-edit)
-for the command that applies it.
+there are lost. To change a setting later, edit `daas.env`.
 
 ### 5. Run the installer
 
@@ -216,7 +220,8 @@ cd /daas/design-daas/installer
 make install
 ```
 
-On a fresh Debian the first run installs the Proxmox kernel and **stops on
+It first prints the IP it uses, e.g. `HOST_IP: 192.168.0.158`. On a fresh
+Debian the first run then installs the Proxmox kernel and **stops on
 purpose** with `Phase 1 done. Reboot into the PVE kernel, then run this
 again.` Reboot:
 
@@ -224,7 +229,7 @@ again.` Reboot:
 reboot
 ```
 
-Log in as root again (step 2) and run the same command a second time:
+Open a root terminal again (step 2) and run the same command a second time:
 
 ```bash
 cd /daas/design-daas/installer
@@ -245,7 +250,7 @@ such as `==== [4/7] Docker images ====`:
 | 7/7 ISOs | builds the unattended install ISOs for Debian 12, Windows 10 and Windows 11 and uploads them to Proxmox (the longest step) |
 
 At the end it prints `Everything installed. Check with: make status` and the
-line for the client's hosts file (step 7).
+address to open.
 
 **If a step fails:** the message says what is wrong; the full log is
 `/var/log/daas-installer.log`. Fix the cause and run `make install` again:
@@ -263,8 +268,8 @@ prints one line per component. All of them must be `active`, `running`,
 `installed` or `built`. (After `make install SKIP_ISOS=1` the ISOs are `not
 built` until `make iso-install`.)
 
-These commands also test the running system the way a client does; they
-change nothing and must each end with `RESULT: all checks passed`:
+These commands also test the running system the way the browser uses it;
+they change nothing and must each end with `RESULT: all checks passed`:
 
 ```bash
 make proxmox-check
@@ -273,44 +278,15 @@ make auth-check
 make frontend-check
 ```
 
-### 7. Prepare the computer with the browser
+### 7. Trust the certificate in the browser
 
-**a) Make the host name known.** Print the line for the client's hosts file;
-this one command runs **on the host**, everything after it in this step on
-the client:
-
-```bash
-make -C /daas/design-daas/installer client-hosts
-```
-
-It is e.g. `192.168.0.158  pve1.daas-design.de`. Unless your DNS already
-resolves the name, add it on the client as root (`su -`), with your line:
-
-```bash
-echo "192.168.0.158  pve1.daas-design.de" >> /etc/hosts
-```
-
-**b) Trust the system's certificate.** The installer creates its own
-certificate authority (CA). Copy it to the client:
-
-```bash
-scp <user>@<host-ip>:/etc/nginx/ssl/daas-ca.crt ~/
-```
-
-and import `~/daas-ca.crt` into the browser once:
+The installer creates its own certificate authority (CA),
+`/etc/nginx/ssl/daas-ca.crt`. Import it into the browser once:
 
 - **Firefox:** *Settings → Privacy & Security → Certificates → View
-  Certificates… → Authorities → Import…*, select the file, tick *Trust this CA
-  to identify websites*, *OK*.
-- **Chromium:** it reads its certificates from your user's NSS database.
-  Install the tool once as root (`apt-get install -y libnss3-tools`), then, as
-  your normal user:
-
-  ```bash
-  mkdir -p ~/.pki/nssdb
-  [ -f ~/.pki/nssdb/cert9.db ] || certutil -d sql:$HOME/.pki/nssdb -N --empty-password
-  certutil -d sql:$HOME/.pki/nssdb -A -t "C,," -n daas-ca -i ~/daas-ca.crt
-  ```
+  Certificates… → Authorities → Import…*, select
+  `/etc/nginx/ssl/daas-ca.crt`, tick *Trust this CA to identify websites*,
+  *OK*.
 
 Restart the browser afterwards. This import is **required**: without it the
 frontend cannot reach the system's backend in the background, and the
@@ -323,6 +299,9 @@ choose the *Admin* tab and log in with `ADMIN_EMAIL` / `ADMIN_PASSWORD` from
 `daas.env`. Open *System status* in the admin menu: every part (backend, auth
 service, containers, frontend) must be green.
 
+Proxmox is at **`https://<host>:8006/`**: log in as `root`, realm *Linux PAM
+standard authentication*, with the root password.
+
 The installation is complete. Everything else about the installer (single
 steps, rebuilding after code changes, uninstalling, changing passwords,
 troubleshooting) is in [installer/README.md](installer/README.md).
@@ -333,12 +312,14 @@ The repository [design-daas-e2e](https://github.com/design-daas-fra-uas/design-d
 tests the installed system through the browser (124 Playwright tests: login,
 user dashboard, permissions, limits, desktops, system status, Docker,
 logout). It installs nothing itself; its README describes how to set it up on
-the host or the client and run it against this installation.
+the host and run it against this installation.
 
 ## Usage
 
 Users and admins work only in the frontend, `https://<host>:8443/`; no client
-software is needed. The login page has two tabs, *User* and *Admin*.
+software is needed. The login page has two tabs, *User* and *Admin*. The
+virtual machines can also be seen and managed in Proxmox,
+`https://<host>:8006/`.
 
 ### On the host
 
@@ -360,6 +341,89 @@ way; the complete list is in [installer/README.md](installer/README.md).
 - **Logs**: every request carries an `X-Request-ID`, written into the logs of
   the frontend, the DaaS backend (`journalctl -u daas`, `src/data/logs/`) and
   the auth service. Search for that id to follow one action through all three.
+
+## Troubleshooting
+
+**First, where do I look?** (as root)
+
+```bash
+make -C /daas/design-daas/installer status            # which part is not running
+tail -n 50 /var/log/daas-installer.log                # what the installer did last
+make -C /daas/design-daas/installer auth-logs         # logs of one part: auth-, daas-, frontend-, db-, guacd-...
+```
+
+If an installer step failed, fix the cause and run `make install` again. Every
+step can be repeated and skips what is already done.
+
+### Commands and permissions
+
+- **`<user> is not in the sudoers file`**: use `su -` instead of `sudo` (it
+  asks for the **root** password), or run a single command with
+  `su -c '<command>'`.
+- **`command not found`** for tools like `ip`, `reboot` or `qm`: you switched
+  with `su` instead of `su -`. With the dash, `/usr/sbin` is in the `PATH`.
+- **`Permission denied`** on files in `/daas`, or git says **`detected dubious
+  ownership in repository`**: the repositories belong to root (they were
+  cloned as root), and you are working as your normal user. Either work as
+  root, or give the folder to your user once. The installer still runs as
+  root afterwards:
+
+  ```bash
+  su -c 'chown -R <user>:<user> /daas'
+  ```
+
+### `HOST_IP ... is not an address of this host`
+
+`make install` stops with this before it changes anything: `HOST_IP` in
+`daas.env` is set to an address this computer does not have (copied from
+another machine or an example). Leave it **empty** (`HOST_IP=`) and run
+`make install` again; the installer then detects it.
+
+### The browser cannot open the frontend or Proxmox
+
+1. **The host's IP changed** after the install (after a reboot or a router
+   restart, with DHCP or Wi-Fi). Compare:
+
+   ```bash
+   getent hosts <HOST_NAME>.<HOST_DOMAIN>    # the IP in /etc/hosts ...
+   ip -br -4 addr                            # ... must be one of these
+   ```
+
+   If not, put the new IP in front of the name in `/etc/hosts` and restart
+   Proxmox:
+
+   ```bash
+   nano /etc/hosts                          # <new IP> <HOST_NAME>.<HOST_DOMAIN> <HOST_NAME>
+   systemctl restart pve-cluster pveproxy
+   ```
+
+   To prevent it, give the host a static IP or a DHCP reservation in the
+   router.
+2. **A part is not running**: see
+   [below](#a-part-shows-as-not-running-in-make-status).
+3. **Check without the browser.** `curl -kI https://<host>:8443/` must answer
+   `HTTP/1.1 200`. If it does and the browser still fails, the problem is in
+   the browser: see the next section.
+
+### The page opens but warns about the certificate, or stays empty
+
+The system's certificate authority is not imported into the browser, or the
+browser was not restarted afterwards. Import `/etc/nginx/ssl/daas-ca.crt` as
+an **authority** (not as a website certificate), see
+[step 7](#7-trust-the-certificate-in-the-browser). Clicking "accept the
+risk" is not enough: the frontend also talks to port 443 in the background,
+and that connection fails silently.
+
+### A part shows as not running in `make status`
+
+```bash
+make -C /daas/design-daas/installer <part>-logs      # e.g. daas-logs, db-logs
+make -C /daas/design-daas/installer <part>-restart
+```
+
+`make help` lists every part and action. More installer-specific problems
+(Proxmox kernel, Wi-Fi, enterprise repository) are in
+[installer/README.md → Troubleshooting](installer/README.md#troubleshooting).
 
 ## Acknowledgments
 

@@ -125,7 +125,7 @@ EOF
     error "The host is online over Wi-Fi ($dev), but NetworkManager does not run it."
     error "Proxmox replaces ifupdown and rewrites /etc/network/interfaces, so this"
     error "Wi-Fi would be gone after the reboot. Use a wired connection, or let"
-    error "NetworkManager run the Wi-Fi first (README.md, step 1), then run this again."
+    error "NetworkManager run the Wi-Fi first (installer/README.md, Troubleshooting), then run this again."
     die "Wi-Fi without NetworkManager"
 }
 

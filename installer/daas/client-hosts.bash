@@ -17,7 +17,8 @@ while getopts ":e:" o; do
 done
 [[ -n "$ENV_FILE" ]] || { echo "Usage: $0 -e <env-file>" >&2; exit 1; }
 load_stack_env "$ENV_FILE" >/dev/null
-[[ -n "${HOST_IP:-}" ]] || die "HOST_IP is not set in $ENV_FILE"
+# Empty HOST_IP: detected the same way the installer does
+HOST_IP="$("$DAAS_INSTALLER_DIR/daas/host-ip.bash" "${HOST_IP:-}")"
 
 names=()
 for url in "$DAAS_PUBLIC_URL" "$FRONTEND_PUBLIC_URL" "$AUTH_PUBLIC_URL"; do

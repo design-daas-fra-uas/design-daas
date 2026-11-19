@@ -49,8 +49,11 @@ make env
 
 This copies `daas.env.example` to `daas.env` (mode 600, not committed). Edit it:
 
-- **Host**: `HOST_NAME`, `HOST_DOMAIN`, `HOST_IP`, `HOST_NUMBER`, `NET_DEVICE`.
-  Set `STANDALONE=yes` for a single host without an uplink bridge.
+- **Host**: `HOST_NAME`, `HOST_DOMAIN`, `HOST_NUMBER`, `NET_DEVICE`. Leave
+  `HOST_IP` empty: it is detected from the default route (`daas/host-ip.bash`).
+  A set `HOST_IP` that is not an address of this host stops `make install`
+  before it changes anything. `STANDALONE=YES` (the default) is a single host
+  without an uplink bridge.
 - **Passwords**: change `ADMIN_PASSWORD`, `AUTH_DB_PASSWORD`,
   `DAAS_DB_PASSWORD`, `PVE_API_PASSWORD` (every `change-me-*` value). `ADMIN_EMAIL` /
   `ADMIN_PASSWORD` is the first admin account you log in with.
@@ -103,15 +106,15 @@ One line per component. Everything should be `active` / `running` /
 
 ## Using it
 
-Steps 7 and 8 of the [top-level README](../README.md#7-prepare-the-computer-with-the-browser)
+Everything runs on one host, and the browser runs on that host too. Steps 7
+and 8 of the [top-level README](../README.md#7-trust-the-certificate-in-the-browser)
 describe it exactly; in short:
 
-1. On the computer with the browser, add the line `make client-hosts` prints
-   to `/etc/hosts` (unless DNS resolves the names).
-2. Import `/etc/nginx/ssl/daas-ca.crt` from the host into the browser as a
-   trusted authority (required, otherwise the frontend cannot reach the
-   backend in the background).
-3. Open `https://<host>:8443/` and log in with `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
+1. Import `/etc/nginx/ssl/daas-ca.crt` into the browser as a trusted
+   authority (required, otherwise the frontend cannot reach the backend in
+   the background). The host name is already in `/etc/hosts`.
+2. Open `https://<host>:8443/` and log in with `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
+   Proxmox is at `https://<host>:8006/` (`root`, realm *Linux PAM*).
 
 Using other names than `HOST_NAME.HOST_DOMAIN`, e.g. the test names
 `pve.cluster.local` / `front0.cluster.local`: `./use-hostnames.bash [<ip>]`
@@ -127,7 +130,7 @@ node name and must not change after the install.
 | `make start` / `stop` / `restart` | The three services auth, daas, frontend (daas starts/stops the containers) |
 | `make logs` | Follow the logs of auth, daas and frontend |
 | `make configure` | You changed `daas.env`: apply it without rebuilding |
-| `make client-hosts` | The hosts file line for the computers with a browser (all names of the public URLs) |
+| `make client-hosts` | Only for a browser on another computer: the line for its hosts file |
 | `make reinstall` | You changed code: rebuild the services, containers and images (data is kept) |
 | `make delete` | Remove services, containers and images (data is kept) |
 | `make backup` | Save all data to `backups/<time>/` (see [Backup and restore](#backup-and-restore)) |
@@ -258,7 +261,15 @@ Values come from, in this order: the command line
   the `vmbr1` bridge, which the DaaS backend creates on its first start.
 - **`Wi-Fi without NetworkManager`**: the host is online over a Wi-Fi that the
   Debian installer set up; Proxmox would remove it. Use a wired connection, or
-  hand the Wi-Fi to NetworkManager first (top-level README, step 1).
+  hand the Wi-Fi to NetworkManager first, at the host's console as root:
+
+  ```bash
+  apt-get install -y network-manager
+  ifdown <wifi-device>
+  nano /etc/network/interfaces    # put a # in front of every line of the <wifi-device> block
+  systemctl restart NetworkManager
+  nmcli device wifi connect "<SSID>" password "<Wi-Fi password>"
+  ```
 - **The Wi-Fi is gone after a reboot** (a system installed before this check):
   NetworkManager stops managing devices that Proxmox lists in
   `/etc/network/interfaces`. At the host's console, as root:

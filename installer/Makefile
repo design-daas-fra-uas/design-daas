@@ -24,7 +24,8 @@ ISOTYPES ?= debian12 win10 win11
 
 # Host configuration: command line > environment > ENV_FILE > default
 HOST_NUMBER ?= $(or $(call env_get,HOST_NUMBER),11)
-HOST_IP ?= $(or $(call env_get,HOST_IP),10.0.2.15)
+# Empty in daas.env: detected from the default route (daas/host-ip.bash)
+HOST_IP ?= $(or $(call env_get,HOST_IP),$(shell "$(DESIGN_FOLDER)/installer/daas/host-ip.bash" 2>/dev/null))
 HOST_NAME ?= $(or $(call env_get,HOST_NAME),pve1)
 HOST_DOMAIN ?= $(or $(call env_get,HOST_DOMAIN),daas-design.de)
 NET_DEVICE ?= $(or $(call env_get,NET_DEVICE),enp0s4)
@@ -83,7 +84,7 @@ PURGE_OPT = $(if $(PURGE),-p)
         daas-all daas-install daas-configure daas-services daas-containers daas-check \
         daas-reinstall \
         frontend-all frontend-install frontend-configure frontend-reinstall frontend-check \
-        env require-env auth-install auth-reinstall auth-check backup auth-admin-password \
+        env require-env require-host-ip auth-install auth-reinstall auth-check backup auth-admin-password \
         client-hosts
 
 default: usage
@@ -189,7 +190,7 @@ stage = @printf '\n\033[1m==== [%s/7] %s ====\033[0m\n\n' "$(1)" "$(2)"
 #   - auth before the DaaS backend: it checks logins against it
 #   - the ISO upload needs the daas-iso storage, which the backend creates
 #     on its first start
-install: require-env
+install: require-env require-host-ip
 	$(call stage,1,Proxmox VE)
 	$(MAKE) proxmox-ensure require-pve
 	$(call stage,2,Host dependencies)
@@ -207,9 +208,8 @@ install: require-env
 	@echo ""
 	@echo "Everything installed. Check with: make status"
 	@echo ""
-	@./daas/client-hosts.bash -e "$(ENV_FILE)"
-	@echo ""
-	@echo "Then open $(or $(call env_get,FRONTEND_PUBLIC_URL),https://$(HOST_NAME).$(HOST_DOMAIN):8443) (see README.md: Using it)"
+	@echo "Then open $(or $(call env_get,FRONTEND_PUBLIC_URL),https://$(HOST_NAME).$(HOST_DOMAIN):8443) in the browser on this host"
+	@echo "(import /etc/nginx/ssl/daas-ca.crt into the browser first, see README.md: Quick start)"
 
 all: install
 
@@ -331,7 +331,7 @@ proxmox-ensure:
 		$(MAKE) proxmox-install; \
 	fi
 
-proxmox-install:
+proxmox-install: require-host-ip
 	./proxmox/install.bash -i "$(HOST_IP)" -h "$(HOST_NAME)" -d "$(HOST_DOMAIN)" -n "$(HOST_NUMBER)"
 
 # Checks the Proxmox host layer (changes nothing)
@@ -435,6 +435,11 @@ env:
 
 require-env:
 	@[ -f "$(ENV_FILE)" ] || { echo "Missing $(ENV_FILE): run 'make env' and edit it"; exit 1; }
+
+# HOST_IP must be an address of this host (empty: detected); stops the install
+# before anything is changed, e.g. /etc/hosts written with a wrong address
+require-host-ip:
+	@ip="$$(./daas/host-ip.bash "$(call env_get,HOST_IP)")" && echo "HOST_IP: $$ip"
 
 auth-install: require-env
 	./auth/install.bash -e "$(ENV_FILE)"

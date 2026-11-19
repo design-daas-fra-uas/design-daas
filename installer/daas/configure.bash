@@ -262,8 +262,11 @@ for url in "$DAAS_PUBLIC_URL" "$FRONTEND_PUBLIC_URL" "$AUTH_PUBLIC_URL"; do
     [[ "$name" == "$FQDN" || " ${CERT_NAMES[*]} " == *" $name "* ]] || CERT_NAMES+=("$name")
 done
 info "Certificate: $FQDN ${CERT_NAMES[*]}"
-"$DAAS_INSTALLER_DIR/daas/mkcert.bash" -o "$HOST_NAME" -c "$FQDN" \
-    $(printf -- '-a %s ' "${CERT_NAMES[@]}")
+# Build the -a flags as an array: printf with an empty list would still emit
+# one bare "-a", and an unquoted $(...) would also word-split/glob the names
+ALT_ARGS=()
+for name in "${CERT_NAMES[@]}"; do ALT_ARGS+=(-a "$name"); done
+"$DAAS_INSTALLER_DIR/daas/mkcert.bash" -o "$HOST_NAME" -c "$FQDN" "${ALT_ARGS[@]}"
 
 run cp "$DAAS_INSTALLER_DIR/daas/nginx.conf" /etc/nginx/nginx.conf
 sed -e "s#pve1.cluster.local#$PUBLIC_HOST#g" "$DAAS_INSTALLER_DIR/daas/daas.conf" \
