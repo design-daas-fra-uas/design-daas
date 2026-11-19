@@ -10,6 +10,9 @@ __pycache__/
 /installer/auth/.env
 /installer/frontend/.env
 
+# Data backups of make backup (installer/backup.bash)
+/installer/backups/
+
 # Secrets written by the installer (installer/daas/configure.bash)
 /src/config/local/
 

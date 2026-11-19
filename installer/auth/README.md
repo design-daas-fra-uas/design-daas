@@ -48,7 +48,7 @@ From `installer/`, as root:
 | `make auth-admin-password` | Sets the admin password to `ADMIN_PASSWORD` (BCrypt hash made in a throwaway container, never printed) and revokes all the admin's tokens; then `make daas-configure daas-restart` |
 | `make auth-status` / `auth-logs` / `auth-restart` | Service control |
 | `make auth-reinstall` | Delete + install from the current code; users and keys are kept |
-| `make auth-delete [PURGE=1]` | Removes service, container and image. `PURGE=1` also drops the **database, its user and the keys**: all users and permissions are gone. Run `make auth-backup` first |
+| `make auth-delete [PURGE=1]` | Removes service, container and image. `PURGE=1` also drops the **database, its user and the keys**: all users and permissions are gone. Run `make backup` first |
 
 Restarting it does not restart the DaaS backend; logins fail while the
 auth service starts (about 8 s on this host, after the database is up).
@@ -60,26 +60,9 @@ database container first.
 
 ## Backup and restore
 
-`make auth-backup` (works while it runs) creates, root-only:
-
-- `auth/backups/db-<time>.sql.gz`: its database `AUTH_DB_NAME` (users,
-  groups, tokens, permissions, schema version), not `mergedb`
-- `auth/backups/keys-<time>.tar.gz`: the token signing key (`rsa-jwk.json`);
-  without it every issued token becomes invalid
-
-It checks the dump (valid gzip, tables present) and the key archive. The
-dump is made with `pg_dump --create`, so it recreates the database itself.
-
-Restore (replaces the current users and permissions):
-
-```bash
-cd /daas/design-daas/installer/auth
-systemctl stop daas-auth                                       # removes the container, keeps the keys volume
-docker exec daas-0-postgres dropdb -U postgres --force design_backend
-gzip -dc backups/db-<time>.sql.gz | docker exec -i daas-0-postgres psql -U postgres -q -d postgres
-docker run --rm -i -v daas-auth_keys:/k postgres:18 tar -C /k -xzf - < backups/keys-<time>.tar.gz
-systemctl start daas-auth && make -C .. auth-check
-```
+The auth service's data (its database and the signing keys) is part of the
+system backup: `make backup` in `installer/`, see
+[Backup and restore](../README.md#backup-and-restore).
 
 ## Security
 
@@ -102,7 +85,6 @@ systemctl start daas-auth && make -C .. auth-check
 | `install.bash` | Database + user in `daas-0-postgres`, `.env` from `daas.env`, image build, `daas-auth.service`, wait + admin login test |
 | `delete.bash` | Removes service, container, image (`-p`: also the database, its user, the keys volume and `.env`) |
 | `check.bash` | The test behind `make auth-check` |
-| `backup.bash` | The backup behind `make auth-backup` |
 | `set-admin-password.bash` | The password change behind `make auth-admin-password` |
 | `docker-compose.yml` | The container, keys volume, environment |
 | `.env`, `backups/` | Generated, root-only, not committed |

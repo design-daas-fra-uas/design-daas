@@ -83,7 +83,7 @@ PURGE_OPT = $(if $(PURGE),-p)
         daas-all daas-install daas-configure daas-services daas-containers daas-check \
         daas-reinstall \
         frontend-all frontend-install frontend-configure frontend-reinstall frontend-check \
-        env require-env auth-install auth-reinstall auth-check auth-backup auth-admin-password \
+        env require-env auth-install auth-reinstall auth-check backup auth-admin-password \
         client-hosts
 
 default: usage
@@ -134,7 +134,6 @@ usage:
 	@echo "ONE COMPONENT  make <component>-<action>"
 	@echo "  service    auth daas frontend           install start stop restart status logs delete reinstall"
 	@echo "             proxmox-check, daas-check, frontend-check, auth-check: test the running parts"
-	@echo "             auth-backup: save the auth service users/permissions + signing keys"
 	@echo "  container  guacd rabbit db extensions   install start stop restart status logs delete reinstall"
 	@echo "  image      x11vnc wine                  install status delete reinstall"
 	@echo "  host       nginx dnsmasq docker proxmox start stop restart status logs"
@@ -447,9 +446,9 @@ auth-check: require-env
 auth-admin-password: require-env
 	./auth/set-admin-password.bash -e "$(ENV_FILE)"
 
-# Saves the database (users, permissions) and signing keys to auth/backups/
-auth-backup: require-env
-	./auth/backup.bash -e "$(ENV_FILE)"
+# Saves all data (the whole PostgreSQL + the auth signing keys) to backups/<time>/
+backup:
+	./backup.bash
 
 auth-reinstall: require-env
 	$(MAKE) auth-delete auth-install
