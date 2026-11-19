@@ -37,7 +37,7 @@ ______________________________________________________________________
 
 Everything runs on **one computer**: install it there and open it in the
 browser on the same computer. Every step links to the full explanation further
-down.
+down. **Only on "Debian 12 "bookworm". No other version: Proxmox VE 8 is built for Debian 12.**
 
 **1. Get the code** ([details](#3-get-the-three-repositories))
 
