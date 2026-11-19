@@ -59,8 +59,8 @@ make env
 nano daas.env
 ```
 
-Set `NET_DEVICE` to that device and every `change-me-*` password. Leave
-`HOST_IP` **empty**: the installer detects it.
+Set `HOST_IP` and `NET_DEVICE` to that device and every `change-me-*` password. 
+(Do not leave `HOST_IP` empty)
 
 **3. Install** ([details](#5-run-the-installer))
 
