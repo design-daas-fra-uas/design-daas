@@ -125,6 +125,7 @@ usage:
 	@echo "  make reinstall            After code changes: rebuild services and images"
 	@echo "  make delete               Remove services, containers and images"
 	@echo "  make reset CONFIRM=yes    Fresh start: delete ALL data + builds (then make install)"
+	@echo "  make backup               Save all data (PostgreSQL + auth keys) to backups/<time>/"
 	@echo ""
 	@echo "  Options: PURGE=1          delete/reinstall also delete the data"
 	@echo "                            (auth: DB + keys, daas: src/data + nginx site,"
@@ -141,7 +142,7 @@ usage:
 	@echo "  Groups:    make containers-install | images-install | images | images-delete"
 	@echo "  e.g.       make db-restart   make db-logs   make extensions-reinstall"
 	@echo ""
-	@echo "PROXMOX (optional, multi-host setups)"
+	@echo "PROXMOX (experimental, untested: multi-host setups, not used by make install)"
 	@echo "  proxmox-install-ceph      Install Ceph (mon + mgr)"
 	@echo "  proxmox-install-ceph-osd  Create OSD on CEPH_DISK"
 	@echo "  proxmox-install-ceph-cephfs"
@@ -227,6 +228,7 @@ reset:
 		echo "  - all instance containers and user images (daas.*)"; \
 		echo "  - the service containers and all images the installer built"; \
 		echo "Kept: installer/daas.env, src/config, the ISOs, the Proxmox VMs."; \
+		echo "Back up first: sudo make backup"; \
 		echo "Run: sudo make reset CONFIRM=yes"; exit 1; }
 	$(SERVICE_CMD) delete -p all
 	@ids="$$(docker ps -aq --filter name=^daas)"; \

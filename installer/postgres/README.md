@@ -80,8 +80,7 @@ then `make db-install daas-configure daas-restart`.
   MariaDB was first merged into it, and the same day both databases were
   moved here. Every row of all 7 `mergedb` and 16 `design_backend` tables
   was compared after the copy. The MariaDB data folder
-  `src/data/db/mariadb` was kept as it was; dumps are in
-  `installer/auth/backups/daas-0-mariadb-all-*.sql.gz`.
+  `src/data/db/mariadb` was kept as it was.
 
 ## Files
 

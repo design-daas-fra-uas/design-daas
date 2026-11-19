@@ -52,7 +52,7 @@ This copies `daas.env.example` to `daas.env` (mode 600, not committed). Edit it:
 - **Host**: `HOST_NAME`, `HOST_DOMAIN`, `HOST_IP`, `HOST_NUMBER`, `NET_DEVICE`.
   Set `STANDALONE=yes` for a single host without an uplink bridge.
 - **Passwords**: change `ADMIN_PASSWORD`, `AUTH_DB_PASSWORD`,
-  `DAAS_DB_PASSWORD` (every `change-me-*` value). `ADMIN_EMAIL` /
+  `DAAS_DB_PASSWORD`, `PVE_API_PASSWORD` (every `change-me-*` value). `ADMIN_EMAIL` /
   `ADMIN_PASSWORD` is the first admin account you log in with.
 - **Public URLs**: leave `DAAS_PUBLIC_URL`, `FRONTEND_PUBLIC_URL` and
   `AUTH_PUBLIC_URL` empty; then everything runs under `HOST_NAME.HOST_DOMAIN`.
@@ -99,7 +99,7 @@ make status
 ```
 
 One line per component. Everything should be `active` / `running` /
-`installed`. If not, see [Troubleshooting](#troubleshooting).
+`installed` / `built` (the ISOs). If not, see [Troubleshooting](#troubleshooting).
 
 ## Using it
 
@@ -128,16 +128,50 @@ node name and must not change after the install.
 | `make client-hosts` | The hosts file line for the computers with a browser (all names of the public URLs) |
 | `make reinstall` | You changed code: rebuild the services, containers and images (data is kept) |
 | `make delete` | Remove services, containers and images (data is kept) |
+| `make backup` | Save all data to `backups/<time>/` (see [Backup and restore](#backup-and-restore)) |
 | `make <command> PURGE=1` | `delete` / `reinstall` also delete the data (auth DB + keys, `src/data`, nginx sites, the DaaS PostgreSQL) |
 
-**`PURGE=1` deletes data for good**, including `src/data/db/postgres`, the
-whole database of the DaaS backend and the auth service. Back it up first
-(`docker exec daas-0-postgres pg_dump -U postgres --create mergedb > daas.sql`)
-and the auth service (`make auth-backup`).
+**`PURGE=1` and `make reset` delete data for good**, including
+`src/data/db/postgres`, the whole database of the DaaS backend and the auth
+service. Run `make backup` first.
 
 Frontend URLs and auth service settings are baked into their builds, so after
 changing those in `daas.env` run `make frontend-install` / `make auth-install`
 instead of `make configure`.
+
+## Backup and restore
+
+You only need this before deleting data (`make reset`, `PURGE=1`). Installing,
+`make reinstall` and restarts keep all data.
+
+```bash
+make backup
+```
+
+saves everything into one folder `backups/<time>/` (root only, not in git),
+while the system runs:
+
+| File | Content |
+|---|---|
+| `postgres.sql.gz` | The whole PostgreSQL: the DaaS backend's database `mergedb`, the auth service's database (users, groups, permissions) and their roles |
+| `auth-keys.tar.gz` | The auth service's token signing key (`rsa-jwk.json`); without it every issued token becomes invalid |
+
+Restore (replaces the current data; `<time>` is the backup folder):
+
+```bash
+cd /daas/design-daas/installer
+make stop                                   # auth, backend and frontend; the backend also stops the containers
+make db-start
+gzip -dc backups/<time>/postgres.sql.gz | docker exec -i daas-0-postgres psql -U postgres -q
+docker run --rm --entrypoint tar -v daas-auth_keys:/app/keys -v "$PWD/backups/<time>":/b:ro \
+    daas-auth -xzf /b/auth-keys.tar.gz -C /app/keys
+make start
+make daas-check auth-check
+```
+
+The restore prints two expected errors about the role `postgres`
+(`current user cannot be dropped`, `role "postgres" already exists`); there
+must be no others.
 
 ### One component
 
@@ -156,7 +190,9 @@ Groups: `make containers-install`, `make images-install`, `make images`
 (both), `make images-delete`. The old names `daas-services` /
 `daas-containers` still work.
 
-### Multi-host / Ceph (optional)
+### Multi-host / Ceph (experimental)
+
+**Experimental:** not tested with the current version of the system, and not needed for a single host. `make install` does not use it.
 
 `proxmox-install-ceph`, `proxmox-install-ceph-osd` (`CEPH_DISK=/dev/vdb`),
 `proxmox-install-ceph-cephfs`, `proxmox-install-ceph-pool`,
@@ -176,6 +212,28 @@ this repository is public.
 | `DAAS_DB_PASSWORD` (superuser of the stack's PostgreSQL) | see `postgres/README.md` (only applied to a new data folder) |
 
 Generate one with `head -c 48 /dev/urandom | base64 | tr -dc A-Za-z0-9 | head -c 32`.
+
+## Which files do I edit?
+
+Only **`daas.env`**. Every other settings file is written from it by the
+installer and overwritten on its next run:
+
+| File | Written by | Edit? |
+|---|---|---|
+| `daas.env.example` | in git: the template `make env` copies | no |
+| **`daas.env`** | you (`make env` creates it) | **yes, the only one** |
+| `auth/.env`, `frontend/.env` | `auth-install`, `frontend-install` | no (`Do not edit` in their header) |
+| `../src/config/local/*.toml` | `daas-configure`: host values and passwords for the DaaS backend | no |
+| `../src/config/*.toml` | in git: the DaaS backend's defaults | only when developing the backend |
+
+After changing `daas.env`, apply it:
+
+| You changed | Run |
+|---|---|
+| host values, `NET_DEVICE`, `DAAS_AUTH_*` | `make configure` |
+| `AUTH_*` (except passwords), `MAIL_*`, `OAUTH_*` | `make auth-install`, and for `OAUTH_CLIENT_ID` also `make frontend-install configure` |
+| the public URLs | the commands in the comment above them in `daas.env` |
+| a password | see [Changing passwords](#changing-passwords) |
 
 ## Configuration
 

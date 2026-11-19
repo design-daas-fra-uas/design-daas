@@ -40,7 +40,9 @@ From `installer/`, as root:
 Restarting `pveproxy` (or the whole `proxmox` group) does not restart the
 DaaS backend.
 
-### Optional: Ceph and cluster (multi-host)
+### Experimental: Ceph and cluster (multi-host)
+
+**Experimental:** not tested with the current version of the system, and not needed for a single host. `make install` does not use it.
 
 | Command | What it does |
 |---|---|
