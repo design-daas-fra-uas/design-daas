@@ -78,6 +78,27 @@ e.g. `pve1.daas-design.de`. In the background the frontend also uses port
 - Internet access and an IPv4 address that **never changes** (static, or a
   DHCP reservation in the router): the installer writes it into
   `/etc/hosts`, and Proxmox stops working when it changes.
+- **Network: a wired connection is the simplest.** Proxmox takes over the
+  network configuration (`/etc/network/interfaces`), and a Wi-Fi set up by
+  the Debian installer would be gone after the installer's reboot. A Wi-Fi
+  only works if **NetworkManager** runs it; the installer checks this and
+  stops before changing anything if it does not (see below).
+
+**Only if the host uses Wi-Fi:** hand the Wi-Fi to NetworkManager before step
+2. Do this at the host's console, not over SSH: the connection drops for a
+moment. As root (`su -`), with your Wi-Fi device (`ip -br link`, e.g.
+`wlp3s0`) and network:
+
+```bash
+apt-get install -y network-manager
+ifdown wlp3s0
+nano /etc/network/interfaces     # put a # in front of every line of the wlp3s0 block (allow-hotplug, iface, wpa-ssid, wpa-psk)
+systemctl restart NetworkManager
+nmcli device wifi connect "<SSID>" password "<Wi-Fi password>"
+nmcli device                      # wlp3s0 must show "connected"
+```
+
+The installer then keeps the Wi-Fi working through Proxmox's changes.
 
 **The client**: a second computer with Debian and Firefox or Chromium in the
 same network. This is where you (and later the users) open the frontend.

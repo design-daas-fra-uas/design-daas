@@ -16,6 +16,14 @@ the reboot:
 | 1 | Debian | Proxmox no-subscription repository, full upgrade, `proxmox-default-kernel`, host name and `/etc/hosts` (`HOST_NAME`, `HOST_DOMAIN`, `HOST_IP`). Then **reboot** |
 | 2 | PVE | `proxmox-ve`, removes the Debian kernel, `update-grub` |
 
+Before anything else, both runs check the **network connection**: Proxmox
+replaces `ifupdown` with `ifupdown2` and rewrites `/etc/network/interfaces`
+with every physical device as `manual`. Wired: nothing to do. Wi-Fi run by
+NetworkManager: writes `/etc/NetworkManager/conf.d/90-daas-ifupdown.conf`
+(`managed=true`), so NetworkManager keeps it after the reboot. Wi-Fi without
+NetworkManager: stops before changing anything, because that Wi-Fi would be
+gone after the reboot.
+
 Both runs disable the **enterprise repositories** (they need a paid
 subscription; without one `apt-get update` fails with 401 and stops `make
 deps`). The files belong to Proxmox packages and may come back with

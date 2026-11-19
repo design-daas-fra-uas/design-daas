@@ -256,6 +256,21 @@ Values come from, in this order: the command line
 - **A service does not start**: `make <service>-logs`, e.g. `make auth-logs`.
 - **dnsmasq is not running** right after `daas-configure`: expected, it needs
   the `vmbr1` bridge, which the DaaS backend creates on its first start.
+- **`Wi-Fi without NetworkManager`**: the host is online over a Wi-Fi that the
+  Debian installer set up; Proxmox would remove it. Use a wired connection, or
+  hand the Wi-Fi to NetworkManager first (top-level README, step 1).
+- **The Wi-Fi is gone after a reboot** (a system installed before this check):
+  NetworkManager stops managing devices that Proxmox lists in
+  `/etc/network/interfaces`. At the host's console, as root:
+
+  ```bash
+  printf '[ifupdown]\nmanaged=true\n' > /etc/NetworkManager/conf.d/90-daas-ifupdown.conf
+  systemctl restart NetworkManager
+  ```
+- **`apt-get update` fails with `401 Unauthorized`** for `enterprise.proxmox.com`:
+  the Proxmox (or Ceph) enterprise repository needs a paid subscription. The
+  installer comments it out in `/etc/apt/sources.list.d/pve-enterprise.list`
+  and `ceph.list`; `make proxmox-check` shows whether one is still on.
 
 ## Folder layout
 
